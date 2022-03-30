@@ -1,6 +1,5 @@
 [Please]
-; TODO uncomment this when we create the release
-; Version = 16.20.0
+Version = 16.20.0-beta.14
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go

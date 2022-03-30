@@ -33,8 +33,9 @@ genrule(
         "//tools/please_go/install/toolchain:srcs",
         "//tools/please_go/embed:srcs",
     ],
+    tools = ["//third_party/go:toolchain|go"],
     requires = ["go_src"],
     binary = True,
-    cmd = "(cd $PKG_DIR && go build please_go.go && mv please_go $OUT); go clean -modcache",
+    cmd = "(cd $PKG_DIR && $TOOL build please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
     visibility = ["PUBLIC"],
 )
