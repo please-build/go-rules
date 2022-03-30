@@ -1,0 +1,32 @@
+name: Golang rules
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run tests
+        run: ./pleasew test --log_file plz-out/log/test.log
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: |
+            plz-out/log
+  release:
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build
+        run: ./pleasew build //package:release_files
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: tatskaari/release-action@master
+        with:
+          release-files: plz-out/package
