@@ -7,7 +7,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests
-        run: ./pleasew test --log_file plz-out/log/test.log
+        run: ./pleasew test -p --log_file plz-out/log/test.log
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v2
