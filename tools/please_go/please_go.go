@@ -10,6 +10,8 @@ import (
 
 	"github.com/please-build/go-rules/tools/please_go/install"
 	"github.com/please-build/go-rules/tools/please_go/test"
+	"github.com/please-build/go-rules/tools/please_go/filter"
+	"github.com/please-build/go-rules/tools/please_go/embed"
 )
 
 var opts = struct {
@@ -44,7 +46,17 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
-	//TODO(jpoole): Move embed and filter here
+	Filter struct {
+		Tags     []string `short:"t" long:"tags" description:"Additional build tags to apply"`
+		Args        struct {
+			Sources []string `positional-arg-name:"sources" description:"Source files to filter"`
+		} `positional-args:"true"`
+	} `command:"filter" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	Embed struct {
+		Args        struct {
+			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
+		} `positional-args:"true"`
+	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -86,6 +98,16 @@ var subCommands = map[string]func() int{
 			opts.Test.Benchmark,
 			opts.Test.External,
 		)
+		return 0
+	},
+	"filter": func() int {
+		filter.Filter(opts.Filter.Tags, opts.Filter.Args.Sources)
+		return 0
+	},
+	"embed": func() int {
+		if err := embed.WriteEmbedConfig(opts.Embed.Args.Sources, os.Stdout); err != nil {
+			log.Fatalf("failed to generate embed config: %v", err)
+		}
 		return 0
 	},
 }

@@ -10,6 +10,8 @@ go_binary(
     deps = [
         "//third_party/go:flags",
         "//tools/please_go/install",
+        "//tools/please_go/filter",
+        "//tools/please_go/embed",
         "//tools/please_go/test",
     ],
 )
@@ -25,6 +27,7 @@ genrule(
     ],
     deps = [
         "//tools/please_go/test:srcs",
+        "//tools/please_go/filter:srcs",
         "//tools/please_go/install:srcs",
         "//tools/please_go/install/exec:srcs",
         "//tools/please_go/install/toolchain:srcs",

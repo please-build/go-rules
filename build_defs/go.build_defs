@@ -158,7 +158,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         embedcfg = build_rule(
             name = name,
             tag = 'embedcfg',
-            cmd = '$TOOL $PKG_DIR/*.go > $OUT' if _all_srcs else '$TOOL $SRCS_GO > $OUT',
+            cmd = '$TOOL embed $PKG_DIR/*.go > $OUT' if _all_srcs else '$TOOL embed $SRCS_GO > $OUT',
             srcs = {
                 'go': srcs,
                 'res': resources,
@@ -166,7 +166,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             deps = deps if _all_srcs else None,
             outs = [f'{package}.embedcfg'],
             requires = ['go_src'],
-            tools = [CONFIG.GO.EMBED_TOOL],
+            tools = [CONFIG.GO.PLEASE_GO_TOOL],
             test_only = test_only,
             labels = labels,
         )
@@ -260,7 +260,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs:
-        tools['filter'] = [CONFIG.GO.FILTER_TOOL]
+        tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
 
     srcs = {
         'go': srcs,
@@ -1258,7 +1258,7 @@ def _set_go_env():
 
 def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
     """Returns the commands to run for building a Go library."""
-    filter_cmd = 'export SRCS_GO="$(\"${TOOLS_FILTER}\" ${SRCS_GO})"; ' if filter_srcs else ''
+    filter_cmd = 'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter ${SRCS_GO})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''

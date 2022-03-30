@@ -7,7 +7,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests
-        run: ./pleasew test --log_file plz-out/log/test.log
+        run: ./pleasew test -p -v notice --log_file plz-out/log/test.log
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v2
@@ -23,7 +23,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Build
-        run: ./pleasew build //package:release_files
+        run: ./pleasew build -p -v notice //package:release_files
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
