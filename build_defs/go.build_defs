@@ -1009,7 +1009,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
 
     tools = {
         'go': [CONFIG.GO_TOOL],
-        'please_go': [CONFIG.PLEASE_GO_TOOL],
+        'please_go': [CONFIG.GO.PLEASE_GO_TOOL],
     }
     if CONFIG.GO.CC_TOOL:
         tools["cc"] = [CONFIG.CC_TOOL]
