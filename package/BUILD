@@ -2,9 +2,9 @@ subinclude("//:version")
 
 def cross_compile(arch):
     return build_rule(
-        name = f"arcat_{arch}",
+        name = f"please_go_{arch}",
         srcs = [f"///{arch}//tools/please_go"],
-        outs = [f"arcat-{VERSION}-{arch}"],
+        outs = [f"please_go-{VERSION}-{arch}"],
         cmd = "mv $SRC $OUT",
     )
 
