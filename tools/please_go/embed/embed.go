@@ -2,8 +2,10 @@
 package embed
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/build"
+	"io"
 	"path"
 	"path/filepath"
 	"strings"
@@ -13,6 +15,19 @@ import (
 type Cfg struct {
 	Patterns map[string][]string
 	Files    map[string]string
+}
+
+func WriteEmbedConfig(files []string, w io.Writer) error {
+	cfg, err := Parse(files)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 // Parse parses the given files and returns the embed information in them.

@@ -30,17 +30,9 @@ Inherit = true
 DefaultValue = ar
 Inherit = true
 
-[PluginConfig "filter_tool"]
-DefaultValue = //_please:please_go_filter
-Inherit = true
-
 [PluginConfig "please_go_tool"]
 ConfigKey = PleaseGoTool
 DefaultValue = //_please:please_go
-Inherit = true
-
-[PluginConfig "embed_tool"]
-DefaultValue = //_please:please_go_embed
 Inherit = true
 
 [PluginConfig "delve_tool"]
