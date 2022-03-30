@@ -4,6 +4,7 @@
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
+PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
 
 [PluginDefinition]
@@ -34,6 +35,7 @@ DefaultValue = //_please:please_go_filter
 Inherit = true
 
 [PluginConfig "please_go_tool"]
+ConfigKey = PleaseGoTool
 DefaultValue = //_please:please_go
 Inherit = true
 
