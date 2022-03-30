@@ -1,0 +1,70 @@
+[Please]
+; TODO uncomment this when we create the release
+; Version = 16.20.0
+
+[Plugin "go"]
+GoTool = //third_party/go:toolchain|go
+ImportPath = github.com/please-build/go-rules
+
+[PluginDefinition]
+Name = go
+
+[PluginConfig "go_tool"]
+DefaultValue = go
+Inherit = true
+
+[PluginConfig "import_path"]
+Optional = true
+
+[PluginConfig "cc_tool"]
+DefaultValue = cc
+Inherit = true
+Optional = true
+
+[PluginConfig "cgo_enabled"]
+Optional = true
+Inherit = true
+
+[PluginConfig "ar_tool"]
+DefaultValue = ar
+Inherit = true
+
+[PluginConfig "filter_tool"]
+DefaultValue = //_please:please_go_filter
+Inherit = true
+
+[PluginConfig "please_go_tool"]
+DefaultValue = //_please:please_go
+Inherit = true
+
+[PluginConfig "embed_tool"]
+DefaultValue = //_please:please_go_embed
+Inherit = true
+
+[PluginConfig "delve_tool"]
+DefaultValue = dlv
+Inherit = true
+
+[PluginConfig "default_static"]
+DefaultValue = false
+Inherit = true
+Type = bool
+
+[PluginConfig "test_root_compat"]
+DefaultValue = false
+Type = bool
+
+[PluginConfig "cpp_coverage"]
+Type = bool
+DefaultValue = false
+
+[PluginConfig "c_flags"]
+Repeatable = true
+Optional = true
+
+[PluginConfig "ld_flags"]
+Repeatable = true
+Optional = true
+
+[FeatureFlags]
+ExcludeGoRules = true
