@@ -1,8 +1,20 @@
 subinclude("//build_defs:go")
 
+
 go_toolchain(
     name = "toolchain",
+    architectures = [
+        "darwin_amd64",
+        "darwin_arm64",
+        "freebsd_amd64",
+        "linux_amd64",
+        "linux_arm64",
+    ],
     version = "1.18",
+    tags = [
+        "osusergo",
+        "netgo",
+    ],
 )
 
 go_module(
