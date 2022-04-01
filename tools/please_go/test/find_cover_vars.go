@@ -3,15 +3,11 @@ package test
 
 import (
 	"fmt"
-	"go/build"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 )
-
-var dontCollapseImportPaths = os.Getenv("FF_GO_DONT_COLLAPSE_IMPORT_PATHS")
 
 // A CoverVar is just a combination of package path and variable name
 // for one of the templated-in coverage variables.
@@ -19,20 +15,13 @@ type CoverVar struct {
 	Dir, ImportPath, ImportName, Var, File string
 }
 
-// replacer is used to replace characters in cover variables.
-// The scheme here must match what we do in go_rules.build_defs
-var replacer = strings.NewReplacer(
-	".", "_",
-	"-", "_",
-)
-
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
-func FindCoverVars(dir, importPath, testPackage string, external bool, exclude, srcs []string) ([]CoverVar, error) {
+func FindCoverVars(dir string, excludedDirs []string) ([]CoverVar, error) {
 	if dir == "" {
 		return nil, nil
 	}
 	excludeMap := map[string]struct{}{}
-	for _, e := range exclude {
+	for _, e := range excludedDirs {
 		excludeMap[e] = struct{}{}
 	}
 	var ret []CoverVar
@@ -45,8 +34,8 @@ func FindCoverVars(dir, importPath, testPackage string, external bool, exclude, 
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
-		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
-			vars, err := findCoverVars(name, importPath, testPackage, external, srcs)
+		} else if strings.HasSuffix(name, ".cover_vars") {
+			vars, err := parseCoverVars(name)
 			if err != nil {
 				return err
 			}
@@ -57,53 +46,33 @@ func FindCoverVars(dir, importPath, testPackage string, external bool, exclude, 
 	return ret, err
 }
 
-// findCoverVars scans a directory containing a .a file for any go files.
-func findCoverVars(filepath, importPath, testPackage string, external bool, srcs []string) ([]CoverVar, error) {
-	dir, file := path.Split(filepath)
-	dir = strings.TrimRight(dir, "/")
+// parseCoverVars parses the coverage variables file for all cover vars
+func parseCoverVars(filepath string) ([]CoverVar, error) {
+	dir := strings.TrimRight(path.Dir(filepath), "/")
 	if dir == "" {
 		dir = "."
 	}
 
-	packagePath := importPath
-	if !external && dir == os.Getenv("PKG_DIR") {
-		packagePath = testPackage
-	} else if dir != "." {
-		if dontCollapseImportPaths != "" {
-			packagePath = toImportPath(dir, importPath)
-		} else {
-			packagePath = collapseFinalDir(strings.TrimSuffix(filepath, ".a"), importPath)
-		}
-	}
-
-	fi, err := ioutil.ReadDir(dir)
+	b, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
-
-	ret := make([]CoverVar, 0, len(fi))
-	for _, info := range fi {
-		name := info.Name()
-		if name != file && strings.HasSuffix(name, ".a") {
-			fmt.Fprintf(os.Stderr, "multiple .a files in %s, can't determine coverage variables accurately\n", dir)
-			return nil, nil
-		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
-			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
-				v := "GoCover_" + replacer.Replace(name)
-				ret = append(ret, coverVar(dir, packagePath, v))
-			}
+	lines := strings.Split(string(b), "\n")
+	ret := make([]CoverVar, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
 		}
+
+		parts := strings.Split(line, "=")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("malformed cover var line in %v: %v", filepath, line)
+		}
+
+		ret = append(ret, coverVar(dir, parts[0], parts[1]))
 	}
+
 	return ret, nil
-}
-
-func contains(needle string, haystack []string) bool {
-	for _, straw := range haystack {
-		if straw == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func coverVar(dir, importPath, v string) CoverVar {
@@ -120,24 +89,3 @@ func coverVar(dir, importPath, v string) CoverVar {
 	}
 }
 
-// TODO(jpoole): delete this once v17 is released
-// collapseFinalDir mimics what go does with import paths; if the final two components of
-// the given path are the same (eg. "src/core/core") it collapses them into one ("src/core")
-// Also if importPath is empty then it trims a leading src/
-func collapseFinalDir(s, importPath string) string {
-	if importPath == "" {
-		s = strings.TrimPrefix(s, "src/")
-	}
-	if path.Base(path.Dir(s)) == path.Base(s) {
-		s = path.Dir(s)
-	}
-	return filepath.Join(importPath, s)
-}
-
-// toImportPath converts a package directory path e.g. src/foo/bar to the import path for that package.
-func toImportPath(s, modulePath string) string {
-	if modulePath == "" {
-		s = strings.TrimPrefix(s, "src/")
-	}
-	return filepath.Join(modulePath, s)
-}

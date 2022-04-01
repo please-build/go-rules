@@ -8,10 +8,11 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 
+	"github.com/please-build/go-rules/tools/please_go/covervars"
+	"github.com/please-build/go-rules/tools/please_go/embed"
+	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/install"
 	"github.com/please-build/go-rules/tools/please_go/test"
-	"github.com/please-build/go-rules/tools/please_go/filter"
-	"github.com/please-build/go-rules/tools/please_go/embed"
 )
 
 var opts = struct {
@@ -39,21 +40,25 @@ var opts = struct {
 		Exclude     []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
 		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
 		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
-		ImportPath  string   `short:"i" long:"import_path" description:"Full import path to the package"`
 		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
-		External    bool     `short:"e" long:"external" description:"Whether the test package is external"`
 		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
+	CoverVars struct {
+		ImportPath string `short:"i" long:"import_path" description:"The import path for the source files"`
+		Args       struct {
+			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
+		} `positional-args:"true"`
+	} `command:"covervars" description:"Generates coverage variable config for a set of go src files"`
 	Filter struct {
-		Tags     []string `short:"t" long:"tags" description:"Additional build tags to apply"`
-		Args        struct {
+		Tags []string `short:"t" long:"tags" description:"Additional build tags to apply"`
+		Args struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to filter"`
 		} `positional-args:"true"`
 	} `command:"filter" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	Embed struct {
-		Args        struct {
+		Args struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
@@ -87,17 +92,11 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"testmain": func() int {
-		test.PleaseGoTest(
-			opts.Test.GoTool,
-			opts.Test.Dir,
-			opts.Test.ImportPath,
-			opts.Test.TestPackage,
-			opts.Test.Output,
-			opts.Test.Args.Sources,
-			opts.Test.Exclude,
-			opts.Test.Benchmark,
-			opts.Test.External,
-		)
+		test.PleaseGoTest(opts.Test.GoTool, opts.Test.Dir, opts.Test.TestPackage, opts.Test.Output, opts.Test.Args.Sources, opts.Test.Exclude, opts.Test.Benchmark)
+		return 0
+	},
+	"covervars": func() int {
+		covervars.GenCoverVars(os.Stdout, opts.CoverVars.ImportPath, opts.CoverVars.Args.Sources)
 		return 0
 	},
 	"filter": func() int {
