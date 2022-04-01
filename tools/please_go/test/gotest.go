@@ -8,7 +8,7 @@ import (
 
 // PleaseGoTest will generate the test main for the provided sources
 func PleaseGoTest(goTool, dir, importPath, testPackage, output string, sources, exclude []string, isBenchmark, external bool) {
-	coverVars, err := FindCoverVars(dir, importPath, testPackage, external, exclude, sources)
+	coverVars, err := FindCoverVars(dir, exclude)
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}

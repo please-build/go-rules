@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/please-build/go-rules/tools/please_go/covervars"
 	"log"
 	"os"
 	"path/filepath"
@@ -8,10 +9,10 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 
+	"github.com/please-build/go-rules/tools/please_go/embed"
+	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/install"
 	"github.com/please-build/go-rules/tools/please_go/test"
-	"github.com/please-build/go-rules/tools/please_go/filter"
-	"github.com/please-build/go-rules/tools/please_go/embed"
 )
 
 var opts = struct {
@@ -46,14 +47,20 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
+	CoverVars struct {
+		ImportPath string `short:"i" long:"import_path" description:"The import path for the source files"`
+		Args       struct {
+			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
+		} `positional-args:"true"`
+	} `command:"covervars" description:"Generates coverage variable config for a set of go src files"`
 	Filter struct {
-		Tags     []string `short:"t" long:"tags" description:"Additional build tags to apply"`
-		Args        struct {
+		Tags []string `short:"t" long:"tags" description:"Additional build tags to apply"`
+		Args struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to filter"`
 		} `positional-args:"true"`
 	} `command:"filter" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	Embed struct {
-		Args        struct {
+		Args struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
@@ -98,6 +105,10 @@ var subCommands = map[string]func() int{
 			opts.Test.Benchmark,
 			opts.Test.External,
 		)
+		return 0
+	},
+	"covervars": func() int {
+		covervars.GenCoverVars(os.Stdout, opts.CoverVars.ImportPath, opts.CoverVars.Args.Sources)
 		return 0
 	},
 	"filter": func() int {

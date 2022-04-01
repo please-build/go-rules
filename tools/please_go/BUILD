@@ -13,6 +13,7 @@ go_binary(
         "//tools/please_go/filter",
         "//tools/please_go/embed",
         "//tools/please_go/test",
+        "//tools/please_go/covervars",
     ],
 )
 
@@ -27,6 +28,7 @@ genrule(
     ],
     deps = [
         "//tools/please_go/test:srcs",
+        "//tools/please_go/covervars:srcs",
         "//tools/please_go/filter:srcs",
         "//tools/please_go/install:srcs",
         "//tools/please_go/install/exec:srcs",

@@ -154,6 +154,18 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     else:
         exported_deps = []
 
+    if cover:
+        cover_vars = build_rule(
+            name = name,
+            tag = "cover_vars",
+            srcs = srcs,
+            cmd = f"$TOOL covervars --import_path {package_path} $($TOOL filter $SRCS) > $OUT",
+            tools = [CONFIG.GO.PLEASE_GO_TOOL],
+            outs = [f"{name}.cover_vars"],
+            visibility = visibility,
+        )
+    else:
+        cover_vars = None
     if resources:
         embedcfg = build_rule(
             name = name,
@@ -227,6 +239,9 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             test_only = test_only,
             labels=labels,
         )
+        provides = {'go': ':' + name, 'go_src': lib_rule}
+        if cover:
+            provides['cover_vars'] = cover_vars
         return build_rule(
             name = name,
             srcs = {
@@ -240,7 +255,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             building_description = 'Packing...',
             requires = ['go'],
             labels = labels+link_labels,
-            provides =  {'go': ':' + name, 'go_src': lib_rule},
+            provides =  provides,
             test_only = test_only,
             exported_deps = exported_deps,
             deps = deps,
@@ -276,22 +291,24 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     else:
         outs = [out]
 
-
+    provides = {'go': ':' + name, 'go_src': src_rule}
+    if cover:
+        provides['cover_vars'] = cover_vars
     return build_rule(
-        name=name,
-        srcs=srcs,
-        deps=deps,
+        name = name,
+        srcs = srcs,
+        deps = deps,
         internal_deps = [src_rule],
-        outs=outs,
-        cmd=_go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
-        visibility=visibility,
-        building_description="Compiling...",
-        requires=['go'],
-        provides={'go': ':' + name, 'go_src': src_rule},
+        outs = outs,
+        cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
+        visibility = visibility,
+        building_description = "Compiling...",
+        requires = ['go'],
+        provides= provides,
         labels = labels+link_labels + [f"go_package:{package_path}"] if _generate_import_config else [],
-        test_only=test_only,
-        tools=tools,
-        needs_transitive_deps=_needs_transitive_deps,
+        test_only = test_only,
+        tools = tools,
+        needs_transitive_deps = _needs_transitive_deps,
         exported_deps = exported_deps,
     )
 
@@ -911,7 +928,7 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
         deps = deps,
         cmd = cmds,
         needs_transitive_deps = cover,  # Need all dependencies to template coverage variables
-        requires = ['go', 'go_src'] if cover else ['go'],
+        requires = ['go', 'cover_vars'] if cover else ['go'],
         test_only = test_only,
         tools = {
             'plz': [CONFIG.GO.PLEASE_GO_TOOL],
