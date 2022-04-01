@@ -43,10 +43,3 @@ func TestFindBinaryCoverVars(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, vars)
 }
-
-func TestFindCoverVarsExcludesSrcs(t *testing.T) {
-	vars, err := FindCoverVars("tools/please_go/test/test_data/binary", nil)
-	assert.NoError(t, err)
-	var expected []CoverVar
-	assert.Equal(t, expected, vars)
-}

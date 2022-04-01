@@ -23,24 +23,12 @@ go_test(
     name = "find_cover_vars_test",
     srcs = ["find_cover_vars_test.go"],
     data = [
-        "test_data/binary/core.a",
-        "test_data/binary/lock.go",
-        "test_data/core.a",
-        "test_data/lock.go",
-        ":test_excluded_archive",
+        "test_data"
     ],
     deps = [
         ":test",
         "//third_party/go:testify",
     ],
-)
-
-# Little tweak so we don't have to commit this file twice.
-genrule(
-    name = "test_excluded_archive",
-    srcs = ["test_data/core.a"],
-    outs = ["test_data/x/core.a"],
-    cmd = 'cp $SRC "$OUT"',
 )
 
 go_test(

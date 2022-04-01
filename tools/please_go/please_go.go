@@ -40,9 +40,7 @@ var opts = struct {
 		Exclude     []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
 		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
 		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
-		ImportPath  string   `short:"i" long:"import_path" description:"Full import path to the package"`
 		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
-		External    bool     `short:"e" long:"external" description:"Whether the test package is external"`
 		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
@@ -94,17 +92,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"testmain": func() int {
-		test.PleaseGoTest(
-			opts.Test.GoTool,
-			opts.Test.Dir,
-			opts.Test.ImportPath,
-			opts.Test.TestPackage,
-			opts.Test.Output,
-			opts.Test.Args.Sources,
-			opts.Test.Exclude,
-			opts.Test.Benchmark,
-			opts.Test.External,
-		)
+		test.PleaseGoTest(opts.Test.GoTool, opts.Test.Dir, opts.Test.TestPackage, opts.Test.Output, opts.Test.Args.Sources, opts.Test.Exclude, opts.Test.Benchmark)
 		return 0
 	},
 	"covervars": func() int {
