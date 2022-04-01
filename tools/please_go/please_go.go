@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/please-build/go-rules/tools/please_go/covervars"
 	"log"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 
+	"github.com/please-build/go-rules/tools/please_go/covervars"
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/install"

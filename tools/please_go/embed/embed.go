@@ -17,6 +17,7 @@ type Cfg struct {
 	Files    map[string]string
 }
 
+// WriteEmbedConfig writes the embed config to w
 func WriteEmbedConfig(files []string, w io.Writer) error {
 	cfg, err := Parse(files)
 	if err != nil {
@@ -49,6 +50,7 @@ func Parse(gofiles []string) (*Cfg, error) {
 	return cfg, nil
 }
 
+// AddPackage parses a go package and adds any embed patterns to the configuration
 func (cfg *Cfg) AddPackage(pkg *build.Package) error {
 	for _, pattern := range append(append(pkg.EmbedPatterns, pkg.TestEmbedPatterns...), pkg.XTestEmbedPatterns...) {
 		paths, err := relglob(pkg.Dir, pattern)

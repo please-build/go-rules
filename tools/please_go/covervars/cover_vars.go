@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// GenCoverVars writes the coverage variable information to w
 func GenCoverVars(w io.Writer, importPath string, srcs []string) {
 	for _, src := range srcs {
 		if _, err := w.Write([]byte(coverVar(src, importPath))); err != nil {
