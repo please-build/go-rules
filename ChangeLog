@@ -1,3 +1,8 @@
+Version 0.2.0
+-------------
+    * Improve the way we handle discovering coverage variables #7
+    * Remove usage of the legacy external flag
+
 Version 0.1.1
 -------------
     *  Merge the please tools into please_go #3

@@ -31,7 +31,7 @@ Inherit = true
 
 [PluginConfig "please_go_tool"]
 ConfigKey = PleaseGoTool
-DefaultValue = //_please:please_go
+DefaultValue = //tools:please_go
 Inherit = true
 
 [PluginConfig "delve_tool"]

@@ -3,5 +3,5 @@ genrule(
     srcs = ["VERSION"],
     outs = ["version.build_defs"],
     cmd = "echo VERSION = \\\"$(cat $SRCS)\\\" > $OUT",
-    visibility = ["//package:all"],
+    visibility = ["//package:all", "//tools:all"],
 )
