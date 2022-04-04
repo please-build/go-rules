@@ -165,6 +165,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             visibility = visibility,
             test_only = test_only,
         )
+        deps += [cover_vars]
     else:
         cover_vars = None
     if resources:
@@ -908,9 +909,8 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
     """
     cover = cover and (CONFIG.BUILD_CONFIG == "cover")
     test_package = test_package or _get_import_path()
-    external_flag = " --external" if external else ""
 
-    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}"{external_flag} -o $OUT'
+    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}" -o $OUT'
     if benchmark:
         cmd = f'{cmd} --benchmark'
     cmds = {
