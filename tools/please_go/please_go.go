@@ -41,6 +41,7 @@ var opts = struct {
 		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
 		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
 		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
+		External    bool     `long:"external" description:"Whether the test is external or not"`
 		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
@@ -92,7 +93,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"testmain": func() int {
-		test.PleaseGoTest(opts.Test.GoTool, opts.Test.Dir, opts.Test.TestPackage, opts.Test.Output, opts.Test.Args.Sources, opts.Test.Exclude, opts.Test.Benchmark)
+		test.PleaseGoTest(opts.Test.GoTool, opts.Test.Dir, opts.Test.TestPackage, opts.Test.Output, opts.Test.Args.Sources, opts.Test.Exclude, opts.Test.Benchmark, opts.Test.External)
 		return 0
 	},
 	"covervars": func() int {

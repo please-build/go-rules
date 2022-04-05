@@ -1,3 +1,8 @@
+Version 0.2.3
+-------------
+    * Import the test version of internal packages when calculating
+      coverage
+
 Version 0.2.2
 -------------
     * Handle hyphens in source file names when generating cover vars
