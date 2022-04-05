@@ -1,7 +1,10 @@
+Version 0.2.2
+-------------
+    * Handle hyphens in source file names when generating cover vars
+
 Version 0.2.1
 -------------
     * Make the tool as binary
-
 
 Version 0.2.0
 -------------

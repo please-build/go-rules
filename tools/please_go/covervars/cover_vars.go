@@ -19,5 +19,7 @@ func GenCoverVars(w io.Writer, importPath string, srcs []string) {
 
 func coverVar(src, importPath string) string {
 	baseName := filepath.Base(src)
-	return fmt.Sprintf("%s=GoCover_%s\n", importPath, strings.ReplaceAll(baseName, ".", "_"))
+	varname := strings.ReplaceAll(baseName, ".", "_")
+	varname = strings.ReplaceAll(varname, "-", "_")
+	return fmt.Sprintf("%s=GoCover_%s\n", importPath, varname)
 }
