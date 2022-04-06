@@ -6,6 +6,7 @@ def cross_compile(arch):
         srcs = [f"///{arch}//tools/please_go"],
         outs = [f"please_go-{VERSION}-{arch}"],
         cmd = "mv $SRC $OUT",
+        labels = ["manual"],
     )
 
 filegroup(
@@ -17,5 +18,5 @@ filegroup(
         "linux_amd64",
         "linux_arm64",
     ]],
-    labels = ["hlink:plz-out/package"],
+    labels = ["hlink:plz-out/package", "manual"],
 )
