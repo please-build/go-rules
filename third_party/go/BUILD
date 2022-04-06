@@ -1,6 +1,5 @@
 subinclude("//build_defs:go")
 
-
 go_toolchain(
     name = "toolchain",
     architectures = [
@@ -9,7 +8,9 @@ go_toolchain(
         "freebsd_amd64",
         "linux_amd64",
         "linux_arm64",
-    ],
+    # Installing takes a while so only do it when we need it for release
+    # This extra check can be removed once we fix booleans in build config
+    ] if CONFIG.RELEASE and CONFIG.RELEASE != "False" else [],
     version = "1.18",
     tags = [
         "osusergo",

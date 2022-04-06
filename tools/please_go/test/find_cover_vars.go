@@ -16,7 +16,7 @@ type CoverVar struct {
 }
 
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
-func FindCoverVars(dir string, excludedDirs []string) ([]CoverVar, error) {
+func FindCoverVars(dir, testPackage string, external bool, excludedDirs []string) ([]CoverVar, error) {
 	if dir == "" {
 		return nil, nil
 	}
@@ -35,7 +35,7 @@ func FindCoverVars(dir string, excludedDirs []string) ([]CoverVar, error) {
 				return filepath.SkipDir
 			}
 		} else if strings.HasSuffix(name, ".cover_vars") {
-			vars, err := parseCoverVars(name)
+			vars, err := parseCoverVars(name, testPackage, external)
 			if err != nil {
 				return err
 			}
@@ -47,7 +47,7 @@ func FindCoverVars(dir string, excludedDirs []string) ([]CoverVar, error) {
 }
 
 // parseCoverVars parses the coverage variables file for all cover vars
-func parseCoverVars(filepath string) ([]CoverVar, error) {
+func parseCoverVars(filepath, testPackage string, external bool) ([]CoverVar, error) {
 	dir := strings.TrimRight(path.Dir(filepath), "/")
 	if dir == "" {
 		dir = "."
@@ -68,8 +68,12 @@ func parseCoverVars(filepath string) ([]CoverVar, error) {
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("malformed cover var line in %v: %v", filepath, line)
 		}
-
-		ret = append(ret, coverVar(dir, parts[0], parts[1]))
+		if external || dir != os.Getenv("PKG_DIR") {
+			ret = append(ret, coverVar(dir, parts[0], parts[1]))
+		} else {
+			// We recompile the test package, so override the import path here to get the right version
+			ret = append(ret, coverVar(dir, testPackage, parts[1]))
+		}
 	}
 
 	return ret, nil
@@ -88,4 +92,3 @@ func coverVar(dir, importPath, v string) CoverVar {
 		File:       f,
 	}
 }
-
