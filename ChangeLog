@@ -1,3 +1,7 @@
+Version 0.2.4
+-------------
+    * Use the `please-go-vx.x.x` release tags for the tools
+
 Version 0.2.3
 -------------
     * Import the test version of internal packages when calculating
