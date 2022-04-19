@@ -29,6 +29,13 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: tatskaari/release-action@master
+        uses: thought-machine/release-action@master
+      - name: Release tool
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: thought-machine/release-action@master
         with:
+          version-file: tools/please_go/VERSION
+          change-log-file: tools/please_go/ChangeLog
+          release-prefix: please-go
           release-files: plz-out/package
