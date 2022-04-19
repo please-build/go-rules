@@ -1,4 +1,4 @@
-subinclude("//:version")
+subinclude("//tools/please_go:version")
 
 def cross_compile(arch):
     return build_rule(

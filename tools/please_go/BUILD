@@ -41,3 +41,11 @@ genrule(
     cmd = "(cd $PKG_DIR && $TOOL build please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
     visibility = ["PUBLIC"],
 )
+
+genrule(
+    name = "version",
+    srcs = ["VERSION"],
+    outs = ["version.build_defs"],
+    cmd = "echo VERSION = \\\"$(cat $SRCS)\\\" > $OUT",
+    visibility = ["//package:all", "//tools:all"],
+)
