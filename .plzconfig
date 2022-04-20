@@ -14,6 +14,7 @@ DefaultValue = go
 Inherit = true
 
 [PluginConfig "import_path"]
+Inherit = true
 Optional = true
 
 [PluginConfig "cc_tool"]
