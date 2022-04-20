@@ -3,7 +3,7 @@ subinclude("//build_defs:go")
 filegroup(
     name = "srcs",
     srcs = glob(["*.go"]),
-    visibility = ["//tools/please_go:bootstrap"]
+    visibility = ["//tools/please_go:bootstrap"],
 )
 
 go_library(
@@ -13,17 +13,17 @@ go_library(
         "gotest.go",
         "write_test_main.go",
     ],
+    visibility = ["//tools/please_go/..."],
     deps = [
         "//tools/please_go/install/toolchain",
     ],
-    visibility = ["//tools/please_go/..."],
 )
 
 go_test(
     name = "find_cover_vars_test",
     srcs = ["find_cover_vars_test.go"],
     data = [
-        "test_data"
+        "test_data",
     ],
     deps = [
         ":test",
