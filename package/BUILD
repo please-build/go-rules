@@ -18,5 +18,8 @@ filegroup(
         "linux_amd64",
         "linux_arm64",
     ]],
-    labels = ["hlink:plz-out/package", "manual"],
+    labels = [
+        "hlink:plz-out/package",
+        "manual",
+    ],
 )

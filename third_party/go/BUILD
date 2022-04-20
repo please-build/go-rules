@@ -8,14 +8,14 @@ go_toolchain(
         "freebsd_amd64",
         "linux_amd64",
         "linux_arm64",
-    # Installing takes a while so only do it when we need it for release
-    # This extra check can be removed once we fix booleans in build config
+        # Installing takes a while so only do it when we need it for release
+        # This extra check can be removed once we fix booleans in build config
     ] if CONFIG.RELEASE and CONFIG.RELEASE != "False" else [],
-    version = "1.18",
     tags = [
-        "osusergo",
         "netgo",
+        "osusergo",
     ],
+    version = "1.18",
 )
 
 go_module(
@@ -86,9 +86,9 @@ go_module(
     install = ["flags"],
     module = "github.com/peterebden/go-cli-init/v5",
     version = "v5.1.0",
+    visibility = ["PUBLIC"],
     deps = [
         ":go-flags",
         ":humanize",
     ],
-    visibility = ["PUBLIC"],
 )

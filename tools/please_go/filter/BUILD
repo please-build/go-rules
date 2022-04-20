@@ -9,5 +9,5 @@ go_library(
 filegroup(
     name = "srcs",
     srcs = glob(["*.go"]),
-    visibility = ["//tools/please_go:bootstrap"]
+    visibility = ["//tools/please_go:bootstrap"],
 )

@@ -59,6 +59,10 @@ Optional = true
 Repeatable = true
 Optional = true
 
+[PluginConfig "legacy_imports"]
+Type = bool
+DefaultValue = False
+
 [FeatureFlags]
 ExcludeGoRules = true
 
