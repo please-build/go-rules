@@ -1,3 +1,7 @@
+Version 0.3.2
+-------------
+    * Update to use new version of the tools which handles no tests #24
+
 Version 0.3.1
 -------------
     * Handle when test targets have no tests #20
