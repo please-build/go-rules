@@ -24,6 +24,7 @@ go_test(
     srcs = ["install_test.go"],
     data = {
         "test_data": ["test_data"],
+        "go_tool": ["//third_party/go:toolchain"],
     },
     deps = [
         ":install",

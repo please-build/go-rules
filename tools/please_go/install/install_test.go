@@ -46,7 +46,8 @@ func TestLocalImports(t *testing.T) {
 }
 
 func newInstall() (*PleaseGoInstall, *bytes.Buffer, *bytes.Buffer) {
-	install := New([]string{}, "tools/please_go/install/test_data/example.com", "example.com", "tools/please_go/install/test_data/empty.importcfg", "", "", "go", "cc", "pkg-config", "out", "")
+	goTool := filepath.Join(os.Getenv("DATA_GO_TOOL"), "bin/go")
+	install := New([]string{}, "tools/please_go/install/test_data/example.com", "example.com", "tools/please_go/install/test_data/empty.importcfg", "", "", goTool, "cc", "pkg-config", "out", "")
 
 	stdOut := &bytes.Buffer{}
 	stdIn := &bytes.Buffer{}

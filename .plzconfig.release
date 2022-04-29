@@ -1,2 +1,5 @@
 [BuildConfig]
 Release = true
+
+[Plugin "go"]
+PleaseGoTool = //tools:please_go

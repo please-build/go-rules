@@ -4,6 +4,7 @@ go_test(
     name = "import_test",
     srcs = ["import_test.go"],
     deps = [
+        "//test/import/legacy:foo",
         "//test/message",
         "//third_party/go:testify",
     ],

@@ -1,5 +1,5 @@
 [Please]
-Version = 16.20.0-beta.14
+Version = 16.20.0
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
@@ -64,6 +64,10 @@ Optional = true
 [PluginConfig "ld_flags"]
 Repeatable = true
 Optional = true
+
+[PluginConfig "legacy_imports"]
+Type = bool
+DefaultValue = False
 
 [FeatureFlags]
 ExcludeGoRules = true

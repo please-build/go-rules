@@ -134,7 +134,6 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     private = out.startswith('_')
     package_path = _get_import_path(package, import_path)
 
-
     # We could just depend on go_src for all our deps but that would mean bringing in srcs for targets outside this
     # package like third party sources which is especially slow on systems with slow syscall performance (macOS)
     if _all_srcs:
@@ -368,6 +367,9 @@ def _get_import_path(package="", import_path=""):
             path = CONFIG.GO_IMPORT_PATH
     else:
         path = pkg
+
+    if CONFIG.GO.LEGACY_IMPORTS and package and not path.endswith(package):
+        return f"{path}/{package}"
 
     return path
 
