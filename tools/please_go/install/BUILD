@@ -3,7 +3,7 @@ subinclude("//build_defs:go")
 filegroup(
     name = "srcs",
     srcs = glob(["*.go"]),
-    visibility = ["//tools/please_go:bootstrap"]
+    visibility = ["//tools/please_go:bootstrap"],
 )
 
 go_library(
@@ -13,9 +13,9 @@ go_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
+        "//tools/please_go/embed",
         "//tools/please_go/install/exec",
         "//tools/please_go/install/toolchain",
-        "//tools/please_go/embed",
     ],
 )
 

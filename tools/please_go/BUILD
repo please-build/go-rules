@@ -9,37 +9,36 @@ go_binary(
     visibility = ["PUBLIC"],
     deps = [
         "//third_party/go:flags",
-        "//tools/please_go/install",
-        "//tools/please_go/filter",
-        "//tools/please_go/embed",
-        "//tools/please_go/test",
         "//tools/please_go/covervars",
+        "//tools/please_go/embed",
+        "//tools/please_go/filter",
+        "//tools/please_go/install",
+        "//tools/please_go/test",
     ],
 )
 
-
 genrule(
     name = "bootstrap",
-    outs = ["please_go.bootstrap"],
     srcs = [
         "go.mod",
         "go.sum",
         "please_go.go",
     ],
+    outs = ["please_go.bootstrap"],
+    binary = True,
+    cmd = "(cd $PKG_DIR && $TOOL build please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
+    requires = ["go_src"],
+    tools = [CONFIG.GO.GO_TOOL],
+    visibility = ["PUBLIC"],
     deps = [
-        "//tools/please_go/test:srcs",
         "//tools/please_go/covervars:srcs",
+        "//tools/please_go/embed:srcs",
         "//tools/please_go/filter:srcs",
         "//tools/please_go/install:srcs",
         "//tools/please_go/install/exec:srcs",
         "//tools/please_go/install/toolchain:srcs",
-        "//tools/please_go/embed:srcs",
+        "//tools/please_go/test:srcs",
     ],
-    tools = [CONFIG.GO.GO_TOOL],
-    requires = ["go_src"],
-    binary = True,
-    cmd = "(cd $PKG_DIR && $TOOL build please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
-    visibility = ["PUBLIC"],
 )
 
 genrule(
@@ -47,5 +46,8 @@ genrule(
     srcs = ["VERSION"],
     outs = ["version.build_defs"],
     cmd = "echo VERSION = \\\"$(cat $SRCS)\\\" > $OUT",
-    visibility = ["//package:all", "//tools:all"],
+    visibility = [
+        "//package:all",
+        "//tools:all",
+    ],
 )

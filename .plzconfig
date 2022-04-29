@@ -5,12 +5,18 @@ Version = 16.20.0-beta.14
 GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
+RequireLicences = true
 
 [PluginDefinition]
 Name = go
 
 [PluginConfig "go_tool"]
 DefaultValue = go
+Inherit = true
+
+[PluginConfig "require_licences"]
+DefaultValue = false
+Type = bool
 Inherit = true
 
 [PluginConfig "import_path"]
