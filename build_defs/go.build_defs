@@ -1098,6 +1098,10 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
     labels += [f"go_module:{module}@{version}"]
 
+    if CONFIG.GO.REQUIRE_LICENCES and not licences:
+        label = canonicalise(f":{name}")
+        fail(f"{label} is missing its licence")
+
     return build_rule(
         name = name,
         srcs = {

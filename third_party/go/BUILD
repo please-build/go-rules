@@ -63,6 +63,7 @@ go_module(
 
 go_module(
     name = "go-flags",
+    licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
     version = "v1.6.0",
     deps = [":xsys"],
@@ -71,12 +72,14 @@ go_module(
 go_module(
     name = "xsys",
     install = ["..."],
+    licences = ["BSD-3-Clause"],
     module = "golang.org/x/sys",
     version = "039c03cc5b867cd7b06a19ff375be5c945c80b10",
 )
 
 go_module(
     name = "humanize",
+    licences = ["MIT"],
     module = "github.com/dustin/go-humanize",
     version = "v1.0.0",
 )
@@ -84,6 +87,7 @@ go_module(
 go_module(
     name = "flags",
     install = ["flags"],
+    licences = ["Apache-2.0"],
     module = "github.com/peterebden/go-cli-init/v5",
     version = "v5.1.0",
     visibility = ["PUBLIC"],
