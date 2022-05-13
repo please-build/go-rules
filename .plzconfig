@@ -69,6 +69,14 @@ Optional = true
 Type = bool
 DefaultValue = False
 
+[PluginConfig "split_debug_info"]
+Type = bool
+Optional = true
+
+[PluginConfig "strip_tool"]
+DefaultValue = eu-strip
+Inherit = true
+
 [FeatureFlags]
 ExcludeGoRules = true
 

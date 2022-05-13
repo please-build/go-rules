@@ -589,7 +589,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _generate_import_config=False,
         import_path="main",
     )
-    cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
+    cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name=name,
@@ -598,14 +598,15 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         deps=deps,
         test_only=test_only,
     )
-
+    out = out or name
     return build_rule(
         name=name,
         srcs=[lib],
         deps=deps,
         data=data,
         debug_data=debug_data,
-        outs=[out or name],
+        outs=[out],
+        optional_outs = [out + '.sym'] if CONFIG.GO.SPLIT_DEBUG_INFO else None,
         cmd=cmds,
         debug_cmd=debug_cmd,
         building_description="Linking...",
@@ -1305,7 +1306,7 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False):
+def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False):
     """Returns the commands to run for linking a Go binary."""
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
@@ -1334,6 +1335,13 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     if len(defs) > 0:
         flags += " " + defs
+
+    if split_debug:
+        return f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS && $TOOLS_STRIP -o $OUT -f $OUT.sym $OUT', {
+            'go': [CONFIG.GO.GO_TOOL],
+            'ld': [CONFIG.GO.CC_TOOL],
+            'strip': [CONFIG.GO.STRIP_TOOL],
+        }
 
     cmds = {
         'dbg': f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS',
