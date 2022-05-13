@@ -72,10 +72,12 @@ DefaultValue = False
 [PluginConfig "split_debug_info"]
 Type = bool
 Optional = true
+Help = Split debug info for binaries into a separate, optional output.
 
 [PluginConfig "strip_tool"]
 DefaultValue = eu-strip
 Inherit = true
+Help = Tool to use to strip debug info. This is temporary and will be removed later!
 
 [FeatureFlags]
 ExcludeGoRules = true
