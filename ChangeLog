@@ -1,3 +1,9 @@
+Version 0.4.0
+-------------
+    * Add config option to make licences mandatory (#25)
+    * Add basic split debug info support (#26)
+    * Fix embedding directories by name (#28)
+
 Version 0.3.2
 -------------
     * Update to use new version of the tools which handles no tests #24
