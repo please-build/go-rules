@@ -96,3 +96,11 @@ go_module(
         ":humanize",
     ],
 )
+
+go_module(
+    name = "xxhash",
+    licences = ["MIT"],
+    module = "github.com/cespare/xxhash/v2",
+    version = "v2.1.2",
+    visibility = ["PUBLIC"],
+)

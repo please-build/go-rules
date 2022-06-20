@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/install/exec"
 	"github.com/please-build/go-rules/tools/please_go/install/toolchain"
-	"github.com/please-build/go-rules/tools/please_go/embed"
 )
 
 const baseWorkDir = "_work"
@@ -409,7 +409,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, asmFiles)
+		asmObjFiles, err := install.tc.Asm(importPath, pkg.Dir, workDir, install.trimPath, asmFiles)
 		if err != nil {
 			return err
 		}
