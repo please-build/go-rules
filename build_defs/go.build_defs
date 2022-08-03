@@ -623,7 +623,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         labels=labels,
         requires=['go'],
         provides={
-            'test': lib,
+            'go': lib,
         },
         pre_build=_collect_linker_flags(static, definitions),
         stamp = stamp,

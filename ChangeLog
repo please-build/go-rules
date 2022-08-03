@@ -1,3 +1,8 @@
+Version 0.4.3
+-------------
+    * Expose go_binary sources when included as a go_test dependency (#35)
+    * Fix `go_library` for 1.19 to include package name when compiling.
+
 Version 0.4.2
 -------------
     * Fix assembly for go_library for Go 1.19
