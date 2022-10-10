@@ -425,7 +425,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             test_only = test_only,
         )
 
-    file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
+    file_srcs = [src for src in srcs if not looks_like_build_label(src)]
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
     subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
 
