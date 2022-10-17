@@ -1,3 +1,7 @@
+Version 0.5.0
+-------------
+    * Add `env` to `go_test`, allowing specifying extra env vars.
+
 Version 0.4.4
 -------------
     * Remove additional 'test' labels on libraries.
