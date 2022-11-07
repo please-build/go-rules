@@ -51,7 +51,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
 
     if architectures and CONFIG.GO.CGO_ENABLED == "1":
-        cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO_C_FLAGS}\" && export CC=$TOOLS_CC"
+        cmd += f" && export CGO_ENABLED={CONFIG.GO.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO.C_FLAGS}\" && export CC=$TOOLS_CC"
 
     tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
     for arch in architectures:
