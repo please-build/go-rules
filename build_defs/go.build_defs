@@ -235,7 +235,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -p {package_path} -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO.GO_TOOL],
             test_only = test_only,
             labels=labels,
@@ -256,7 +256,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             building_description = 'Packing...',
             requires = ['go'],
             labels = labels+link_labels,
-            provides =  provides,
+            provides = provides,
             test_only = test_only,
             exported_deps = exported_deps,
             deps = deps,
@@ -305,7 +305,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         visibility = visibility,
         building_description = "Compiling...",
         requires = ['go'],
-        provides= provides,
+        provides = provides,
         labels = labels+link_labels + [f"go_package:{package_path}"] if _generate_import_config else [],
         test_only = test_only,
         tools = tools,
@@ -589,7 +589,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _generate_import_config=False,
         import_path="main",
     )
-    cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
+    cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name=name,
@@ -598,14 +598,15 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         deps=deps,
         test_only=test_only,
     )
-
+    out = out or name
     return build_rule(
         name=name,
         srcs=[lib],
         deps=deps,
         data=data,
         debug_data=debug_data,
-        outs=[out or name],
+        outs=[out],
+        optional_outs = [out + '.sym'] if CONFIG.GO.SPLIT_DEBUG_INFO else None,
         cmd=cmds,
         debug_cmd=debug_cmd,
         building_description="Linking...",
@@ -618,6 +619,9 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         visibility=visibility,
         labels=labels,
         requires=['go'],
+        provides={
+            'go': lib,
+        },
         pre_build=_collect_linker_flags(static, definitions),
         stamp = stamp,
     )
@@ -627,7 +631,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=[],
             labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO.DEFAULT_STATIC,
-            definitions:str|list|dict=None):
+            definitions:str|list|dict=None, env:dict=None):
     """Defines a Go test rule.
 
     Args:
@@ -659,6 +663,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
                      when calling the Go linker.  If set to a list, pass each value as a
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
+      env (dict): Additional environment variables to set for the test
     """
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
@@ -765,7 +770,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         size = size,
         flaky = flaky,
         test_outputs = test_outputs,
-        requires = ['go', 'test'],
+        requires = ['go'],
         labels = labels,
         binary = True,
         test = True,
@@ -773,6 +778,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         needs_transitive_deps = True,
         output_is_complete = True,
         pre_build = _collect_linker_flags(static, definitions),
+        env = env,
     )
 
 
@@ -1301,11 +1307,11 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
         'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS_GO'
+        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd}{package_flag} $SRCS_GO'
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False):
+def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False):
     """Returns the commands to run for linking a Go binary."""
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
@@ -1334,6 +1340,13 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     if len(defs) > 0:
         flags += " " + defs
+
+    if split_debug:
+        return f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS && $TOOLS_STRIP -o $OUT -f $OUT.sym $OUT', {
+            'go': [CONFIG.GO.GO_TOOL],
+            'ld': [CONFIG.GO.CC_TOOL],
+            'strip': [CONFIG.GO.STRIP_TOOL],
+        }
 
     cmds = {
         'dbg': f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS',
