@@ -51,7 +51,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
 
     if architectures and CONFIG.GO.CGO_ENABLED == "1":
-        cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO_C_FLAGS}\" && export CC=$TOOLS_CC"
+        flags = " ".join(CONFIG.GO.C_FLAGS)
+        cmd += f" && export CGO_ENABLED={CONFIG.GO.CGO_ENABLED} && export CFLAGS=\"{flags}\" && export CC=$TOOLS_CC"
 
     tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
     for arch in architectures:
@@ -1041,7 +1042,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         'please_go': [CONFIG.GO.PLEASE_GO_TOOL],
     }
     if CONFIG.GO.CC_TOOL:
-        tools["cc"] = [CONFIG.CC_TOOL]
+        tools["cc"] = [CONFIG.GO.CC_TOOL]
 
     return build_rule(
         name = name,
@@ -1265,9 +1266,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     )
 
 def _set_go_env():
-    if CONFIG.GOROOT:
-        go_root = CONFIG.GOROOT
-    elif CONFIG.HOSTOS == 'freebsd':
+    if CONFIG.HOSTOS == 'freebsd':
         # FreeBSD has some very strange semantics around hardlinks that lead to it finding
         # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
         # the most recent hardlink to the file). We can work around this way although it's
@@ -1275,9 +1274,11 @@ def _set_go_env():
         go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
+
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
     if CONFIG.GO.C_FLAGS:
-        cmd = f'{cmd} && export CFLAGS="{CONFIG.GO.C_FLAGS}"'
+        flags = " ".join(CONFIG.GO.C_FLAGS)
+        cmd = f'{cmd} && export CFLAGS="{flags}"'
     if CONFIG.GO.LD_FLAGS:
         cmd = f'{cmd} && export LDFLAGS="{CONFIG.GO.LD_FLAGS}"'
     if CONFIG.OS != CONFIG.HOSTOS or CONFIG.ARCH != CONFIG.HOSTARCH:
