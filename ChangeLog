@@ -1,6 +1,8 @@
 Version 0.5.1
 -------------
     * Fix the CGO config options in the go_toolchain() rule #44
+    * Fix the compiler flags on the cgo rules #43
+    * Trim path when cross-compiling the toolchain #40
 
 Version 0.5.0
 -------------
