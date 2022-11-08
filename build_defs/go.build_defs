@@ -51,7 +51,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
 
     if architectures and CONFIG.GO.CGO_ENABLED == "1":
-        cmd += f" && export CGO_ENABLED={CONFIG.GO.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO.C_FLAGS}\" && export CC=$TOOLS_CC"
+        flags = " ".join(CONFIG.GO.C_FLAGS)
+        cmd += f" && export CGO_ENABLED={CONFIG.GO.CGO_ENABLED} && export CFLAGS=\"{flags}\" && export CC=$TOOLS_CC"
 
     tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
     for arch in architectures:
@@ -1273,7 +1274,8 @@ def _set_go_env():
 
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
     if CONFIG.GO.C_FLAGS:
-        cmd = f'{cmd} && export CFLAGS="{CONFIG.GO.C_FLAGS}"'
+        flags = " ".join(CONFIG.GO.C_FLAGS)
+        cmd = f'{cmd} && export CFLAGS="{flags}"'
     if CONFIG.GO.LD_FLAGS:
         cmd = f'{cmd} && export LDFLAGS="{CONFIG.GO.LD_FLAGS}"'
     if CONFIG.OS != CONFIG.HOSTOS or CONFIG.ARCH != CONFIG.HOSTARCH:
