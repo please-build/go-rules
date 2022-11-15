@@ -43,9 +43,6 @@ ConfigKey = PleaseGoTool
 DefaultValue = //tools:please_go
 Inherit = true
 
-[PluginConfig "test_root_compat"]
-Optional = True
-
 [PluginConfig "delve_tool"]
 DefaultValue = dlv
 Inherit = true
