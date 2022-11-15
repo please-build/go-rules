@@ -1,2 +1,11 @@
-[go]
-ImportPath = github.com/thought-machine/please/root
+[Parse]
+BuildFileName = BUILD_FILE
+BuildFileName = BUILD
+PreloadSubincludes = ///go//build_defs:go
+
+[Plugin "go"]
+ImportPath = github.com/please-build/please-rules/root-test
+Target = //plugins:go
+
+[FeatureFlags]
+ExcludeGoRules = true

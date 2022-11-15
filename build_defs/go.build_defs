@@ -365,7 +365,7 @@ def _get_import_path(package="", import_path=""):
         if pkg:
             path = f'{CONFIG.GO.IMPORT_PATH}/{pkg}'
         else:
-            path = CONFIG.GO_IMPORT_PATH
+            path = CONFIG.GO.IMPORT_PATH
     else:
         path = pkg
 

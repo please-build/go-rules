@@ -2,7 +2,7 @@ subinclude("///e2e//build_defs:e2e")
 
 _please_repo_e2e_test = please_repo_e2e_test
 
-def please_repo_e2e_test(name, expected_output, plz_command, repo):
+def please_repo_e2e_test(name, expected_output=None, plz_command, repo, labels=[]):
     return _please_repo_e2e_test(
         name = name,
         expected_output = expected_output,
@@ -15,4 +15,5 @@ def please_repo_e2e_test(name, expected_output, plz_command, repo):
             "GO": ["//third_party/go:toolchain|go"],
             "PLEASE_GO": ["//tools/please_go:please_go"],
         },
+        labels = labels,
     )

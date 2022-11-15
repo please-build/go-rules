@@ -1,1 +1,1 @@
-module github.com/thought-machine/please/root
+module github.com/please-build/please-rules/root-test
