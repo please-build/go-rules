@@ -1,2 +1,6 @@
-# This is needed in 16.20.0 because the cross compile repo subinclude queues this package up for parse incorrectly
-# TODO(jpoole): remove this when that's fixed. Test with `plz build --arch linux_arm64`
+# Include the config file in the build graph otherwise `plz export` doesn't pick it up for the e2e tests
+filegroup(
+    name = "config",
+    srcs = [".plzconfig"],
+    visibility = ["PUBLIC"],
+)
