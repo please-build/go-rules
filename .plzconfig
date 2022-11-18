@@ -1,11 +1,14 @@
 [Please]
-Version = 16.20.0
+Version = 16.24.0
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
 RequireLicences = true
+
+[Plugin "e2e"]
+Target = //plugins:e2e
 
 [PluginDefinition]
 Name = go

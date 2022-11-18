@@ -1,0 +1,1 @@
+module github.com/please-build/please-rules/root-test
