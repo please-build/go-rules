@@ -1,0 +1,11 @@
+[Parse]
+BuildFileName = BUILD_FILE
+BuildFileName = BUILD
+
+[Plugin "go"]
+Target = //plugins:go
+PleaseGoTool = <pleasegotool>
+GoTool = <gotool>
+
+[FeatureFlags]
+ExcludeGoRules = true

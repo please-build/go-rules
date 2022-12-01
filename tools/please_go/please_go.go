@@ -11,6 +11,7 @@ import (
 	"github.com/please-build/go-rules/tools/please_go/covervars"
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
+	"github.com/please-build/go-rules/tools/please_go/generate"
 	"github.com/please-build/go-rules/tools/please_go/install"
 	"github.com/please-build/go-rules/tools/please_go/test"
 )
@@ -63,6 +64,9 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	Generate struct {
+		SrcRoot string `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -107,6 +111,12 @@ var subCommands = map[string]func() int{
 	"embed": func() int {
 		if err := embed.WriteEmbedConfig(opts.Embed.Args.Sources, os.Stdout); err != nil {
 			log.Fatalf("failed to generate embed config: %v", err)
+		}
+		return 0
+	},
+	"generate": func() int {
+		if err := generate.New(opts.Generate.SrcRoot).Generate(); err != nil {
+			log.Fatalf("failed to generate go rules: %v", err)
 		}
 		return 0
 	},

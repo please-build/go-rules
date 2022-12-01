@@ -1,5 +1,5 @@
 [Please]
-Version = 16.24.0
+Version = 16.25.1
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
