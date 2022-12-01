@@ -23,24 +23,35 @@ type Generate struct {
 }
 
 type rule struct {
-	name    string
-	kind    string
-	srcs    []string
-	cgoSrcs []string
-	deps    []string
+	name          string
+	kind          string
+	srcs          []string
+	cgoSrcs       []string
+	compilerFlags []string
+	linkerFlags   []string
+	pkgConfigs    []string
+	asmFiles      []string
+	hdrs          []string
+	deps          []string
+	embedPatterns []string
 }
 
-func New(srcRoot string) *Generate {
+func New(srcRoot string, requirements []string) *Generate {
 	return &Generate{
 		srcRoot:       srcRoot,
 		buildContext:  build.Default,
 		buildFileName: "BUILD",
+		deps:          requirements,
 	}
 }
 
 func (g *Generate) Generate() error {
-	g.readGoMod()
-	g.writeConfig()
+	if err := g.readGoMod(); err != nil {
+		return err
+	}
+	if err := g.writeConfig(); err != nil {
+		return err
+	}
 	return g.generateAll(g.srcRoot)
 }
 
@@ -51,18 +62,18 @@ func (g *Generate) readGoMod() error {
 	if err != nil {
 		return err
 	}
-	modFile, err := modfile.Parse(path, data, nil)
+	modFile, err := modfile.ParseLax(path, data, nil)
 	if err != nil {
 		return err
 	}
 
-	// TODO we should probably validate these are known modules
-	g.deps = make([]string, len(modFile.Require)+1)
-	for i, req := range modFile.Require {
-		g.deps[i] = req.Mod.Path
+	// TODO we could probably validate these are known modules
+	for _, req := range modFile.Require {
+		g.deps = append(g.deps, req.Mod.Path)
 	}
+
 	g.moduleName = modFile.Module.Mod.Path
-	g.deps[len(g.deps)-1] = g.moduleName
+	g.deps = append(g.deps, g.moduleName)
 	return nil
 }
 
@@ -122,7 +133,9 @@ func (g *Generate) generate(dir string) error {
 	if pkg.IsCommand() {
 		rules = append(rules, g.newRule(pkg, "go_binary", "cgo_binary"))
 	} else {
-		rules = append(rules, g.newRule(pkg, "go_library", "cgo_library"))
+		if (len(pkg.GoFiles) + len(pkg.CgoFiles)) != 0 {
+			rules = append(rules, g.newRule(pkg, "go_library", "cgo_library"))
+		}
 	}
 
 	return g.writeFile(dir, rules)
@@ -152,9 +165,40 @@ func (g *Generate) writeFile(pkg string, rules []*rule) error {
 
 	for _, rule := range rules {
 		r := NewRule(buildFile, rule.kind, rule.name)
-		r.SetAttr("srcs", NewStringList(rule.srcs))
+		if len(rule.cgoSrcs) > 0 {
+			r.SetAttr("srcs", NewStringList(rule.cgoSrcs))
+			r.SetAttr("go_srcs", NewStringList(rule.srcs))
+		} else {
+			r.SetAttr("srcs", NewStringList(rule.srcs))
+		}
 		if len(rule.deps) > 0 {
 			r.SetAttr("deps", NewStringList(rule.deps))
+		}
+		if len(rule.compilerFlags) > 0 {
+			r.SetAttr("pkg_config", NewStringList(rule.pkgConfigs))
+		}
+		if len(rule.compilerFlags) > 0 {
+			r.SetAttr("compiler_flags", NewStringList(rule.compilerFlags))
+		}
+		if len(rule.linkerFlags) > 0 {
+			r.SetAttr("linker_flags", NewStringList(rule.linkerFlags))
+		}
+		if len(rule.hdrs) > 0 {
+			r.SetAttr("hdrs", NewStringList(rule.hdrs))
+		}
+		if len(rule.asmFiles) > 0 {
+			r.SetAttr("asm_srcs", NewStringList(rule.asmFiles))
+		}
+		if len(rule.deps) > 0 {
+			r.SetAttr("deps", NewStringList(rule.deps))
+		}
+		if len(rule.embedPatterns) > 0 {
+			r.SetAttr("resources", &bazelbuild.CallExpr{
+				X: &bazelbuild.Ident{Name: "glob"},
+				List: []bazelbuild.Expr{
+					NewStringList(rule.embedPatterns),
+				},
+			})
 		}
 		r.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
 	}
@@ -201,20 +245,27 @@ func (g *Generate) newRule(pkg *build.Package, kind, cgoKind string) *rule {
 		kind = cgoKind
 	}
 
-	// TODO handle the other cgo things
+	// The name of the target should match the dir it's in, or the basename of the module if it's in the repo root.
 	name := filepath.Base(pkg.Dir)
-	if strings.HasSuffix(pkg.Dir, g.srcRoot) {
+	if strings.HasSuffix(pkg.Dir, g.srcRoot) || name == "" {
 		name = filepath.Base(g.moduleName)
 	}
-	if name == "_github_com_stretchr_objx#dl" {
-		panic(fmt.Sprintf("pkgDir: %v, srcRoot: %v", pkg.Dir, g.srcRoot))
+
+	if name == "." {
+		panic(fmt.Sprintf("%v %v", g.moduleName, pkg.Dir))
 	}
 	return &rule{
-		name:    name,
-		kind:    kind,
-		srcs:    pkg.GoFiles,
-		cgoSrcs: pkg.CgoFiles,
-		deps:    deps,
+		name:          name,
+		kind:          kind,
+		srcs:          pkg.GoFiles,
+		cgoSrcs:       pkg.CgoFiles,
+		compilerFlags: pkg.CgoCFLAGS,
+		linkerFlags:   pkg.CgoLDFLAGS,
+		pkgConfigs:    pkg.CgoPkgConfig,
+		asmFiles:      pkg.SFiles,
+		hdrs:          pkg.HFiles,
+		deps:          deps,
+		embedPatterns: pkg.EmbedPatterns,
 	}
 }
 

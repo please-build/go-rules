@@ -66,6 +66,9 @@ var opts = struct {
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	Generate struct {
 		SrcRoot string `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+		Args    struct {
+			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
+		} `positional-args:"true"`
 	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
 }{
 	Usage: `
@@ -115,7 +118,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		if err := generate.New(opts.Generate.SrcRoot).Generate(); err != nil {
+		if err := generate.New(opts.Generate.SrcRoot, opts.Generate.Args.Requirements).Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
 		return 0
