@@ -1,0 +1,22 @@
+subinclude(CONFIG.GO.REQUIRES)
+
+def _go_dep(import_path):
+    match = ""
+    for mod in GO_REQUIRES:
+        if import_path.startswith(mod) and len(match) < len(mod):
+            match = mod
+
+    if not match:
+        fail(f"can't find go module for import path {import_path}")
+
+    pkg_name = import_path.removeprefix(match).removeprefix("/")
+    if not pkg_name:
+        pkg_name = ":" + basename(match)
+
+    subrepo_name = match.replace("/", "_")
+    return f"///third_party/go/{subrepo_name}//{pkg_name}"
+
+
+
+def go_deps(deps: list):
+    return [_go_dep(dep) for dep in deps]

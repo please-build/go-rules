@@ -15,6 +15,7 @@ go_binary(
         "//tools/please_go/install",
         "//tools/please_go/test",
         "//tools/please_go/generate",
+        "//tools/please_go/goget",
     ],
 )
 
@@ -41,6 +42,7 @@ genrule(
         "//tools/please_go/install/toolchain:srcs",
         "//tools/please_go/test:srcs",
         "//tools/please_go/generate:srcs",
+        "//tools/please_go/goget:srcs",
     ],
 )
 

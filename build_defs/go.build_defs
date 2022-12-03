@@ -1071,8 +1071,18 @@ def _add_ld_flags(name:str, stdout:list):
 
 
 def _module_rule_name(module):
-    return module.replace("/", "_").replace(".", "_")
+    return module.replace("/", "_")
 
+def require(mods:dict):
+    for mod, ver in mods.items():
+        go_get(module = mod, version = ver, requirements = mods.keys())
+    module_requirements = "\n    ".join([f"{key} " for key in mods.keys()])
+
+    return text_file(
+        name = "go.mod",
+        content=f"module example\n require(\n = [{module_requirements}]",
+        visibility=["PUBLIC"],
+    )
 
 def go_get(module: str, version:str, requirements:list=[], licences=None, patch=None):
     name = _module_rule_name(module)

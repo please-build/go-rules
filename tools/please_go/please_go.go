@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/please-build/go-rules/tools/please_go/goget"
 	"log"
 	"os"
 	"path/filepath"
@@ -66,10 +67,17 @@ var opts = struct {
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	Generate struct {
 		SrcRoot string `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+		ModFile string `long:"mod_file"`
 		Args    struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
 	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	GoGet struct {
+		ModFile string `short:"m" long:"mod_file" description:"A go.mod file to use as a set of reuirementzs"`
+		Args    struct {
+			Requirements []string `positional-arg-name:"requirements" description:"a set of module@version pairs"`
+		} `positional-args:"true"`
+	} `command:"get" description:"Generate go_get rules"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -119,6 +127,18 @@ var subCommands = map[string]func() int{
 	},
 	"generate": func() int {
 		if err := generate.New(opts.Generate.SrcRoot, opts.Generate.Args.Requirements).Generate(); err != nil {
+			log.Fatalf("failed to generate go rules: %v", err)
+		}
+		return 0
+	},
+	"get": func() int {
+		if opts.GoGet.ModFile != "" {
+			if err := goget.GetMod(opts.GoGet.ModFile); err != nil {
+				log.Fatalf("failed to generate go rules: %v", err)
+			}
+			return 0
+		}
+		if err := goget.GoGet(opts.GoGet.Args.Requirements); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
 		return 0

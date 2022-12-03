@@ -14,12 +14,14 @@ import (
 )
 
 type Generate struct {
-	moduleName    string
-	srcRoot       string
-	buildContext  build.Context
-	buildFileName string
-	deps          []string
-	pluginTarget  string
+	moduleName         string
+	srcRoot            string
+	buildContext       build.Context
+	buildFileName      string
+	deps               []string
+	pluginTarget       string
+	replace            map[string]string
+	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 }
 
 type rule struct {
@@ -38,10 +40,11 @@ type rule struct {
 
 func New(srcRoot string, requirements []string) *Generate {
 	return &Generate{
-		srcRoot:       srcRoot,
-		buildContext:  build.Default,
-		buildFileName: "BUILD",
-		deps:          requirements,
+		srcRoot:            srcRoot,
+		buildContext:       build.Default,
+		buildFileName:      "BUILD",
+		deps:               requirements,
+		knownImportTargets: map[string]string{},
 	}
 }
 
@@ -74,6 +77,11 @@ func (g *Generate) readGoMod() error {
 
 	g.moduleName = modFile.Module.Mod.Path
 	g.deps = append(g.deps, g.moduleName)
+
+	g.replace = make(map[string]string, len(modFile.Replace))
+	for _, replace := range modFile.Replace {
+		g.replace[replace.Old.Path] = replace.New.Path
+	}
 	return nil
 }
 
@@ -97,7 +105,7 @@ func (g *Generate) generateAll(dir string) error {
 		}
 		if info.IsDir() {
 			if info.Name() == "testdata" {
-				return filepath.SkipDir // Dirs named testdata are deemed not to contain buildable Go code.
+				return filepath.SkipDir
 			}
 			if err := g.generate(filepath.Clean(strings.TrimPrefix(path, g.srcRoot))); err != nil {
 				switch err.(type) {
@@ -129,16 +137,7 @@ func (g *Generate) generate(dir string) error {
 	if err != nil {
 		return err
 	}
-	var rules []*rule
-	if pkg.IsCommand() {
-		rules = append(rules, g.newRule(pkg, "go_binary", "cgo_binary"))
-	} else {
-		if (len(pkg.GoFiles) + len(pkg.CgoFiles)) != 0 {
-			rules = append(rules, g.newRule(pkg, "go_library", "cgo_library"))
-		}
-	}
-
-	return g.writeFile(dir, rules)
+	return g.writeFile(dir, g.newRule(pkg))
 }
 
 func (g *Generate) writeFile(pkg string, rules []*rule) error {
@@ -231,19 +230,33 @@ func NewStringList(ss []string) *bazelbuild.ListExpr {
 	return l
 }
 
-func (g *Generate) newRule(pkg *build.Package, kind, cgoKind string) *rule {
+func packageKind(pkg *build.Package) string {
+	cgo := len(pkg.CgoFiles) > 0
+	if pkg.IsCommand() && cgo {
+		return "cgo_binary"
+	}
+	if pkg.IsCommand() {
+		return "go_binary"
+	}
+	if cgo {
+		return "cgo_library"
+	}
+	return "go_library"
+}
+
+func (g *Generate) depTargets(imports []string) []string {
 	deps := make([]string, 0)
-	for _, path := range pkg.Imports {
+	for _, path := range imports {
 		target := g.depTarget(path)
 		if target == "" {
 			continue
 		}
 		deps = append(deps, target)
 	}
+	return deps
+}
 
-	if len(pkg.CgoFiles) > 0 {
-		kind = cgoKind
-	}
+func (g *Generate) newRule(pkg *build.Package) []*rule {
 
 	// The name of the target should match the dir it's in, or the basename of the module if it's in the repo root.
 	name := filepath.Base(pkg.Dir)
@@ -254,25 +267,41 @@ func (g *Generate) newRule(pkg *build.Package, kind, cgoKind string) *rule {
 	if name == "." {
 		panic(fmt.Sprintf("%v %v", g.moduleName, pkg.Dir))
 	}
-	return &rule{
-		name:          name,
-		kind:          kind,
-		srcs:          pkg.GoFiles,
-		cgoSrcs:       pkg.CgoFiles,
-		compilerFlags: pkg.CgoCFLAGS,
-		linkerFlags:   pkg.CgoLDFLAGS,
-		pkgConfigs:    pkg.CgoPkgConfig,
-		asmFiles:      pkg.SFiles,
-		hdrs:          pkg.HFiles,
-		deps:          deps,
-		embedPatterns: pkg.EmbedPatterns,
+	var rules []*rule
+
+	if len(pkg.GoFiles) > 0 || len(pkg.CgoFiles) > 0 {
+		packageRule := &rule{
+			name:          name,
+			kind:          packageKind(pkg),
+			srcs:          pkg.GoFiles,
+			cgoSrcs:       pkg.CgoFiles,
+			compilerFlags: pkg.CgoCFLAGS,
+			linkerFlags:   pkg.CgoLDFLAGS,
+			pkgConfigs:    pkg.CgoPkgConfig,
+			asmFiles:      pkg.SFiles,
+			hdrs:          pkg.HFiles,
+			deps:          g.depTargets(pkg.Imports),
+			embedPatterns: pkg.EmbedPatterns,
+		}
+		rules = append(rules, packageRule)
 	}
+	return rules
 }
 
 func (g *Generate) depTarget(importPath string) string {
-	// TODO memoization
+	if target, ok := g.knownImportTargets[importPath]; ok {
+		return target
+	}
+
+	if replacement, ok := g.replace[importPath]; ok {
+		target := g.depTarget(replacement)
+		g.knownImportTargets[importPath] = target
+		return target
+	}
+
 	module := ""
 
+	// TODO a trie would be a more sensible data structure here
 	for _, mod := range g.deps {
 		if strings.HasPrefix(importPath, mod) {
 			if len(module) < len(mod) {
@@ -282,18 +311,23 @@ func (g *Generate) depTarget(importPath string) string {
 	}
 
 	if module == "" {
-		// If we can't find this import, assume it's from the goroot
+		// If we can't find this import, we can return nothing and the build rule will fail at build time reporting a
+		// sensible error. It may also be an import from the go SDK which is fine.
 		return ""
 	}
 
 	subrepoName := strings.ReplaceAll(module, "/", "_")
-	subrepoName = strings.ReplaceAll(subrepoName, ".", "_")
 
-	packageName := filepath.Clean(strings.TrimPrefix(importPath, module))
+	packageName := strings.TrimPrefix(importPath, module)
 	packageName = strings.TrimPrefix(packageName, "/")
 
-	if packageName == "." {
-		return fmt.Sprintf("///third_party/go/%s//:%s", subrepoName, filepath.Base(module))
+	target := ""
+	if packageName == "" {
+		target = fmt.Sprintf("///third_party/go/%s//:%s", subrepoName, filepath.Base(module))
+	} else {
+		target = fmt.Sprintf("///third_party/go/%s//%s:%s", subrepoName, packageName, filepath.Base(packageName))
 	}
-	return fmt.Sprintf("///third_party/go/%s//%s:%s", subrepoName, packageName, filepath.Base(packageName))
+
+	g.knownImportTargets[importPath] = target
+	return target
 }
