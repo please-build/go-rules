@@ -1,0 +1,17 @@
+package(go_import_path = "github.com/thought-machine/please")
+subinclude("//build_defs:go")
+
+go_library(
+    name = "importpath",
+    srcs = ["importpath.go"],
+)
+
+go_test(
+    name = "importpath_test",
+    srcs = ["importpath_test.go"],
+    external = True,
+    deps = [
+        ":importpath",
+        "//third_party/go:testify",
+    ],
+)

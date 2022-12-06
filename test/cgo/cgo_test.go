@@ -1,10 +1,15 @@
 package cgo
 
-import "testing"
+import (
+	"testing"
 
-func TestHello(t *testing.T) {
-	msg := Hello()
-	if msg != "hello" {
-		t.Fatalf("unexpected msg %v", msg)
-	}
+	"github.com/stretchr/testify/assert"
+)
+
+func TestAnswer(t *testing.T) {
+	assert.Equal(t, 42, GetAnswer())
+}
+
+func TestQuestion(t *testing.T) {
+	assert.NoError(t, CheckAnswer("42"))
 }

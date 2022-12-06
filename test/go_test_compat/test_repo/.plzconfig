@@ -1,0 +1,11 @@
+[Parse]
+BuildFileName = BUILD_FILE
+BuildFileName = BUILD
+PreloadSubincludes = ///go//build_defs:go
+
+[Plugin "go"]
+Target = //plugins:go
+TestRootCompat = true
+
+[FeatureFlags]
+ExcludeGoRules = true

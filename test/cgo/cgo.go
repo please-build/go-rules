@@ -1,8 +1,9 @@
 package cgo
 
-// #include "hello.h"
+// #include "cgo.h"
 import "C"
 
-func Hello() string {
-	return C.GoString(C.hello())
+// GetAnswer returns the answer to the great question of Life, the Universe and Everything.
+func GetAnswer() int {
+	return int(C.GetAnswer())
 }

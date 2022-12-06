@@ -1,3 +1,5 @@
-char *hello() {
-    return "hello";
+#include "cgo.h"
+
+int GetAnswer() {
+  return 42;
 }

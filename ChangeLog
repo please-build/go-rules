@@ -1,3 +1,36 @@
+Version 0.5.1
+-------------
+    * Fix the CGO config options in the go_toolchain() rule #44
+    * Fix the compiler flags on the cgo rules #43
+    * Trim path when cross-compiling the toolchain #40
+
+Version 0.5.0
+-------------
+    * Add `env` to `go_test`, allowing specifying extra env vars.
+
+Version 0.4.4
+-------------
+    * Remove additional 'test' labels on libraries.
+
+Version 0.4.3
+-------------
+    * Expose go_binary sources when included as a go_test dependency (#35)
+    * Fix `go_library` for 1.19 to include package name when compiling.
+
+Version 0.4.2
+-------------
+    * Fix assembly for go_library for Go 1.19
+
+Version 0.4.1
+-------------
+    * Fix assembly for Go 1.19 (#33)
+
+Version 0.4.0
+-------------
+    * Add config option to make licences mandatory (#25)
+    * Add basic split debug info support (#26)
+    * Fix embedding directories by name (#28)
+
 Version 0.3.2
 -------------
     * Update to use new version of the tools which handles no tests #24
