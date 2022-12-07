@@ -1,4 +1,4 @@
-subinclude("//build_defs:go")
+subinclude("//build_defs:cgo")
 
 cgo_library(
     name = "cgo",
