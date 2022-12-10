@@ -16,7 +16,7 @@ var opts = struct {
 	Usage     string
 	Verbosity logging.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 	Args      struct {
-		Packages []string `positional-arg-name:"package" required:"true"`
+		Files []string `positional-arg-name:"file" required:"true"`
 	} `positional-args:"true"`
 }{
 	Usage: `
@@ -37,7 +37,7 @@ func main() {
 	if err := json.NewDecoder(os.Stdin).Decode(req); err != nil {
 		log.Fatalf("Failed to read request: %s", err)
 	}
-	resp, err := packages.Load(req, opts.Args.Packages)
+	resp, err := packages.Load(req, opts.Args.Files)
 	if err != nil {
 		log.Fatalf("Failed to load packages: %s", err)
 	}
