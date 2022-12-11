@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/types"
-	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/peterebden/go-cli-init/v5/logging"
 	"golang.org/x/tools/go/packages"
@@ -29,7 +30,6 @@ type DriverResponse struct {
 	Sizes      *types.StdSizes
 	Roots      []string `json:",omitempty"`
 	Packages   []*packages.Package
-	GoVersion  int
 }
 
 // Load reads a set of packages and returns information about them.
@@ -51,48 +51,125 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err := build.Run(); err != nil {
 		return nil, handleSubprocessErr(build, err)
 	}
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	defer w.Close()
-
+	// TODO(peterebden): It would be nicer to connect these two together with a pipe. That seems to be
+	//                   hanging when I try it; I'm not sure what is wrong but we should be able to figure it out.
 	deps := exec.Command("plz", "query", "deps", "-")
 	deps.Stdin = bytes.NewReader(targetList)
 	deps.Stderr = &bytes.Buffer{}
-	deps.Stdout = w
-	if err := deps.Start(); err != nil {
-		return nil, err
-	}
-	print := exec.Command("plz", "query", "print", "--json", "-")
-	print.Stdin = r
-	print.Stderr = &bytes.Buffer{}
-	print.Stdout = &bytes.Buffer{}
-	if err := print.Start(); err != nil {
-		return nil, err
-	}
-	if err := deps.Wait(); err != nil {
+	depList, err := deps.Output()
+	if err != nil {
 		return nil, handleSubprocessErr(deps, err)
 	}
-	if err := print.Wait(); err != nil {
+	print := exec.Command("plz", "query", "print", "--json", "-")
+	print.Stdin = bytes.NewReader(depList)
+	print.Stderr = &bytes.Buffer{}
+	output, err := print.Output()
+	if err != nil {
 		return nil, handleSubprocessErr(print, err)
 	}
+	reporoot := exec.Command("plz", "query", "reporoot")
+	reporoot.Stderr = &bytes.Buffer{}
+	root, err := reporoot.Output()
+	if err != nil {
+		return nil, handleSubprocessErr(reporoot, err)
+	}
 	targets := map[string]*buildTarget{}
-	if err := json.Unmarshal(print.Stdout.(*bytes.Buffer).Bytes(), targets); err != nil {
+	if err := json.Unmarshal(output, &targets); err != nil {
 		return nil, err
 	}
-	return &DriverResponse{}, fmt.Errorf("Not handled: %s ", targets)
+	for l, t := range targets {
+		pkg, name, _ := strings.Cut(l, ":")
+		t.Package = strings.TrimPrefix(pkg, "//")
+		t.Name = name
+		// Hardcoding plz-out/gen obviously isn't generally correct, but it works for all the
+		// cases we care about.
+		t.OutputDir = filepath.Join(root, "plz-out/gen", t.Package)
+	}
+	m := map[string]struct{}{}
+	for _, file := range files {
+		m[file] = struct{}{}
+	}
+	return toResponse(targets, m), nil
 }
 
 // buildTarget is a minimal version of the target output structure from `plz query print`
 type buildTarget struct {
-	Deps   []string    `json:"deps"`
-	Labels []string    `json:"labels"`
-	Srcs   interface{} `json:"srcs"`
+	Deps      []string    `json:"deps"`
+	Labels    []string    `json:"labels"`
+	Srcs      interface{} `json:"srcs"`
+	Outs      []string    `json:"outs"`
+	Package   string      // Not in the output, but useful to have on here for later
+	OutputDir string      // Absolute path to output directory
+	Name      string
 }
 
 func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 	return fmt.Errorf("%s Stdout:\n%s", err, cmd.Stderr.(*bytes.Buffer).String())
+}
+
+// toResponse converts `plz query print` output to a DriverResponse
+func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct{}) *DriverResponse {
+	resp := &DriverResponse{}
+	for label, target := range targets {
+		for _, pkg := range target.ToPackages() {
+			pkg.ID = label
+			resp.Packages = append(resp.Packages, pkg)
+			for _, src := range pkg.GoFiles {
+				if _, present := originalFiles[src]; present {
+					resp.Roots = append(resp.Roots, pkg.Name)
+					break
+				}
+			}
+		}
+	}
+	return resp
+}
+
+// ToPackages converts this build target to the Go packages it represents.
+// There can be an arbitrary number of packages in a target:
+//   - 0 if it is not a Go package at all
+//   - 1 if it's a go_library
+//   - Many if it's a go_module
+func (t *buildTarget) ToPackages() []*packages.Package {
+	for _, l := range t.Labels {
+		if strings.HasPrefix(l, "go_module_path:") {
+			return t.toPackages(strings.TrimPrefix(l, "go_module_path:"))
+		}
+	}
+	// Not a module, might be a go_library or whatever
+	return t.toPackages("")
+}
+
+func (t *buildTarget) toPackages(module_path string) []*packages.Package {
+	ret := []*packages.Package{}
+	for _, l := range t.Labels {
+		if strings.HasPrefix(l, "go_package:") {
+			ret = append(ret, t.toPackage(module_path, strings.TrimPrefix(l, "go_package:")))
+		}
+	}
+	return ret
+}
+
+func (t *buildTarget) toPackage(module_path, package_path string) *packages.Package {
+	pkg := &packages.Package{
+		Path: package_path,
+	}
+	// This is a hack, the package name isn't necessarily the path name, but we haven't parsed it to know that.
+	if idx := strings.LastIndexByte(path, '/'); idx != -1 {
+		pkg.Name = path[idx+1:]
+	}
+	// From here on we start making a lot of assumptions about exactly how these things are structured.
+	if module_path != "" {
+		// This is part of a go_module.
+		outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(package_path, module_path))
+	}
+
+	if len(t.Outs) == 0 {
+		// Assume this is a go_module (its top level filegroup has no explicit outputs)
+
+	}
+
+	// srcs is a faff because they can be either named or not named, which encodes them differently.
+	log.Fatalf("here %T %#v %s %s", t.Srcs, t.Srcs, pkg.Name, t.Labels)
+	return pkg
 }
