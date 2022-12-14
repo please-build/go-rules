@@ -374,180 +374,6 @@ def _get_import_path(package="", import_path=""):
 
     return path
 
-def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
-                package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
-                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
-    """Generates a Go library which can be reused by other rules.
-
-    Note that by its nature this is something of a hybrid of Go and C rules. It can depend
-    on C / C++ rules, given the limitations of cgo (i.e. you will have to interact with them
-    through a C interface, although the objects themselves can contain C++). As mentioned
-    below, you will likely be better off wrapping your dependencies into a cc_static_library
-    rule and depending on that rather than depending directly on cc_library rules.
-
-    Note also that this does not honour Go's syntactic comments; you have to explicitly
-    specify which Go files are cgo vs. which are not, as well as C headers & sources and
-    any required cflags or ldflags.
-
-    Args:
-      name (str): Name of the rule.
-      srcs (list): Go source files to compile that have 'import "C"' declarations in them.
-      go_srcs (list): Any Go source files that do *not* have 'import "C"' declarations.
-      resources (list): Files to embed in the library using //go:embed directives.
-      c_srcs (list): Any C source files to include.
-      hdrs (list): Any C header files to include.
-      out (str): Name of output file. Defaults to name + '.a'.
-      compiler_flags (list): List of compiler flags to be passed when compiling the C code.
-      linker_flags (list): List of linker flags to be passed when linking a Go binary.
-      pkg_config (list): List of packages to pass to pkg-config.
-      subdir (str): Subdirectory that source files are in. Required if they're not in the
-                    current directory.
-      deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
-                   you will likely be better off wrapping them into a cc_static_library
-                   and depending on that.
-      visibility (list): Visibility specification
-      test_only (bool): If True, is only visible to test rules.
-      import_path (str): If set, this will override the import path of the generated go package.
-    """
-    assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
-
-    if CONFIG.BUILD_CONFIG == "cover":
-        linker_flags += ["-lgcov"]
-
-    if not srcs:
-        return go_library(
-            name = name,
-            srcs = go_srcs,
-            resources = resources,
-            package = package,
-            deps = deps,
-            import_path = import_path,
-            visibility = visibility,
-            test_only = test_only,
-        )
-
-    file_srcs = [src for src in srcs if not looks_like_build_label(src)]
-    post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
-    subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
-
-    # Resolve the import_path early
-    # _write_import_config_cmd won't resolve it again
-    import_path = _get_import_path(package or name, import_path)
-    compiler_flags_cmd = " ".join(compiler_flags)
-    if pkg_config:
-        pkg_configs = " ".join(pkg_config)
-        compiler_flags_cmd = f"{compiler_flags_cmd} $(pkg-config --cflags {pkg_configs})"
-    cgo_rule = build_rule(
-        name = name,
-        tag = 'cgo',
-        srcs = srcs + hdrs,
-        outs = {
-            'go': [subdir2 + src.replace('.go', '.cgo1.go') for src in file_srcs] + [subdir2 + '_cgo_gotypes.go'],
-            'c': [subdir2 + src.replace('.go', '.cgo2.c') for src in file_srcs] + [subdir2 + '_cgo_export.c'],
-            'h': [subdir2 + '_cgo_export.h'],
-        },
-        cmd = ' && '.join([
-            (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
-            'mkdir -p "$OUT_DIR"',
-            'cd $PKG_DIR/' + subdir,
-            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -- {compiler_flags_cmd} *.go',
-            # Remove the .o file which BSD sed gets upset about in the next command
-            'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
-            # cgo leaves absolute paths in these files which we must get rid of :(
-            'find "$OUT_DIR" -type f -maxdepth 1 | xargs sed -i -e "s|"$TMP_DIR"/||g"',
-            'cd "$TMP_DIR"',
-            f'ls {subdir2}*.c {subdir2}*.go',
-        ]),
-        tools = [CONFIG.GO.GO_TOOL],
-        post_build = post_build if file_srcs != srcs else None,
-        requires = ['go', 'cc_hdrs'],
-    )
-
-    # Compile the various bits
-    c_rule = c_library(
-        name = f'_{name}#c',
-        srcs = [cgo_rule + '|c'] + c_srcs,
-        hdrs = [cgo_rule + '|h'] + hdrs,
-        compiler_flags = compiler_flags + [
-            '-Wno-error',
-            '-Wno-unused-parameter',  # Generated code doesn't compile clean
-        ],
-        pkg_config_libs = pkg_config,
-        test_only = test_only,
-        deps = deps,
-    )
-    go_rule = go_library(
-        name = f'_{name}#go',
-        srcs = [cgo_rule + '|go'] + go_srcs,
-        resources = resources,
-        test_only = test_only,
-        complete = False,
-        deps = deps,
-        _generate_import_config=False,
-        import_path=import_path,
-    )
-
-    output = package if package else name
-    import_config = build_rule(
-        name=name,
-        tag='import_config',
-        cmd = _write_import_config_cmd(output, import_path),
-        outs = [f'{output}.importconfig'],
-        visibility=visibility,
-        test_only=test_only,
-    )
-
-    # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
-    return _merge_cgo_obj(
-        name = name,
-        a_rule = f':_{name}#go',
-        o_rule = c_rule,
-        visibility = visibility,
-        test_only = test_only,
-        linker_flags = linker_flags,
-        package = package,
-        labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
-        provides = {
-            'go': ':' + name,
-            'go_src': go_rule,
-            'cgo': c_rule,
-        },
-        deps = deps,
-        exported_deps=[import_config],
-    )
-
-
-def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
-                   linker_flags:list=[], deps=None, exported_deps=None, provides=None, package=None, labels:list=[]):
-    """Defines a rule to merge a cgo object into a Go library."""
-    if o_rule:
-        cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $SRCS_O && "$TOOLS_GO" tool pack r "$OUT" *.o'
-    else:
-        cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $PKG_DIR/*#c.a && "$TOOLS_GO" tool pack r "$OUT" *.o'
-
-    return build_rule(
-        name = name,
-        tag = tag,
-        srcs = {
-            'a': [a_rule],
-            'o': [o_rule] if o_rule else [],
-        },
-        outs = [(package or name) + '.a'],
-        cmd = cmd,
-        tools = {
-            'go': [CONFIG.GO.GO_TOOL],
-            'ar': [CONFIG.GO.AR_TOOL],
-        },
-        visibility = visibility,
-        test_only = test_only,
-        labels = ['cc:ld:' + flag for flag in linker_flags] + labels,
-        requires = ['go', 'cgo'],
-        provides = provides,
-        deps = deps,
-        exported_deps = exported_deps,
-    )
-
-
 def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO.DEFAULT_STATIC,
               filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
@@ -630,6 +456,35 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         stamp = stamp,
     )
 
+def merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
+                   linker_flags:list=[], deps=None, exported_deps=None, provides=None, package=None, labels:list=[]):
+    """Defines a rule to merge a cgo object into a Go library."""
+    if o_rule:
+        cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $SRCS_O && "$TOOLS_GO" tool pack r "$OUT" *.o'
+    else:
+        cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $PKG_DIR/*#c.a && "$TOOLS_GO" tool pack r "$OUT" *.o'
+
+    return build_rule(
+        name = name,
+        tag = tag,
+        srcs = {
+            'a': [a_rule],
+            'o': [o_rule] if o_rule else [],
+        },
+        outs = [(package or name) + '.a'],
+        cmd = cmd,
+        tools = {
+            'go': [CONFIG.GO.GO_TOOL],
+            'ar': [CONFIG.GO.AR_TOOL],
+        },
+        visibility = visibility,
+        test_only = test_only,
+        labels = ['cc:ld:' + flag for flag in linker_flags] + labels,
+        requires = ['go', 'cgo'],
+        provides = provides,
+        deps = deps,
+        exported_deps = exported_deps,
+    )
 
 def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
@@ -689,7 +544,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
 
     if cgo:
         archive_name = test_package + "_cgo"
-        lib_rule = _merge_cgo_obj(
+        lib_rule = merge_cgo_obj(
             name = name,
             tag='cgo',
             a_rule = lib_rule,
@@ -843,7 +698,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         labels=labels,
     )
     if cgo:
-        lib_rule = _merge_cgo_obj(
+        lib_rule = merge_cgo_obj(
             name = name,
             tag = 'cgo',
             a_rule = lib_rule,
@@ -1438,9 +1293,9 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
         return "", None, None
 
     # Delve command.
-    cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
+    cmd = f"$DEBUG_TOOLS_DLV exec {bin} --check-go-version=false"
     if CONFIG.DEBUG_PORT:
-        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2 --check-go-version=false"
+        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2"
     cmd = f"{cmd} -- {flags}"
 
     tools = {

@@ -6,6 +6,9 @@ GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
 
+[Plugin "cc"]
+Target = //plugins:cc
+
 [Plugin "e2e"]
 Target = //plugins:e2e
 

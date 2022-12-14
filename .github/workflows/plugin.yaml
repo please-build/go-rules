@@ -24,8 +24,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Test
-        run: ./pleasew test --profile release -p -v notice
       - name: Build
         run: ./pleasew build --profile release -p -v notice //package:release_files
       - name: Release
