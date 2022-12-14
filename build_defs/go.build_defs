@@ -940,6 +940,9 @@ def require(mods:dict):
     )
 
 def go_get(module: str, version:str, requirements:list=[], licences=None, patch=None):
+    if "go_get" not in CONFIG.GO.FEATURE_FLAGS:
+        fail("go_get() is not ready for production use. To use it, add \"go_get\" to plugin.go.featureflags")
+
     name = _module_rule_name(module)
     dl = go_mod_download(f"{name}_dl", module, version, licences=licences, patch=patch)
     requirements = " ".join(requirements)

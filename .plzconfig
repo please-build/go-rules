@@ -87,6 +87,12 @@ DefaultValue = eu-strip
 Inherit = true
 Help = Tool to use to strip debug info. This is temporary and will be removed later!
 
+[PluginConfig "feature_flags"]
+Repeatable = true
+Optional = true
+Inherit = true
+Help = Flags to enable in-development features, or toggle breaking changes
+
 [FeatureFlags]
 ExcludeGoRules = true
 
