@@ -1257,9 +1257,9 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
         return "", None, None
 
     # Delve command.
-    cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
+    cmd = f"$DEBUG_TOOLS_DLV exec {bin} --check-go-version=false"
     if CONFIG.DEBUG_PORT:
-        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2 --check-go-version=false"
+        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2"
     cmd = f"{cmd} -- {flags}"
 
     tools = {
