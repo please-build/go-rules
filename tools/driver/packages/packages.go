@@ -77,6 +77,14 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		}
 		relFiles[i] = file
 	}
+	// Find the GOROOT for stdlib imports.
+	// TODO(peterebden): This is not really correct, plz could be supplying it.
+	goroot := exec.Command("go", "env", "GOROOT")
+	goroot.Stderr = &bytes.Buffer{}
+	gorootPath, err := goroot.Output()
+	if err != nil {
+		return nil, handleSubprocessErr(goroot, err)
+	}
 	// We run Please as a subprocess to get the answers here.
 	// A cooler way of handling this in future would be to do this in-process; for that we'd
 	// need to define the SDK we keep talking about as a supported programmatic interface.
@@ -126,7 +134,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	for _, file := range files {
 		m[file] = struct{}{}
 	}
-	return toResponse(targets, m), nil
+	return toResponse(targets, m, strings.TrimSpace(string(gorootPath))), nil
 }
 
 // buildTarget is a minimal version of the target output structure from `plz query print`
@@ -146,7 +154,7 @@ func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 }
 
 // toResponse converts `plz query print` output to a DriverResponse
-func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct{}) *DriverResponse {
+func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct{}, goroot string) *DriverResponse {
 	resp := &DriverResponse{
 		Sizes: &types.StdSizes{
 			// These are obviously hardcoded. To worry about later.
@@ -178,6 +186,13 @@ func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct
 				importPath := strings.Trim(imp.Path.Value, `"`)
 				if p, present := m[importPath]; present {
 					pkg.Imports[importPath] = p
+				} else if !strings.Contains(importPath, ".") {
+					// Looks like a third-party package we _should_ know it but won't if there are missing dependencies or whatever.
+					log.Warning("Failed to map import path %s", importPath)
+				} else if p := createStdlibImport(importPath, goroot); p != nil {
+					pkg.Imports[importPath] = p
+					resp.Packages = append(resp.Packages, p)
+					m[importPath] = p
 				}
 			}
 		}
@@ -316,4 +331,26 @@ func directoriesToFiles(in []string, suffix string) ([]string, error) {
 		}
 	}
 	return files, nil
+}
+
+// createStdlibImport attempts to create an import for one of the stdlib packages.
+func createStdlibImport(path, goroot string) *packages.Package {
+	if path == "C" {
+		return nil // Cgo isn't a real import, of course.
+	}
+
+	pkg := &packages.Package{
+		PkgPath: path,
+		Imports: map[string]*packages.Package{},
+	}
+	dir := filepath.Join(goroot, "src", path)
+	for _, f := range allFilesInDir(dir, ".go") {
+		pkg.GoFiles = append(pkg.GoFiles, filepath.Join(dir, f))
+	}
+	if len(pkg.GoFiles) == 0 {
+		return nil // Assume this wasn't actually a stdlib package
+	}
+	pkg.CompiledGoFiles = pkg.GoFiles
+	parseFiles(pkg)
+	return pkg
 }
