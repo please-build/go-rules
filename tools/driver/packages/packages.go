@@ -147,7 +147,13 @@ func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 
 // toResponse converts `plz query print` output to a DriverResponse
 func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct{}) *DriverResponse {
-	resp := &DriverResponse{}
+	resp := &DriverResponse{
+		Sizes: &types.StdSizes{
+			// These are obviously hardcoded. To worry about later.
+			WordSize: 8,
+			MaxAlign: 8,
+		},
+	}
 	m := map[string]*packages.Package{}
 	for label, target := range targets {
 		for _, pkg := range target.ToPackages() {
