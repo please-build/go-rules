@@ -50,7 +50,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		files[i] = file
 	}
 	// Inputs can be either files or directories; here we turn them all into files.
-	files, err := directoriesToFiles(files, ".go")
+	files, err := directoriesToFiles(files)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct
 				importPath := strings.Trim(imp.Path.Value, `"`)
 				if p, present := m[importPath]; present {
 					pkg.Imports[importPath] = p
-				} else if !strings.Contains(importPath, ".") {
+				} else if strings.Contains(importPath, ".") {
 					// Looks like a third-party package we _should_ know it but won't if there are missing dependencies or whatever.
 					log.Warning("Failed to map import path %s", importPath)
 				} else if p := createStdlibImport(importPath, goroot); p != nil {
@@ -225,7 +225,7 @@ func (t *buildTarget) toPackages(modulePath string) []*packages.Package {
 				outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(pkg, modulePath))
 				for _, dir := range allDirsUnder(outDir) {
 					// This isn't efficient, we could have filtered this before and we will call it again, but just deal with it for now
-					if len(allFilesInDir(filepath.Join(outDir, dir), ".go")) > 0 {
+					if len(allGoFilesInDir(filepath.Join(outDir, dir))) > 0 {
 						ret = append(ret, t.toPackage(modulePath, filepath.Join(pkg, dir)))
 					}
 				}
@@ -249,7 +249,7 @@ func (t *buildTarget) toPackage(modulePath, packagePath string) *packages.Packag
 	if modulePath != "" {
 		// This is part of a go_module.
 		outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(packagePath, modulePath))
-		for _, f := range allFilesInDir(outDir, ".go") {
+		for _, f := range allGoFilesInDir(outDir) {
 			pkg.GoFiles = append(pkg.GoFiles, filepath.Join(outDir, f))
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
@@ -273,8 +273,8 @@ func (t *buildTarget) toPackage(modulePath, packagePath string) *packages.Packag
 	return pkg
 }
 
-// allFilesInDir returns all the files ending in a particular suffix in a given directory.
-func allFilesInDir(dirname, suffix string) []string {
+// allGoFilesInDir returns all the files ending in a particular suffix in a given directory.
+func allGoFilesInDir(dirname string) []string {
 	entries, err := os.ReadDir(dirname)
 	if err != nil {
 		log.Error("Failed to read directory %s: %s", dirname, err)
@@ -282,7 +282,7 @@ func allFilesInDir(dirname, suffix string) []string {
 	}
 	files := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if name := entry.Name(); strings.HasSuffix(name, suffix) {
+		if name := entry.Name(); strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
 			files = append(files, name)
 		}
 	}
@@ -317,13 +317,13 @@ func parseFiles(pkg *packages.Package) {
 }
 
 // directoriesToFiles expands any directories in the given list to files in that directory.
-func directoriesToFiles(in []string, suffix string) ([]string, error) {
+func directoriesToFiles(in []string) ([]string, error) {
 	files := make([]string, 0, len(in))
 	for _, x := range in {
 		if info, err := os.Stat(x); err != nil {
 			return nil, err
 		} else if info.IsDir() {
-			for _, f := range allFilesInDir(x, suffix) {
+			for _, f := range allGoFilesInDir(x) {
 				files = append(files, filepath.Join(x, f))
 			}
 		} else {
@@ -344,7 +344,7 @@ func createStdlibImport(path, goroot string) *packages.Package {
 		Imports: map[string]*packages.Package{},
 	}
 	dir := filepath.Join(goroot, "src", path)
-	for _, f := range allFilesInDir(dir, ".go") {
+	for _, f := range allGoFilesInDir(dir) {
 		pkg.GoFiles = append(pkg.GoFiles, filepath.Join(dir, f))
 	}
 	if len(pkg.GoFiles) == 0 {
