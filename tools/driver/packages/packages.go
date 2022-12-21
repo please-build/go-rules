@@ -157,7 +157,10 @@ func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct
 	m := map[string]*packages.Package{}
 	for label, target := range targets {
 		for _, pkg := range target.ToPackages() {
+			// TODO(peterebden): We should set pkg.ID to the plz label, but that requires all the go_module
+			//                   equivalents to be broken out to unique targets to be sensible.
 			pkg.ID = label
+			pkg.ID = pkg.PkgPath
 			resp.Packages = append(resp.Packages, pkg)
 			for _, src := range pkg.GoFiles {
 				if _, present := originalFiles[src]; present {
@@ -172,8 +175,9 @@ func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct
 	for _, pkg := range resp.Packages {
 		for _, file := range pkg.Syntax {
 			for _, imp := range file.Imports {
-				if p, present := m[imp.Path.Value]; present {
-					pkg.Imports[imp.Path.Value] = p
+				importPath := strings.Trim(imp.Path.Value, `"`)
+				if p, present := m[importPath]; present {
+					pkg.Imports[importPath] = p
 				}
 			}
 		}
@@ -289,7 +293,7 @@ func allDirsUnder(dirname string) (dirs []string) {
 func parseFiles(pkg *packages.Package) {
 	pkg.Fset = token.NewFileSet()
 	for _, src := range pkg.CompiledGoFiles {
-		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution)
+		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution|parser.ParseComments)
 		if err != nil {
 			log.Error("Failed to parse file %s: %s", src, err)
 		}
