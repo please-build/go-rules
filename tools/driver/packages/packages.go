@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"go/parser"
+	"go/token"
 	"go/types"
+	"io/fs"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -35,10 +39,48 @@ type DriverResponse struct {
 // Load reads a set of packages and returns information about them.
 // Most of the request structure isn't honoured at the moment.
 func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
+	// We need to find the plz repo that we need to be in (we might be invoked from outside it)
+	// For now we're assuming they're all in the same repo (which is probably reasonable) and just
+	// take the first one as indicative (which is maybe less so).
+	for i, file := range files {
+		file, err := filepath.Abs(file)
+		if err != nil {
+			return nil, err
+		}
+		files[i] = file
+	}
+	// Inputs can be either files or directories; here we turn them all into files.
+	files, err := directoriesToFiles(files, ".go")
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Chdir(filepath.Dir(files[0])); err != nil {
+		return nil, err
+	}
+	reporoot := exec.Command("plz", "query", "reporoot")
+	reporoot.Stderr = &bytes.Buffer{}
+	root, err := reporoot.Output()
+	if err != nil {
+		return nil, handleSubprocessErr(reporoot, err)
+	}
+	rootpath := strings.TrimSpace(string(root))
+	if err := os.Chdir(rootpath); err != nil {
+		return nil, err
+	}
+	// Now we have to make the filepaths relative, so plz understands them
+	// When https://github.com/thought-machine/please/issues/2618 is resolved, we won't need to do this.
+	relFiles := make([]string, len(files))
+	for i, file := range files {
+		file, err = filepath.Rel(rootpath, file)
+		if err != nil {
+			return nil, err
+		}
+		relFiles[i] = file
+	}
 	// We run Please as a subprocess to get the answers here.
 	// A cooler way of handling this in future would be to do this in-process; for that we'd
 	// need to define the SDK we keep talking about as a supported programmatic interface.
-	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, files...)...)
+	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, relFiles...)...)
 	whatinputs.Stderr = &bytes.Buffer{}
 	targetList, err := whatinputs.Output()
 	if err != nil {
@@ -67,12 +109,6 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err != nil {
 		return nil, handleSubprocessErr(print, err)
 	}
-	reporoot := exec.Command("plz", "query", "reporoot")
-	reporoot.Stderr = &bytes.Buffer{}
-	root, err := reporoot.Output()
-	if err != nil {
-		return nil, handleSubprocessErr(reporoot, err)
-	}
 	targets := map[string]*buildTarget{}
 	if err := json.Unmarshal(output, &targets); err != nil {
 		return nil, err
@@ -83,7 +119,8 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		t.Name = name
 		// Hardcoding plz-out/gen obviously isn't generally correct, but it works for all the
 		// cases we care about.
-		t.OutputDir = filepath.Join(root, "plz-out/gen", t.Package)
+		t.OutputDir = filepath.Join(rootpath, "plz-out/gen", t.Package)
+		t.InputDir = filepath.Join(rootpath, t.Package)
 	}
 	m := map[string]struct{}{}
 	for _, file := range files {
@@ -99,6 +136,7 @@ type buildTarget struct {
 	Srcs      interface{} `json:"srcs"`
 	Outs      []string    `json:"outs"`
 	Package   string      // Not in the output, but useful to have on here for later
+	InputDir  string      // Absolute path to input directory
 	OutputDir string      // Absolute path to output directory
 	Name      string
 }
@@ -110,14 +148,26 @@ func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 // toResponse converts `plz query print` output to a DriverResponse
 func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct{}) *DriverResponse {
 	resp := &DriverResponse{}
+	m := map[string]*packages.Package{}
 	for label, target := range targets {
 		for _, pkg := range target.ToPackages() {
 			pkg.ID = label
 			resp.Packages = append(resp.Packages, pkg)
 			for _, src := range pkg.GoFiles {
 				if _, present := originalFiles[src]; present {
-					resp.Roots = append(resp.Roots, pkg.Name)
+					resp.Roots = append(resp.Roots, pkg.ID)
 					break
+				}
+			}
+			m[pkg.PkgPath] = pkg
+		}
+	}
+	// Now we have all the packages, we need to populate the Imports properties
+	for _, pkg := range resp.Packages {
+		for _, file := range pkg.Syntax {
+			for _, imp := range file.Imports {
+				if p, present := m[imp.Path.Value]; present {
+					pkg.Imports[imp.Path.Value] = p
 				}
 			}
 		}
@@ -140,36 +190,120 @@ func (t *buildTarget) ToPackages() []*packages.Package {
 	return t.toPackages("")
 }
 
-func (t *buildTarget) toPackages(module_path string) []*packages.Package {
+func (t *buildTarget) toPackages(modulePath string) []*packages.Package {
 	ret := []*packages.Package{}
 	for _, l := range t.Labels {
 		if strings.HasPrefix(l, "go_package:") {
-			ret = append(ret, t.toPackage(module_path, strings.TrimPrefix(l, "go_package:")))
+			if pkg := strings.TrimPrefix(l, "go_package:"); strings.HasSuffix(pkg, "/...") {
+				// We specify everything under this directory, so we have to discover them all.
+				pkg = strings.TrimSuffix(pkg, "/...")
+				outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(pkg, modulePath))
+				for _, dir := range allDirsUnder(outDir) {
+					// This isn't efficient, we could have filtered this before and we will call it again, but just deal with it for now
+					if len(allFilesInDir(filepath.Join(outDir, dir), ".go")) > 0 {
+						ret = append(ret, t.toPackage(modulePath, filepath.Join(pkg, dir)))
+					}
+				}
+			} else {
+				ret = append(ret, t.toPackage(modulePath, pkg))
+			}
 		}
 	}
 	return ret
 }
 
-func (t *buildTarget) toPackage(module_path, package_path string) *packages.Package {
+func (t *buildTarget) toPackage(modulePath, packagePath string) *packages.Package {
+	// TODO(peterebden): Work out what we are meant to do with CompiledGoFiles
 	pkg := &packages.Package{
-		Path: package_path,
+		PkgPath: packagePath,
+		Imports: map[string]*packages.Package{},
 	}
 	// This is a hack, the package name isn't necessarily the path name, but we haven't parsed it to know that.
-	if idx := strings.LastIndexByte(path, '/'); idx != -1 {
-		pkg.Name = path[idx+1:]
-	}
+	pkg.Name = packagePath[strings.LastIndexByte(packagePath, '/')+1:]
 	// From here on we start making a lot of assumptions about exactly how these things are structured.
-	if module_path != "" {
+	if modulePath != "" {
 		// This is part of a go_module.
-		outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(package_path, module_path))
+		outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(packagePath, modulePath))
+		for _, f := range allFilesInDir(outDir, ".go") {
+			pkg.GoFiles = append(pkg.GoFiles, filepath.Join(outDir, f))
+		}
+		pkg.CompiledGoFiles = pkg.GoFiles
+		// TODO(peterebden): Other file types too (EmbedFiles, OtherFiles etc)
+		parseFiles(pkg)
+		return pkg
 	}
-
-	if len(t.Outs) == 0 {
-		// Assume this is a go_module (its top level filegroup has no explicit outputs)
-
+	// This is probably a go_library. Deal with its srcs (which are a faff because they can be named or not named, but we know go_library rules will be named)
+	// TODO(peterebden): This does not work with sources that are themselves generated...
+	if srcs, ok := t.Srcs.(map[string]interface{}); ok {
+		if goSrcsI, present := srcs["go"]; present {
+			if goSrcs, ok := goSrcsI.([]interface{}); ok {
+				for _, src := range goSrcs {
+					pkg.GoFiles = append(pkg.GoFiles, filepath.Join(t.InputDir, src.(string)))
+				}
+			}
+		}
 	}
-
-	// srcs is a faff because they can be either named or not named, which encodes them differently.
-	log.Fatalf("here %T %#v %s %s", t.Srcs, t.Srcs, pkg.Name, t.Labels)
+	pkg.CompiledGoFiles = pkg.GoFiles
+	parseFiles(pkg)
 	return pkg
+}
+
+// allFilesInDir returns all the files ending in a particular suffix in a given directory.
+func allFilesInDir(dirname, suffix string) []string {
+	entries, err := os.ReadDir(dirname)
+	if err != nil {
+		log.Error("Failed to read directory %s: %s", dirname, err)
+		return nil
+	}
+	files := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if name := entry.Name(); strings.HasSuffix(name, suffix) {
+			files = append(files, name)
+		}
+	}
+	return files
+}
+
+// allDirsUnder returns all directories underneath the given one
+func allDirsUnder(dirname string) (dirs []string) {
+	if err := filepath.WalkDir(dirname, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		} else if name := d.Name(); d.IsDir() && !strings.HasPrefix(name, ".") {
+			dirs = append(dirs, strings.TrimPrefix(strings.TrimPrefix(path, dirname), "/"))
+		}
+		return nil
+	}); err != nil {
+		log.Error("failed to read output dir %s", dirname)
+	}
+	return dirs
+}
+
+// parseFiles parses all the Go sources of a package and populates appropriate fields.
+func parseFiles(pkg *packages.Package) {
+	pkg.Fset = token.NewFileSet()
+	for _, src := range pkg.CompiledGoFiles {
+		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution)
+		if err != nil {
+			log.Error("Failed to parse file %s: %s", src, err)
+		}
+		pkg.Syntax = append(pkg.Syntax, f)
+	}
+}
+
+// directoriesToFiles expands any directories in the given list to files in that directory.
+func directoriesToFiles(in []string, suffix string) ([]string, error) {
+	files := make([]string, 0, len(in))
+	for _, x := range in {
+		if info, err := os.Stat(x); err != nil {
+			return nil, err
+		} else if info.IsDir() {
+			for _, f := range allFilesInDir(x, suffix) {
+				files = append(files, filepath.Join(x, f))
+			}
+		} else {
+			files = append(files, x)
+		}
+	}
+	return files, nil
 }
