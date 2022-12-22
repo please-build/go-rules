@@ -48,7 +48,7 @@ func WriteModuleInfo(modulePath, strip, src string, w io.Writer) error {
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
-			return err
+			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
 		pkgs = append(pkgs, pkg)
 	}
