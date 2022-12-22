@@ -64,7 +64,7 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
-	PkgInfo struct {
+	PackageInfo struct {
 		ImportPath string   `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
 		Pkg        string   `long:"pkg" env:"PKG" description:"Package that we're in within the repo"`
 		GoSrcs     []string `long:"go_src" short:"g" env:"SRCS_GO" description:"Go source files for the package"`
