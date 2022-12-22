@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
-	"go/parser"
-	"go/scanner"
-	"go/token"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -68,28 +65,7 @@ func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
 		return nil, err
 	}
 	bpkg.ImportPath = pkgPath
-	pkg := FromBuildPackage(bpkg)
-	pkg.Fset = token.NewFileSet()
-	for _, src := range pkg.GoFiles {
-		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution|parser.ParseComments)
-		if err != nil {
-			// Try to continue if there are just syntax errors; they are not our problem.
-			if l, ok := err.(scanner.ErrorList); ok {
-				for _, err := range l {
-					pkg.Errors = append(pkg.Errors, packages.Error{
-						Pos:  err.Pos.String(),
-						Msg:  err.Msg,
-						Kind: packages.ParseError,
-					})
-				}
-			} else {
-				return nil, fmt.Errorf("failed to parse %s: %w", src, err)
-			}
-		}
-		pkg.Syntax = append(pkg.Syntax, f)
-		// TODO(peterebden): Add type checking here
-	}
-	return pkg, nil
+	return FromBuildPackage(bpkg), nil
 }
 
 func serialise(pkgs []*packages.Package, w io.Writer) error {
