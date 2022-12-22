@@ -12,8 +12,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/peterebden/go-cli-init/v5/logging"
+	"golang.org/x/sync"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -77,114 +79,31 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		}
 		relFiles[i] = file
 	}
-	// Find the GOROOT for stdlib imports.
-	// TODO(peterebden): This is not really correct, plz could be supplying it.
+	pkgs, err := loadPackageInfo(relFiles)
+	if err != nil {
+		return nil, err
+	}
+	// Handle stdlib imports which are not currently done elsewhere.
+	// TODO(peterebden): This is not really correct, plz could be supplying it. However it's not
+	//                   trivial to stitch in sensibly there, and doesn't work in this repo...
 	goroot := exec.Command("go", "env", "GOROOT")
 	goroot.Stderr = &bytes.Buffer{}
 	gorootPath, err := goroot.Output()
 	if err != nil {
 		return nil, handleSubprocessErr(goroot, err)
 	}
-	// We run Please as a subprocess to get the answers here.
-	// A cooler way of handling this in future would be to do this in-process; for that we'd
-	// need to define the SDK we keep talking about as a supported programmatic interface.
-	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, relFiles...)...)
-	whatinputs.Stderr = &bytes.Buffer{}
-	targetList, err := whatinputs.Output()
-	if err != nil {
-		return nil, handleSubprocessErr(whatinputs, err)
+	// Now stitch in whatever stdlib packages are needed
+	m := make(map[string]*packages.Package, len(pkgs)+50)
+	for _, pkg := range pkgs {
+		m[pkg.PkgPath] = pkg
 	}
-	// We can't pipe whatinputs directly into plz build because we need the target list to use again.
-	build := exec.Command("plz", "build", "-")
-	build.Stdin = bytes.NewReader(targetList)
-	build.Stderr = &bytes.Buffer{}
-	if err := build.Run(); err != nil {
-		return nil, handleSubprocessErr(build, err)
-	}
-	// TODO(peterebden): It would be nicer to connect these two together with a pipe. That seems to be
-	//                   hanging when I try it; I'm not sure what is wrong but we should be able to figure it out.
-	deps := exec.Command("plz", "query", "deps", "-")
-	deps.Stdin = bytes.NewReader(targetList)
-	deps.Stderr = &bytes.Buffer{}
-	depList, err := deps.Output()
-	if err != nil {
-		return nil, handleSubprocessErr(deps, err)
-	}
-	print := exec.Command("plz", "query", "print", "--json", "-")
-	print.Stdin = bytes.NewReader(depList)
-	print.Stderr = &bytes.Buffer{}
-	output, err := print.Output()
-	if err != nil {
-		return nil, handleSubprocessErr(print, err)
-	}
-	targets := map[string]*buildTarget{}
-	if err := json.Unmarshal(output, &targets); err != nil {
-		return nil, err
-	}
-	for l, t := range targets {
-		pkg, name, _ := strings.Cut(l, ":")
-		t.Package = strings.TrimPrefix(pkg, "//")
-		t.Name = name
-		// Hardcoding plz-out/gen obviously isn't generally correct, but it works for all the
-		// cases we care about.
-		t.OutputDir = filepath.Join(rootpath, "plz-out/gen", t.Package)
-		t.InputDir = filepath.Join(rootpath, t.Package)
-	}
-	m := map[string]struct{}{}
-	for _, file := range files {
-		m[file] = struct{}{}
-	}
-	return toResponse(targets, m, strings.TrimSpace(string(gorootPath))), nil
-}
-
-// buildTarget is a minimal version of the target output structure from `plz query print`
-type buildTarget struct {
-	Deps      []string    `json:"deps"`
-	Labels    []string    `json:"labels"`
-	Srcs      interface{} `json:"srcs"`
-	Outs      []string    `json:"outs"`
-	Package   string      // Not in the output, but useful to have on here for later
-	InputDir  string      // Absolute path to input directory
-	OutputDir string      // Absolute path to output directory
-	Name      string
-}
-
-func handleSubprocessErr(cmd *exec.Cmd, err error) error {
-	return fmt.Errorf("%s Stdout:\n%s", err, cmd.Stderr.(*bytes.Buffer).String())
-}
-
-// toResponse converts `plz query print` output to a DriverResponse
-func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct{}, goroot string) *DriverResponse {
-	resp := &DriverResponse{
-		Sizes: &types.StdSizes{
-			// These are obviously hardcoded. To worry about later.
-			WordSize: 8,
-			MaxAlign: 8,
-		},
-	}
-	m := map[string]*packages.Package{}
-	for label, target := range targets {
-		for _, pkg := range target.ToPackages() {
-			// TODO(peterebden): We should set pkg.ID to the plz label, but that requires all the go_module
-			//                   equivalents to be broken out to unique targets to be sensible.
-			pkg.ID = label
-			pkg.ID = pkg.PkgPath
-			resp.Packages = append(resp.Packages, pkg)
-			for _, src := range pkg.GoFiles {
-				if _, present := originalFiles[src]; present {
-					resp.Roots = append(resp.Roots, pkg.ID)
-					break
-				}
-			}
-			m[pkg.PkgPath] = pkg
-		}
-	}
-	// Now we have all the packages, we need to populate the Imports properties
-	for _, pkg := range resp.Packages {
+	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			for _, imp := range file.Imports {
 				importPath := strings.Trim(imp.Path.Value, `"`)
 				if p, present := m[importPath]; present {
+					// This isn't _really_ necessary (it gets flattened back to much of what it
+					// was before) but there isn't really a good reason not to either.
 					pkg.Imports[importPath] = p
 				} else if strings.Contains(importPath, ".") {
 					// Looks like a third-party package we _should_ know it but won't if there are missing dependencies or whatever.
@@ -197,80 +116,86 @@ func toResponse(targets map[string]*buildTarget, originalFiles map[string]struct
 			}
 		}
 	}
-	return resp
+	return &DriverResponse{
+		Sizes: &types.StdSizes{
+			// These are obviously hardcoded. To worry about later.
+			WordSize: 8,
+			MaxAlign: 8,
+		},
+		Packages: pkgs,
+		// TODO(peterebden): Roots
+	}, nil
 }
 
-// ToPackages converts this build target to the Go packages it represents.
-// There can be an arbitrary number of packages in a target:
-//   - 0 if it is not a Go package at all
-//   - 1 if it's a go_library
-//   - Many if it's a go_module
-func (t *buildTarget) ToPackages() []*packages.Package {
-	for _, l := range t.Labels {
-		if strings.HasPrefix(l, "go_module_path:") {
-			return t.toPackages(strings.TrimPrefix(l, "go_module_path:"))
-		}
+// loadPackageInfo loads all the package information by executing Please.
+// A cooler way of handling this in future would be to do this in-process; for that we'd
+// need to define the SDK we keep talking about as a supported programmatic interface.
+func loadPackageInfo(files []string) ([]*packages.Package, error) {
+	r1, w1, err := os.Pipe()
+	if err != nil {
+		return nil, err
 	}
-	// Not a module, might be a go_library or whatever
-	return t.toPackages("")
-}
-
-func (t *buildTarget) toPackages(modulePath string) []*packages.Package {
-	ret := []*packages.Package{}
-	for _, l := range t.Labels {
-		if strings.HasPrefix(l, "go_package:") {
-			if pkg := strings.TrimPrefix(l, "go_package:"); strings.HasSuffix(pkg, "/...") {
-				// We specify everything under this directory, so we have to discover them all.
-				pkg = strings.TrimSuffix(pkg, "/...")
-				outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(pkg, modulePath))
-				for _, dir := range allDirsUnder(outDir) {
-					// This isn't efficient, we could have filtered this before and we will call it again, but just deal with it for now
-					if len(allGoFilesInDir(filepath.Join(outDir, dir))) > 0 {
-						ret = append(ret, t.toPackage(modulePath, filepath.Join(pkg, dir)))
-					}
-				}
-			} else {
-				ret = append(ret, t.toPackage(modulePath, pkg))
+	// N.B. Deliberate not to defer close of the readers here, we need to close them once processes
+	//      finish (otherwise the downstream ones keep trying to read them forever).
+	defer w1.Close()
+	r2, w2, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer w2.Close()
+	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, files...)...)
+	whatinputs.Stderr = &bytes.Buffer{}
+	whatinputs.Stdout = w1
+	deps := exec.Command("plz", "query", "deps", "-", "--hidden", "--include", "go_pkg_info")
+	deps.Stdin = r1
+	deps.Stderr = &bytes.Buffer{}
+	deps.Stdout = w2
+	build := exec.Command("plz", "build", "-")
+	build.Stdin = r2
+	build.Stderr = &bytes.Buffer{}
+	build.Stdout = &bytes.Buffer{}
+	if err := whatinputs.Start(); err != nil {
+		return nil, err
+	} else if err := deps.Start(); err != nil {
+		return nil, err
+	} else if err := build.Start(); err != nil {
+		return nil, err
+	}
+	if err := whatinputs.Wait(); err != nil {
+		return nil, handleSubprocessErr(whatinputs, err)
+	}
+	r1.Close()
+	if err := deps.Wait(); err != nil {
+		return nil, handleSubprocessErr(deps, err)
+	}
+	r2.Close()
+	if err := build.Wait(); err != nil {
+		return nil, handleSubprocessErr(build, err)
+	}
+	// Now we can read all the package info files from the build process' stdout.
+	pkgs := []*packages.Package{}
+	var lock sync.Mutex
+	var g errgroup.Group
+	g.SetLimit(8) // arbitrary limit since we're doing I/O
+	for _, file := range strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())) {
+		file := file
+		g.Go(func() error {
+			f, err := os.Open(file)
+			if err != nil {
+				return err
 			}
-		}
-	}
-	return ret
-}
-
-func (t *buildTarget) toPackage(modulePath, packagePath string) *packages.Package {
-	// TODO(peterebden): Work out what we are meant to do with CompiledGoFiles
-	pkg := &packages.Package{
-		PkgPath: packagePath,
-		Imports: map[string]*packages.Package{},
-	}
-	// This is a hack, the package name isn't necessarily the path name, but we haven't parsed it to know that.
-	pkg.Name = packagePath[strings.LastIndexByte(packagePath, '/')+1:]
-	// From here on we start making a lot of assumptions about exactly how these things are structured.
-	if modulePath != "" {
-		// This is part of a go_module.
-		outDir := filepath.Join(t.OutputDir, t.Name, strings.TrimPrefix(packagePath, modulePath))
-		for _, f := range allGoFilesInDir(outDir) {
-			pkg.GoFiles = append(pkg.GoFiles, filepath.Join(outDir, f))
-		}
-		pkg.CompiledGoFiles = pkg.GoFiles
-		// TODO(peterebden): Other file types too (EmbedFiles, OtherFiles etc)
-		parseFiles(pkg)
-		return pkg
-	}
-	// This is probably a go_library. Deal with its srcs (which are a faff because they can be named or not named, but we know go_library rules will be named)
-	// TODO(peterebden): This does not work with sources that are themselves generated...
-	if srcs, ok := t.Srcs.(map[string]interface{}); ok {
-		if goSrcsI, present := srcs["go"]; present {
-			if goSrcs, ok := goSrcsI.([]interface{}); ok {
-				for _, src := range goSrcs {
-					pkg.GoFiles = append(pkg.GoFiles, filepath.Join(t.InputDir, src.(string)))
-				}
+			defer f.Close()
+			lpkgs := []*packages.Package{}
+			if err := json.NewDecoder(f).Decode(&lpkgs); err != nil {
+				return err
 			}
-		}
+			lock.Lock()
+			defer lock.Unlock()
+			pkgs = append(pkgs, lpkgs...)
+			return nil
+		})
 	}
-	pkg.CompiledGoFiles = pkg.GoFiles
-	parseFiles(pkg)
-	return pkg
+	return pkgs, g.Wait()
 }
 
 // allGoFilesInDir returns all the files ending in a particular suffix in a given directory.
@@ -289,21 +214,6 @@ func allGoFilesInDir(dirname string) []string {
 	return files
 }
 
-// allDirsUnder returns all directories underneath the given one
-func allDirsUnder(dirname string) (dirs []string) {
-	if err := filepath.WalkDir(dirname, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		} else if name := d.Name(); d.IsDir() && !strings.HasPrefix(name, ".") {
-			dirs = append(dirs, strings.TrimPrefix(strings.TrimPrefix(path, dirname), "/"))
-		}
-		return nil
-	}); err != nil {
-		log.Error("failed to read output dir %s", dirname)
-	}
-	return dirs
-}
-
 // parseFiles parses all the Go sources of a package and populates appropriate fields.
 func parseFiles(pkg *packages.Package) {
 	pkg.Fset = token.NewFileSet()
@@ -314,23 +224,6 @@ func parseFiles(pkg *packages.Package) {
 		}
 		pkg.Syntax = append(pkg.Syntax, f)
 	}
-}
-
-// directoriesToFiles expands any directories in the given list to files in that directory.
-func directoriesToFiles(in []string) ([]string, error) {
-	files := make([]string, 0, len(in))
-	for _, x := range in {
-		if info, err := os.Stat(x); err != nil {
-			return nil, err
-		} else if info.IsDir() {
-			for _, f := range allGoFilesInDir(x) {
-				files = append(files, filepath.Join(x, f))
-			}
-		} else {
-			files = append(files, x)
-		}
-	}
-	return files, nil
 }
 
 // createStdlibImport attempts to create an import for one of the stdlib packages.

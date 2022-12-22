@@ -1104,7 +1104,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         binary = binary,
         src = download,
         outs = outs,
-        deps = deps + exported_deps,
+        deps = deps + exported_deps + [pkg_info],
         test_only = test_only,
         visibility = visibility,
         licences = licences,

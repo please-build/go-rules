@@ -171,3 +171,12 @@ go_module(
     version = "v0.0.0-20210615171337-6886f2dfbf5b",
     deps = [":xsys"],
 )
+
+go_module(
+    name = "xsync",
+    install = ["errgroup"],
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/sync",
+    version = "v0.1.0",
+    visibility = ["PUBLIC"],
+)
