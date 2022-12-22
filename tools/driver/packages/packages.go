@@ -54,6 +54,11 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Now turn these back into the set of original directories; we use these to determine roots later
+	dirs := map[string]struct{}{}
+	for _, file := range files {
+		dirs[filepath.Dir(file)] = struct{}{}
+	}
 	if err := os.Chdir(filepath.Dir(files[0])); err != nil {
 		return nil, err
 	}
@@ -81,12 +86,29 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Make all file paths absolute. Useful absolute paths cannot exist in build actions so we
+	// need to rebuild here.
+	log.Debug("Checking for file locations...")
+	for _, pkg := range pkgs {
+		for i, file := range pkg.GoFiles {
+			// This is pretty awkward; we need to try to figure out where these files exist now,
+			// which isn't particularly clear to the build actions that generated them.
+			if _, err := os.Lstat(file); err == nil { // file exists
+				pkg.GoFiles[i] = filepath.Join(rootpath, file)
+			} else {
+				pkg.GoFiles[i] = filepath.Join(rootpath, "plz-out/gen", file)
+			}
+		}
+		// TODO(pebers): Do we need to care about these? go list doesn't seem to populate its
+		//               equivalent (although it isn't exactly the same structure)
+		pkg.CompiledGoFiles = pkg.GoFiles
+	}
 	// Handle stdlib imports which are not currently done elsewhere.
 	stdlib, err := loadStdlibPackages()
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("Read all packages")
+	log.Debug("Built package set")
 	return &DriverResponse{
 		Sizes: &types.StdSizes{
 			// These are obviously hardcoded. To worry about later.
@@ -197,6 +219,9 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 	}
 	pkgs := make([]*packages.Package, len(goPkgs))
 	for i, pkg := range goPkgs {
+		for i, file := range pkg.GoFiles {
+			pkg.GoFiles[i] = filepath.Join(pkg.Dir, file)
+		}
 		pkgs[i] = &packages.Package{
 			ID:              pkg.ImportPath,
 			Name:            pkg.Name,
