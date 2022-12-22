@@ -88,6 +88,7 @@ func createPackage(pkgPath string, goSrcs []string, embedCfg string) (*packages.
 			}
 		}
 		pkg.Syntax = append(pkg.Syntax, f)
+		// TODO(peterebden): Add type checking here
 	}
 	// Store its imports now, although we just enter something minimal (we can't sensibly link up package objects
 	// here; it's kind of a weird structure anyway since you'd obviously not serialise as-is)

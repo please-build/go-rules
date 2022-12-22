@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go/parser"
-	"go/token"
 	"go/types"
-	"io/fs"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +13,7 @@ import (
 	"sync"
 
 	"github.com/peterebden/go-cli-init/v5/logging"
-	"golang.org/x/sync"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -84,45 +82,18 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		return nil, err
 	}
 	// Handle stdlib imports which are not currently done elsewhere.
-	// TODO(peterebden): This is not really correct, plz could be supplying it. However it's not
-	//                   trivial to stitch in sensibly there, and doesn't work in this repo...
-	goroot := exec.Command("go", "env", "GOROOT")
-	goroot.Stderr = &bytes.Buffer{}
-	gorootPath, err := goroot.Output()
+	stdlib, err := loadStdlibPackages()
 	if err != nil {
-		return nil, handleSubprocessErr(goroot, err)
+		return nil, err
 	}
-	// Now stitch in whatever stdlib packages are needed
-	m := make(map[string]*packages.Package, len(pkgs)+50)
-	for _, pkg := range pkgs {
-		m[pkg.PkgPath] = pkg
-	}
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Syntax {
-			for _, imp := range file.Imports {
-				importPath := strings.Trim(imp.Path.Value, `"`)
-				if p, present := m[importPath]; present {
-					// This isn't _really_ necessary (it gets flattened back to much of what it
-					// was before) but there isn't really a good reason not to either.
-					pkg.Imports[importPath] = p
-				} else if strings.Contains(importPath, ".") {
-					// Looks like a third-party package we _should_ know it but won't if there are missing dependencies or whatever.
-					log.Warning("Failed to map import path %s", importPath)
-				} else if p := createStdlibImport(importPath, goroot); p != nil {
-					pkg.Imports[importPath] = p
-					resp.Packages = append(resp.Packages, p)
-					m[importPath] = p
-				}
-			}
-		}
-	}
+	log.Debug("Read all packages")
 	return &DriverResponse{
 		Sizes: &types.StdSizes{
 			// These are obviously hardcoded. To worry about later.
 			WordSize: 8,
 			MaxAlign: 8,
 		},
-		Packages: pkgs,
+		Packages: append(pkgs, stdlib...),
 		// TODO(peterebden): Roots
 	}, nil
 }
@@ -135,14 +106,11 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	// N.B. Deliberate not to defer close of the readers here, we need to close them once processes
-	//      finish (otherwise the downstream ones keep trying to read them forever).
-	defer w1.Close()
 	r2, w2, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	defer w2.Close()
+	// N.B. deliberate not to close these here, they happen exactly when needed.
 	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, files...)...)
 	whatinputs.Stderr = &bytes.Buffer{}
 	whatinputs.Stdout = w1
@@ -161,17 +129,23 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	} else if err := build.Start(); err != nil {
 		return nil, err
 	}
+	log.Debug("Waiting for plz query whatinputs...")
 	if err := whatinputs.Wait(); err != nil {
 		return nil, handleSubprocessErr(whatinputs, err)
 	}
+	w1.Close()
 	r1.Close()
+	log.Debug("Waiting for plz query deps...")
 	if err := deps.Wait(); err != nil {
 		return nil, handleSubprocessErr(deps, err)
 	}
+	w2.Close()
 	r2.Close()
+	log.Debug("Waiting for plz build...")
 	if err := build.Wait(); err != nil {
 		return nil, handleSubprocessErr(build, err)
 	}
+	log.Debug("Loading plz package info files...")
 	// Now we can read all the package info files from the build process' stdout.
 	pkgs := []*packages.Package{}
 	var lock sync.Mutex
@@ -198,6 +172,100 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	return pkgs, g.Wait()
 }
 
+// loadStdlibPackages returns all the packages from the Go stdlib.
+// TODO(peterebden): This is very much temporary, we should ideally be able to get this from
+//                   a plz target as well (especially for go_toolchain)
+func loadStdlibPackages() ([]*packages.Package, error) {
+	// We just list the entire stdlib set, it's not worth trying to filter it right now.
+	log.Debug("Loading stdlib packages...")
+	cmd := exec.Command("go", "list", "-json", "std")
+	cmd.Stderr = &bytes.Buffer{}
+	cmd.Stdout = &bytes.Buffer{}
+	if err := cmd.Run(); err != nil {
+		return nil, handleSubprocessErr(cmd, err)
+	}
+	goPkgs := []*goPackage{}
+	d := json.NewDecoder(cmd.Stdout.(*bytes.Buffer))
+	for {
+		pkg := &goPackage{}
+		if err := d.Decode(pkg); err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		goPkgs = append(goPkgs, pkg)
+	}
+	pkgs := make([]*packages.Package, len(goPkgs))
+	for i, pkg := range goPkgs {
+		pkgs[i] = &packages.Package{
+			ID:              pkg.ImportPath,
+			Name:            pkg.Name,
+			PkgPath:         pkg.ImportPath,
+			GoFiles:         pkg.GoFiles,
+			CompiledGoFiles: pkg.CompiledGoFiles,
+			OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
+			EmbedPatterns:   pkg.EmbedPatterns,
+			EmbedFiles:      pkg.EmbedFiles,
+			Imports:         map[string]*packages.Package{},
+		}
+		for _, imp := range pkg.Imports {
+			pkgs[i].Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
+		}
+	}
+	return pkgs, nil
+}
+
+// mappend appends multiple slices together.
+func mappend(s []string, args ...[]string) []string {
+	for _, arg := range args {
+		s = append(s, arg...)
+	}
+	return s
+}
+
+// goPackage is a subset of the struct that `go list` outputs (AFAIK this isn't importable)
+type goPackage struct {
+	Dir             string   // directory containing package sources
+	ImportPath      string   // import path of package in dir
+	Name            string   // package name
+	Root            string   // Go root or Go path dir containing this package
+	GoFiles         []string // .go source files (excluding CgoFiles, TestGoFiles, XTestGoFiles)
+	CgoFiles        []string // .go source files that import "C"
+	CompiledGoFiles []string // .go files presented to compiler (when using -compiled)
+	CFiles          []string // .c source files
+	CXXFiles        []string // .cc, .cxx and .cpp source files
+	MFiles          []string // .m source files
+	HFiles          []string // .h, .hh, .hpp and .hxx source files
+	SFiles          []string // .s source files
+	SwigFiles       []string // .swig files
+	SwigCXXFiles    []string // .swigcxx files
+	SysoFiles       []string // .syso object files to add to archive
+	EmbedPatterns   []string // //go:embed patterns
+	EmbedFiles      []string // files matched by EmbedPatterns
+	Imports         []string // import paths used by this package
+}
+
+func handleSubprocessErr(cmd *exec.Cmd, err error) error {
+	return fmt.Errorf("%s Stdout:\n%s", err, cmd.Stderr.(*bytes.Buffer).String())
+}
+
+// directoriesToFiles expands any directories in the given list to files in that directory.
+func directoriesToFiles(in []string) ([]string, error) {
+	files := make([]string, 0, len(in))
+	for _, x := range in {
+		if info, err := os.Stat(x); err != nil {
+			return nil, err
+		} else if info.IsDir() {
+			for _, f := range allGoFilesInDir(x) {
+				files = append(files, filepath.Join(x, f))
+			}
+		} else {
+			files = append(files, x)
+		}
+	}
+	return files, nil
+}
+
 // allGoFilesInDir returns all the files ending in a particular suffix in a given directory.
 func allGoFilesInDir(dirname string) []string {
 	entries, err := os.ReadDir(dirname)
@@ -212,38 +280,4 @@ func allGoFilesInDir(dirname string) []string {
 		}
 	}
 	return files
-}
-
-// parseFiles parses all the Go sources of a package and populates appropriate fields.
-func parseFiles(pkg *packages.Package) {
-	pkg.Fset = token.NewFileSet()
-	for _, src := range pkg.CompiledGoFiles {
-		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution|parser.ParseComments)
-		if err != nil {
-			log.Error("Failed to parse file %s: %s", src, err)
-		}
-		pkg.Syntax = append(pkg.Syntax, f)
-	}
-}
-
-// createStdlibImport attempts to create an import for one of the stdlib packages.
-func createStdlibImport(path, goroot string) *packages.Package {
-	if path == "C" {
-		return nil // Cgo isn't a real import, of course.
-	}
-
-	pkg := &packages.Package{
-		PkgPath: path,
-		Imports: map[string]*packages.Package{},
-	}
-	dir := filepath.Join(goroot, "src", path)
-	for _, f := range allGoFilesInDir(dir) {
-		pkg.GoFiles = append(pkg.GoFiles, filepath.Join(dir, f))
-	}
-	if len(pkg.GoFiles) == 0 {
-		return nil // Assume this wasn't actually a stdlib package
-	}
-	pkg.CompiledGoFiles = pkg.GoFiles
-	parseFiles(pkg)
-	return pkg
 }
