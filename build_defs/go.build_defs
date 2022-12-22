@@ -287,6 +287,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         outs = [f"_{name}_pkg_info.json"],
         cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
         labels = ["go_pkg_info"],
+        test_only = test_only,
     )
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
@@ -1077,6 +1078,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         outs = [f"_{name}_pkg_info.json"],
         cmd = f'$TOOL m -m {module} -s "$PKG/{name}" > $OUT',
         labels = ["go_pkg_info"],
+        test_only = test_only,
     )
 
     # Gets the expected archive name given a target package
