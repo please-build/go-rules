@@ -54,11 +54,6 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Now turn these back into the set of original directories; we use these to determine roots later
-	dirs := map[string]struct{}{}
-	for _, file := range files {
-		dirs[filepath.Dir(file)] = struct{}{}
-	}
 	if err := os.Chdir(filepath.Dir(files[0])); err != nil {
 		return nil, err
 	}
@@ -82,9 +77,27 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		}
 		relFiles[i] = file
 	}
+	// Now turn these back into the set of original directories; we use these to determine roots later
+	dirs := map[string]struct{}{}
+	for _, file := range relFiles {
+		dirs[filepath.Dir(file)] = struct{}{}
+	}
 	pkgs, err := loadPackageInfo(relFiles)
 	if err != nil {
 		return nil, err
+	}
+	// Build the set of root packages
+	seenRoots := map[string]struct{}{}
+	roots := []string{}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.GoFiles {
+			if _, present := dirs[filepath.Dir(file)]; present {
+				if _, present := seenRoots[pkg.ID]; !present {
+					seenRoots[pkg.ID] = struct{}{}
+					roots = append(roots, pkg.ID)
+				}
+			}
+		}
 	}
 	// Make all file paths absolute. Useful absolute paths cannot exist in build actions so we
 	// need to rebuild here.
@@ -116,7 +129,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 			MaxAlign: 8,
 		},
 		Packages: append(pkgs, stdlib...),
-		// TODO(peterebden): Roots
+		Roots:    roots,
 	}, nil
 }
 
