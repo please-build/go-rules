@@ -1075,7 +1075,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         srcs = [download],
         outs = [f"_{name}_pkg_info.json"],
-        cmd = f"$TOOL m -m {module} > $OUT",
+        cmd = f'$TOOL m -m {module} -s "$PKG/{name}" > $OUT',
         labels = ["go_pkg_info"],
     )
 

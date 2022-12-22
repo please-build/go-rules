@@ -30,7 +30,7 @@ func WritePackageInfo(importPath, plzPkg string, goSrcs []string, embedCfg strin
 }
 
 // WriteModuleInfo writes a series of package info files to the given file.
-func WriteModuleInfo(modulePath, src string, w io.Writer) error {
+func WriteModuleInfo(modulePath, strip, src string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -48,7 +48,8 @@ func WriteModuleInfo(modulePath, src string, w io.Writer) error {
 	}
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir, files := range goFiles {
-		pkg, err := createPackage(filepath.Join(modulePath, dir), files, "")
+		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
+		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), files, "")
 		if err != nil {
 			return err
 		}
@@ -64,12 +65,11 @@ func WriteModuleInfo(modulePath, src string, w io.Writer) error {
 func createPackage(pkgPath string, goSrcs []string, embedCfg string) (*packages.Package, error) {
 	pkg := &packages.Package{
 		// TODO(peterebden): This should really be the build label, but that won't work for go_module where it's not unique.
-		ID:              pkgPath,
-		PkgPath:         pkgPath,
-		Fset:            token.NewFileSet(),
-		GoFiles:         goSrcs,
-		CompiledGoFiles: goSrcs, // For our purposes these are the same as GoFiles (I think)
-		Imports:         map[string]*packages.Package{},
+		ID:      pkgPath,
+		PkgPath: pkgPath,
+		Fset:    token.NewFileSet(),
+		GoFiles: goSrcs,
+		Imports: map[string]*packages.Package{},
 	}
 	for _, src := range goSrcs {
 		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution|parser.ParseComments)

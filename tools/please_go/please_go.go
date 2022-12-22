@@ -72,6 +72,7 @@ var opts = struct {
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
 		ModulePath string `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
+		Strip      string `short:"s" long:"strip" description:"Prefix to strip off package directories"`
 		Srcs       string `long:"srcs" env:"SRCS" required:"true" description:"Source files of the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 }{
@@ -129,7 +130,8 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"module_info": func() int {
-		if err := packageinfo.WriteModuleInfo(opts.ModuleInfo.ModulePath, opts.ModuleInfo.Srcs, os.Stdout); err != nil {
+		mi := opts.ModuleInfo
+		if err := packageinfo.WriteModuleInfo(mi.ModulePath, mi.Strip, mi.Srcs, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
