@@ -112,8 +112,6 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 				pkg.GoFiles[i] = filepath.Join(rootpath, "plz-out/gen", file)
 			}
 		}
-		// TODO(pebers): Do we need to care about these? go list doesn't seem to populate its
-		//               equivalent (although it isn't exactly the same structure)
 		pkg.CompiledGoFiles = pkg.GoFiles
 	}
 	// Handle stdlib imports which are not currently done elsewhere.
@@ -240,7 +238,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 			Name:            pkg.Name,
 			PkgPath:         pkg.ImportPath,
 			GoFiles:         pkg.GoFiles,
-			CompiledGoFiles: pkg.CompiledGoFiles,
+			CompiledGoFiles: pkg.GoFiles, // This seems to be important to e.g. gosec
 			OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
 			EmbedPatterns:   pkg.EmbedPatterns,
 			EmbedFiles:      pkg.EmbedFiles,
