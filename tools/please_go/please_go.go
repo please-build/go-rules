@@ -70,6 +70,10 @@ var opts = struct {
 		GoSrcs     []string `long:"go_src" short:"g" env:"SRCS_GO" description:"Go source files for the package"`
 		EmbedCfg   string   `long:"embed_cfg" short:"e" env:"SRCS_EMBED" description:"Embedding config file"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
+	ModuleInfo struct {
+		ModulePath string `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
+		Srcs       string `long:"srcs" env:"SRCS" required:"true" description:"Source files of the module"`
+	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -121,6 +125,12 @@ var subCommands = map[string]func() int{
 		pi := opts.PackageInfo
 		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, pi.GoSrcs, pi.EmbedCfg, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
+		}
+		return 0
+	},
+	"module_info": func() int {
+		if err := packageinfo.WriteModuleInfo(opts.ModuleInfo.ModulePath, opts.ModuleInfo.Srcs, os.Stdout); err != nil {
+			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
 	},
