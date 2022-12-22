@@ -60,6 +60,14 @@ func WriteModuleInfo(modulePath, strip, src string, w io.Writer) error {
 }
 
 func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
+	if pkgDir == "" || pkgDir == "." {
+		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
+		path, err := filepath.Abs(pkgDir)
+		if err != nil {
+			return nil, err
+		}
+		pkgDir = path
+	}
 	bpkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
 		return nil, err
