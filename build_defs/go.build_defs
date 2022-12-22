@@ -275,6 +275,20 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         test_only=test_only,
     )
 
+    # Package info rule for the Go packages driver
+    pkg_info_rule = build_rule(
+        name = name,
+        tag = "pkg_info",
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        srcs = {
+            'go': srcs,
+            'embed': [embedcfg],
+        },
+        outs = [f"_{name}_pkg_info.json"],
+        cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
+        labels = ["go_pkg_info"],
+    )
+
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs:
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
@@ -299,7 +313,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     return build_rule(
         name = name,
         srcs = srcs,
-        deps = deps,
+        deps = deps + [pkg_info_rule],
         internal_deps = [src_rule],
         outs = outs,
         cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),

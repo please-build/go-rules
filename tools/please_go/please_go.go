@@ -12,6 +12,7 @@ import (
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/install"
+	"github.com/please-build/go-rules/tools/please_go/packageinfo"
 	"github.com/please-build/go-rules/tools/please_go/test"
 )
 
@@ -63,6 +64,12 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	PkgInfo struct {
+		ImportPath string   `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
+		Pkg        string   `long:"pkg" env:"PKG" description:"Package that we're in within the repo"`
+		GoSrcs     []string `long:"go_src" short:"g" env:"SRCS_GO" description:"Go source files for the package"`
+		EmbedCfg   string   `long:"embed_cfg" short:"e" env:"SRCS_EMBED" description:"Embedding config file"`
+	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -107,6 +114,13 @@ var subCommands = map[string]func() int{
 	"embed": func() int {
 		if err := embed.WriteEmbedConfig(opts.Embed.Args.Sources, os.Stdout); err != nil {
 			log.Fatalf("failed to generate embed config: %v", err)
+		}
+		return 0
+	},
+	"package_info": func() int {
+		pi := opts.PackageInfo
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, pi.GoSrcs, pi.EmbedCfg, os.Stdout); err != nil {
+			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
 	},
