@@ -5,24 +5,22 @@ package packageinfo
 import (
 	"encoding/json"
 	"fmt"
+	"go/build"
 	"go/parser"
 	"go/scanner"
 	"go/token"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
-
-	"github.com/please-build/go-rules/tools/please_go/embed"
 )
 
 // WritePackageInfo writes package info to the given file.
-func WritePackageInfo(importPath, plzPkg string, goSrcs []string, embedCfg string, w io.Writer) error {
-	pkg, err := createPackage(filepath.Join(importPath, plzPkg), goSrcs, embedCfg)
+func WritePackageInfo(importPath, plzPkg string, w io.Writer) error {
+	pkg, err := createPackage(filepath.Join(importPath, plzPkg), plzPkg)
 	if err != nil {
 		return err
 	}
@@ -47,10 +45,12 @@ func WriteModuleInfo(modulePath, strip, src string, w io.Writer) error {
 		return fmt.Errorf("failed to read module dir: %w", err)
 	}
 	pkgs := make([]*packages.Package, 0, len(goFiles))
-	for dir, files := range goFiles {
+	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
-		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), files, "")
-		if err != nil {
+		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), dir)
+		if _, ok := err.(*build.NoGoError); ok {
+			continue // Don't really care, this happens sometimes for modules
+		} else if err != nil {
 			return err
 		}
 		pkgs = append(pkgs, pkg)
@@ -62,16 +62,15 @@ func WriteModuleInfo(modulePath, strip, src string, w io.Writer) error {
 	return serialise(pkgs, w)
 }
 
-func createPackage(pkgPath string, goSrcs []string, embedCfg string) (*packages.Package, error) {
-	pkg := &packages.Package{
-		// TODO(peterebden): This should really be the build label, but that won't work for go_module where it's not unique.
-		ID:      pkgPath,
-		PkgPath: pkgPath,
-		Fset:    token.NewFileSet(),
-		GoFiles: goSrcs,
-		Imports: map[string]*packages.Package{},
+func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
+	bpkg, err := build.ImportDir(pkgDir, build.ImportComment)
+	if err != nil {
+		return nil, err
 	}
-	for _, src := range goSrcs {
+	bpkg.ImportPath = pkgPath
+	pkg := FromBuildPackage(bpkg)
+	pkg.Fset = token.NewFileSet()
+	for _, src := range pkg.GoFiles {
 		f, err := parser.ParseFile(pkg.Fset, src, nil, parser.SkipObjectResolution|parser.ParseComments)
 		if err != nil {
 			// Try to continue if there are just syntax errors; they are not our problem.
@@ -90,36 +89,6 @@ func createPackage(pkgPath string, goSrcs []string, embedCfg string) (*packages.
 		pkg.Syntax = append(pkg.Syntax, f)
 		// TODO(peterebden): Add type checking here
 	}
-	// Store its imports now, although we just enter something minimal (we can't sensibly link up package objects
-	// here; it's kind of a weird structure anyway since you'd obviously not serialise as-is)
-	for _, file := range pkg.Syntax {
-		for _, imp := range file.Imports {
-			ipath := strings.Trim(imp.Path.Value, `"`)
-			pkg.Imports[ipath] = &packages.Package{ID: ipath}
-		}
-		pkg.Name = file.Name.Name
-	}
-	// If there's an embed config, load that info.
-	if embedCfg != "" {
-		f, err := os.Open(embedCfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read embed config: %w", err)
-		}
-		defer f.Close()
-		cfg := embed.Cfg{}
-		if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-			return nil, fmt.Errorf("failed to load embed config: %w", err)
-		}
-		for pattern := range cfg.Patterns {
-			pkg.EmbedPatterns = append(pkg.EmbedPatterns, pattern)
-		}
-		for _, file := range cfg.Files {
-			pkg.EmbedFiles = append(pkg.EmbedFiles, file)
-		}
-		// Both of these are nondeterminstic and need to be ordered.
-		sort.Strings(pkg.EmbedPatterns)
-		sort.Strings(pkg.EmbedFiles)
-	}
 	return pkg, nil
 }
 
@@ -127,4 +96,33 @@ func serialise(pkgs []*packages.Package, w io.Writer) error {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	return e.Encode(pkgs)
+}
+
+// FromBuildPackage creates a packages Package from a build Package.
+func FromBuildPackage(pkg *build.Package) *packages.Package {
+	p := &packages.Package{
+		ID:            pkg.ImportPath,
+		Name:          pkg.Name,
+		PkgPath:       pkg.ImportPath,
+		GoFiles:       make([]string, len(pkg.GoFiles)),
+		OtherFiles:    mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
+		EmbedPatterns: pkg.EmbedPatterns,
+		Imports:       make(map[string]*packages.Package, len(pkg.Imports)),
+	}
+	for i, file := range pkg.GoFiles {
+		p.GoFiles[i] = filepath.Join(pkg.Dir, file)
+	}
+	p.CompiledGoFiles = p.GoFiles // This seems to be important to e.g. gosec
+	for _, imp := range pkg.Imports {
+		p.Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
+	}
+	return p
+}
+
+// mappend appends multiple slices together.
+func mappend(s []string, args ...[]string) []string {
+	for _, arg := range args {
+		s = append(s, arg...)
+	}
+	return s
 }

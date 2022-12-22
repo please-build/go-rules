@@ -11,7 +11,6 @@ go_library(
     srcs = glob(["*.go"]),
     deps = [
         "//third_party/go:xtools",
-        "//tools/please_go/embed",
     ],
     visibility = [
         "//tools/please_go/...",

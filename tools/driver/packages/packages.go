@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"go/build"
 	"go/types"
 	"io"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"github.com/peterebden/go-cli-init/v5/logging"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/please-build/go-rules/tools/please_go/packageinfo"
 )
 
 var log = logging.MustGetLogger()
@@ -217,10 +220,10 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 	if err := cmd.Run(); err != nil {
 		return nil, handleSubprocessErr(cmd, err)
 	}
-	goPkgs := []*goPackage{}
+	goPkgs := []*build.Package{}
 	d := json.NewDecoder(cmd.Stdout.(*bytes.Buffer))
 	for {
-		pkg := &goPackage{}
+		pkg := &build.Package{}
 		if err := d.Decode(pkg); err == io.EOF {
 			break
 		} else if err != nil {
@@ -230,55 +233,9 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 	}
 	pkgs := make([]*packages.Package, len(goPkgs))
 	for i, pkg := range goPkgs {
-		for i, file := range pkg.GoFiles {
-			pkg.GoFiles[i] = filepath.Join(pkg.Dir, file)
-		}
-		pkgs[i] = &packages.Package{
-			ID:              pkg.ImportPath,
-			Name:            pkg.Name,
-			PkgPath:         pkg.ImportPath,
-			GoFiles:         pkg.GoFiles,
-			CompiledGoFiles: pkg.GoFiles, // This seems to be important to e.g. gosec
-			OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
-			EmbedPatterns:   pkg.EmbedPatterns,
-			EmbedFiles:      pkg.EmbedFiles,
-			Imports:         map[string]*packages.Package{},
-		}
-		for _, imp := range pkg.Imports {
-			pkgs[i].Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
-		}
+		pkgs[i] = packageinfo.FromBuildPackage(pkg)
 	}
 	return pkgs, nil
-}
-
-// mappend appends multiple slices together.
-func mappend(s []string, args ...[]string) []string {
-	for _, arg := range args {
-		s = append(s, arg...)
-	}
-	return s
-}
-
-// goPackage is a subset of the struct that `go list` outputs (AFAIK this isn't importable)
-type goPackage struct {
-	Dir             string   // directory containing package sources
-	ImportPath      string   // import path of package in dir
-	Name            string   // package name
-	Root            string   // Go root or Go path dir containing this package
-	GoFiles         []string // .go source files (excluding CgoFiles, TestGoFiles, XTestGoFiles)
-	CgoFiles        []string // .go source files that import "C"
-	CompiledGoFiles []string // .go files presented to compiler (when using -compiled)
-	CFiles          []string // .c source files
-	CXXFiles        []string // .cc, .cxx and .cpp source files
-	MFiles          []string // .m source files
-	HFiles          []string // .h, .hh, .hpp and .hxx source files
-	SFiles          []string // .s source files
-	SwigFiles       []string // .swig files
-	SwigCXXFiles    []string // .swigcxx files
-	SysoFiles       []string // .syso object files to add to archive
-	EmbedPatterns   []string // //go:embed patterns
-	EmbedFiles      []string // files matched by EmbedPatterns
-	Imports         []string // import paths used by this package
 }
 
 func handleSubprocessErr(cmd *exec.Cmd, err error) error {

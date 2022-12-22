@@ -65,10 +65,8 @@ var opts = struct {
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	PackageInfo struct {
-		ImportPath string   `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
-		Pkg        string   `long:"pkg" env:"PKG" description:"Package that we're in within the repo"`
-		GoSrcs     []string `long:"go_src" short:"g" env:"SRCS_GO" env-delim:" " description:"Go source files for the package"`
-		EmbedCfg   string   `long:"embed_cfg" short:"e" env:"SRCS_EMBED" env-delim:" " description:"Embedding config file"`
+		ImportPath string `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
+		Pkg        string `long:"pkg" env:"PKG" description:"Package that we're in within the repo"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
 		ModulePath string `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
@@ -124,7 +122,7 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, pi.GoSrcs, pi.EmbedCfg, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0

@@ -7,6 +7,7 @@ go_library(
         "//third_party/go:flags",
         "//third_party/go:xsync",
         "//third_party/go:xtools",
+        "//tools/please_go/packageinfo",
     ],
     visibility = ["//tools/driver/..."],
 )
