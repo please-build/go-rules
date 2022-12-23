@@ -75,9 +75,6 @@ Optional = true
 Type = bool
 DefaultValue = False
 
-[PluginConfig "requires"]
-DefaultValue = //third_party/go:requires
-
 [PluginConfig "split_debug_info"]
 Type = bool
 Optional = true

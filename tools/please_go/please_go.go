@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/please-build/go-rules/tools/please_go/goget"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/generate"
+	"github.com/please-build/go-rules/tools/please_go/goget"
 	"github.com/please-build/go-rules/tools/please_go/install"
 	"github.com/please-build/go-rules/tools/please_go/packageinfo"
 	"github.com/please-build/go-rules/tools/please_go/test"
