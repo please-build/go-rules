@@ -5,13 +5,13 @@ please_repo_e2e_test(
     expected_output = {
         "out.txt": "wibble wibble wibble",
     },
-    plz_command = "plz test -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO //src/foo:foo_test && plz run //src:main > out.txt",
+    plz_command = "plz test -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO //src/foo:foo_test && plz run -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO //src:main > out.txt",
     repo = "test_repo",
     data = {
         "PLUGIN_REPO": ["//test:export"],
     },
     tools = {
-        "PLEASE_GO": ["//tools/please_go:please_go"],
+        "PLEASE_GO": ["//tools/please_go"],
     },
 )
 
