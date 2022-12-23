@@ -220,7 +220,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 	if err := cmd.Run(); err != nil {
 		return nil, handleSubprocessErr(cmd, err)
 	}
-	goPkgs := []*build.Package{}
+	pkgs := []*packages.Package{}
 	d := json.NewDecoder(cmd.Stdout.(*bytes.Buffer))
 	for {
 		pkg := &build.Package{}
@@ -229,11 +229,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		goPkgs = append(goPkgs, pkg)
-	}
-	pkgs := make([]*packages.Package, len(goPkgs))
-	for i, pkg := range goPkgs {
-		pkgs[i] = packageinfo.FromBuildPackage(pkg)
+		pkgs = append(pkgs, packageinfo.FromBuildPackage(pkg))
 	}
 	return pkgs, nil
 }
