@@ -11,7 +11,7 @@ please_repo_e2e_test(
         "PLUGIN_REPO": ["//test:export"],
     },
     tools = {
-        "PLEASE_GO": ["//tools/please_go:please_go"],
+        "PLEASE_GO": ["//tools/please_go:bootstrap"],
     },
 )
 
