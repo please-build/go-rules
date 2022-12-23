@@ -27,7 +27,7 @@ jobs:
       - name: Build please_go
         run: ./pleasew build //tools/please_go
       - name: Build
-        run: ./pleasew build --profile release -o plugin.go.pleasegotool:$(pwd)/plz-out/bin/tools/please_go/please_go -p -v notice //package:release_files
+        run: ./pleasew build --profile release -o plugin.go.pleasegotool:$(pwd)/plz-out/bin/tools/please_go/please_go -p -v notice //package:please_go_release_files //package:driver_release_files
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -40,4 +40,13 @@ jobs:
           version-file: tools/please_go/VERSION
           change-log-file: tools/please_go/ChangeLog
           release-prefix: please-go
-          release-files: plz-out/package
+          release-files: plz-out/package/please_go
+      - name: Release package driver
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: thought-machine/release-action@master
+        with:
+          version-file: tools/driver/VERSION
+          change-log-file: tools/driver/ChangeLog
+          release-prefix: please-go
+          release-files: plz-out/package/driver
