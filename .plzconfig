@@ -1,5 +1,5 @@
 [Please]
-Version = 16.26.0
+Version = 16.26.1
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
@@ -11,7 +11,7 @@ Target = //plugins:cc
 
 [Plugin "e2e"]
 Target = //plugins:e2e
-PleaseVersion = 16.26.0
+PleaseVersion = 16.26.1
 
 [PluginDefinition]
 Name = go
