@@ -15,6 +15,7 @@ var log = logging.MustGetLogger()
 var opts = struct {
 	Usage     string
 	Verbosity logging.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
+	NoInput   bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
 	Args      struct {
 		Files []string `positional-arg-name:"file" required:"true"`
 	} `positional-args:"true"`
@@ -34,8 +35,10 @@ func main() {
 	logging.InitLogging(opts.Verbosity)
 
 	req := &packages.DriverRequest{}
-	if err := json.NewDecoder(os.Stdin).Decode(req); err != nil {
-		log.Fatalf("Failed to read request: %s", err)
+	if !opts.NoInput {
+		if err := json.NewDecoder(os.Stdin).Decode(req); err != nil {
+			log.Fatalf("Failed to read request: %s", err)
+		}
 	}
 	resp, err := packages.Load(req, opts.Args.Files)
 	if err != nil {
