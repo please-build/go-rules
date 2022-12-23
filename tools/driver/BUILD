@@ -7,6 +7,7 @@ go_binary(
         "//third_party/go:flags",
         "//tools/driver/packages",
     ],
+    visibility = ["PUBLIC"],
 )
 
 genrule(
