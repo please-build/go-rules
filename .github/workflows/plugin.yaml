@@ -24,8 +24,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Build please_go
+        run: ./pleasew build //tools/please_go
       - name: Build
-        run: ./pleasew build --profile release -p -v notice //package:release_files
+        run: ./pleasew build --profile release -o plugin.go.pleasegotool:$(pwd)/plz-out/bin/tools/please_go/please_go -p -v notice //package:release_files
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
