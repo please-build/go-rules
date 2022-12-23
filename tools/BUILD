@@ -1,14 +1,14 @@
-VERSION = "0.1.4"
+VERSION = "1.0.0"
 
 remote_file(
     name = "please_go",
     binary = True,
     hashes = [
-        "e59d445371aba528942b3d9b67ca0ee2b443ea31ac48fff0c91d88037c758806",  # darwin_amd64
-        "0e99ad95d8df074763518de069793786752c5a19174396654d452efff9504a62",  # darwin_arm64
-        "34c292fd0b88b1387becf7d67639ab400d780f8bb7b8cb914ab0a01a51a00ef3",  # freebsd_amd64
-        "2bfb2cedfc92aa0660f48b20b2db6ed98f4f22c21ee0f037d6679721f3244d91",  # linux_amd64
-        "34515d6f55976872285f34ab75e8fcc42b51143b67775498b1706b3d68aea29e",  # linux_arm64
+        "bbede3a0a606d07cb7a894ed0e1bbf4bc85a2ae1400e14899ae559115689f0b2",  # darwin_amd64
+        "d9f3ac04eccae6006b0daca42a167d13e1ef8f1fa3dbe7fa9ab879f22d634211",  # darwin_arm64
+        "22486b809c5c9a0f399c064ac7f37eac69d85f5b96f5498a67ca2c9e6b11733b",  # freebsd_amd64
+        "934fd993e23c0f07a9179b76f27a4e4d861b8477d230cb18e4b980a33d52d53c",  # linux_amd64
+        "5fe68fc73b49f7d8c25f4f4e83b4f2abd538106e29551290623ed920191fff6a",  # linux_arm64
     ],
     labels = ["manual"],  # Needed to avoid picking this up for coverage
     url = f"https://github.com/please-build/go-rules/releases/download/please-go-v{VERSION}/please_go-{VERSION}-{CONFIG.OS}_{CONFIG.ARCH}",
