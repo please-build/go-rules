@@ -98,7 +98,7 @@ def _pkg_sources(name: str, deps: list, test_only:bool):
        test_only = test_only,
    )
 
-def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdrs:list=None, deps:list=[],
+def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:list=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
@@ -275,6 +275,18 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         test_only=test_only,
     )
 
+    # Package info rule for the Go packages driver
+    pkg_info_rule = build_rule(
+        name = name,
+        tag = "pkg_info",
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        srcs = srcs + resources,
+        outs = [f"_{name}_pkg_info.json"],
+        cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
+        labels = ["go_pkg_info"],
+        test_only = test_only,
+    )
+
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs:
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
@@ -299,7 +311,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     return build_rule(
         name = name,
         srcs = srcs,
-        deps = deps,
+        deps = deps + [pkg_info_rule],
         internal_deps = [src_rule],
         outs = outs,
         cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
@@ -1089,9 +1101,21 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             licences = licences,
             hashes = hashes,
             strip = strip,
-            patch=patch,
+            patch = patch,
         )
     outs = []
+
+    # Package info rule for the Go packages driver
+    pkg_info = build_rule(
+        name = name,
+        tag = "pkg_info",
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        srcs = [download],
+        outs = [f"_{name}_pkg_info.json"],
+        cmd = f'$TOOL m -m {module} -s "$PKG/{name}" > $OUT',
+        labels = ["go_pkg_info"],
+        test_only = test_only,
+    )
 
     # Gets the expected archive name given a target package
     def archive_name(i):
@@ -1118,7 +1142,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         binary = binary,
         src = download,
         outs = outs,
-        deps = deps + exported_deps,
+        deps = deps + exported_deps + [pkg_info],
         test_only = test_only,
         visibility = visibility,
         licences = licences,
@@ -1150,8 +1174,9 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         provides = {
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
+            "pkg_info": pkg_info,
         },
-        labels = labels + [f"go_package:{i}" for i in install],
+        labels = labels + [f"go_package:{i}" for i in install] + ["go_module_path:" + module],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,

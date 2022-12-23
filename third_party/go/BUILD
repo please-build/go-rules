@@ -86,7 +86,10 @@ go_module(
 
 go_module(
     name = "flags",
-    install = ["flags"],
+    install = [
+        "flags",
+        "logging",
+    ],
     licences = ["Apache-2.0"],
     module = "github.com/peterebden/go-cli-init/v5",
     version = "v5.1.0",
@@ -94,6 +97,9 @@ go_module(
     deps = [
         ":go-flags",
         ":humanize",
+        ":xcrypto",
+        ":logging",
+        ":xsys",
     ],
 )
 
@@ -184,5 +190,75 @@ go_module(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/xerrors",
     version = "v0.0.0-20200804184101-5ec99f83aff1",
+    visibility = ["PUBLIC"],
+)
+
+go_module(
+    name = "xtools",
+    install = [
+        "go/packages",
+        "go/gcexportdata",
+        "go/internal/packagesdriver",
+        "internal/event/...",
+        "internal/pkgbits",
+        "internal/gcimporter",
+        "internal/gocommand",
+        "internal/packagesinternal",
+        "internal/typeparams",
+        "internal/typesinternal",
+    ],
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/tools",
+    version = "v0.4.0",
+    deps = [
+        ":xmod",
+        ":xsys",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+go_module(
+    name = "xmod",
+    install = [
+        "semver",
+    ],
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/mod",
+    version = "v0.7.0",
+)
+
+go_module(
+    name = "logging",
+    licences = ["BSD-3-Clause"],
+    module = "gopkg.in/op/go-logging.v1",
+    version = "v1.0.0-20160211212156-b2cb9fa56473",
+    deps = [":xcrypto"],
+)
+
+go_module(
+    name = "xcrypto",
+    install = [
+        "ssh/terminal",
+    ],
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/crypto",
+    version = "v0.0.0-20210920023735-84f357641f63",
+    deps = [":xterm"],
+)
+
+go_module(
+    name = "xterm",
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/term",
+    version = "v0.0.0-20210615171337-6886f2dfbf5b",
+    deps = [":xsys"],
+)
+
+go_module(
+    name = "xsync",
+    install = ["errgroup"],
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/sync",
+    version = "v0.1.0",
     visibility = ["PUBLIC"],
 )
