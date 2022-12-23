@@ -172,11 +172,19 @@ go_module(
     deps = [":xsys"],
 )
 
+# This is not really necessary, it's here to test the case of a separate go_mod_download
+# for the gopackagesdriver.
+go_mod_download(
+    name = "xsync_download",
+    module = "golang.org/x/sync",
+    version = "v0.1.0",
+    licences = ["BSD-3-Clause"],
+)
+
 go_module(
     name = "xsync",
     install = ["errgroup"],
-    licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
-    version = "v0.1.0",
+    download = ":xsync_download",
     visibility = ["PUBLIC"],
 )
