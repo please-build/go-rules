@@ -13,6 +13,7 @@ go_binary(
         "//tools/please_go/embed",
         "//tools/please_go/filter",
         "//tools/please_go/install",
+        "//tools/please_go/packageinfo",
         "//tools/please_go/test",
     ],
 )
@@ -38,6 +39,7 @@ genrule(
         "//tools/please_go/install/exec:srcs",
         "//tools/please_go/install/toolchain:srcs",
         "//tools/please_go/test:srcs",
+        "//tools/please_go/packageinfo:srcs",
     ],
 )
 

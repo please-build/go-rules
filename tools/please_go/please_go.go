@@ -12,6 +12,7 @@ import (
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/install"
+	"github.com/please-build/go-rules/tools/please_go/packageinfo"
 	"github.com/please-build/go-rules/tools/please_go/test"
 )
 
@@ -63,6 +64,15 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	PackageInfo struct {
+		ImportPath string `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
+		Pkg        string `long:"pkg" env:"PKG" description:"Package that we're in within the repo"`
+	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
+	ModuleInfo struct {
+		ModulePath string `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
+		Strip      string `short:"s" long:"strip" description:"Prefix to strip off package directories"`
+		Srcs       string `long:"srcs" env:"SRCS" required:"true" description:"Source files of the module"`
+	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -107,6 +117,20 @@ var subCommands = map[string]func() int{
 	"embed": func() int {
 		if err := embed.WriteEmbedConfig(opts.Embed.Args.Sources, os.Stdout); err != nil {
 			log.Fatalf("failed to generate embed config: %v", err)
+		}
+		return 0
+	},
+	"package_info": func() int {
+		pi := opts.PackageInfo
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, os.Stdout); err != nil {
+			log.Fatalf("failed to write package info: %s", err)
+		}
+		return 0
+	},
+	"module_info": func() int {
+		mi := opts.ModuleInfo
+		if err := packageinfo.WriteModuleInfo(mi.ModulePath, mi.Strip, mi.Srcs, os.Stdout); err != nil {
+			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
 	},
