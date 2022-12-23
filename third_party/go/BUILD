@@ -211,20 +211,10 @@ go_module(
     module = "golang.org/x/tools",
     version = "v0.4.0",
     deps = [
-        ":xmod",
+        ":mod",
         ":xsys",
     ],
     visibility = ["PUBLIC"],
-)
-
-go_module(
-    name = "xmod",
-    install = [
-        "semver",
-    ],
-    licences = ["BSD-3-Clause"],
-    module = "golang.org/x/mod",
-    version = "v0.7.0",
 )
 
 go_module(
