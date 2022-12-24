@@ -937,6 +937,31 @@ def _add_ld_flags(name:str, stdout:list):
         add_label(name, f"cc:ld:{stdout}")
 
 
+def _module_rule_name(module):
+    return module.replace("/", "_")
+
+def go_get(module: str, version:str, requirements:list=[], licences=None, patch=None):
+    if "go_get" not in CONFIG.GO.FEATURE_FLAGS:
+        fail("go_get() is not ready for production use. To use it, add \"go_get\" to plugin.go.featureflags")
+
+    name = _module_rule_name(module)
+    dl = go_mod_download(f"{name}_dl", module, version, licences=licences, patch=patch)
+    requirements = " ".join(requirements)
+    repo = build_rule(
+        name = name,
+        srcs = [dl],
+        cmd  = f"rm -rf $SRC/.plzconfig && find $SRC -name BUILD -delete && $TOOL generate --src_root=$SRC {requirements} && mv $SRC $OUT",
+        outs = [name],
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        _subrepo = True,
+    )
+    subrepo(
+        name = name,
+        dep = repo,
+        package_root = f"pkg/{CONFIG.OS}_{CONFIG.ARCH}/{module}",
+    )
+    return repo
+
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
                     licences:list=None, hashes:list=None, labels:list=[], _tag:str='', deps:list=[],
@@ -967,7 +992,10 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         'export export GOPATH="$PWD/go_mod_download_folder"', # avoid conflict on "go" folder
         f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
-        'cp -r "$MOD_DIR" "$OUT"'
+        'export MOD_FILE=$(cat mod.json | ' 'awk -F\\" \'/"GoMod": / { print $4 }\')',
+        'cp -r "$MOD_DIR" "$OUT"',
+        'rm -rf $OUT/go.mod', # Sometimes this file exists, and sometimes we need to manually copy it in
+        'cp -r $MOD_FILE $OUT/go.mod'
     ] + [f'rm -rf "$OUT/{s}"' for s in strip]
 
     if patch:

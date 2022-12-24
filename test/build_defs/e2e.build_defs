@@ -6,7 +6,7 @@ def please_repo_e2e_test(name, expected_output=None, plz_command, repo, labels=[
     return _please_repo_e2e_test(
         name = name,
         expected_output = expected_output,
-        plz_command = plz_command.replace("plz", "plz -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.gotool:$TOOLS_GO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO"),
+        plz_command = plz_command.replace("plz ", "plz -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.gotool:$TOOLS_GO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO "),
         repo = repo,
         data = {
             "PLUGIN_REPO": ["//test:export"],

@@ -1,18 +1,17 @@
 [Please]
-Version = 16.25.1
+Version = 16.26.1
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
-RequireLicences = true
 
 [Plugin "cc"]
 Target = //plugins:cc
 
 [Plugin "e2e"]
 Target = //plugins:e2e
-PleaseVersion = 16.25.1
+PleaseVersion = 16.26.1
 
 [PluginDefinition]
 Name = go
@@ -85,6 +84,12 @@ Help = Split debug info for binaries into a separate, optional output.
 DefaultValue = eu-strip
 Inherit = true
 Help = Tool to use to strip debug info. This is temporary and will be removed later!
+
+[PluginConfig "feature_flags"]
+Repeatable = true
+Optional = true
+Inherit = true
+Help = Flags to enable in-development features, or toggle breaking changes
 
 [FeatureFlags]
 ExcludeGoRules = true
