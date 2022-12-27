@@ -1,5 +1,6 @@
 Version 1.1.0
 -------------
+    * Add go_get(), a subrepo based approach to third party dependencies (#49)
     * Add extra pkg_info build actions for supplying a Go package driver
 
 Version 1.0.0
