@@ -1,3 +1,7 @@
+Version 0.1.1
+-------------
+    * Change the release prefix to `plz-gopackagesdriver`.
+
 Version 0.1.0
 -------------
     * Initial release of gopackagesdriver tool for Please.
