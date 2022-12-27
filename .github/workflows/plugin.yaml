@@ -48,5 +48,5 @@ jobs:
         with:
           version-file: tools/driver/VERSION
           change-log-file: tools/driver/ChangeLog
-          release-prefix: driver
+          release-prefix: plz-gopackagesdriver
           release-files: plz-out/package/driver
