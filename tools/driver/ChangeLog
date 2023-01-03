@@ -1,3 +1,7 @@
+Version 0.2.0
+-------------
+    * `plz build` output now appears on stderr if the terminal is interactive.
+
 Version 0.1.1
 -------------
     * Change the release prefix to `plz-gopackagesdriver`.
