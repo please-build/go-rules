@@ -1,3 +1,7 @@
+Version 1.1.1
+-------------
+    * Fixes package generation for go_library actions with Go files in subdirectories
+
 Version 1.1.0
 -------------
     * Adds support to generate go rules for a given package (#49)
