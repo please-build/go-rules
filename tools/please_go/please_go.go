@@ -68,7 +68,7 @@ var opts = struct {
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	PackageInfo struct {
 		ImportPath string `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
-		Pkg        string `long:"pkg" env:"PKG" description:"Package that we're in within the repo"`
+		Pkg        string `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
 		ModulePath string `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
