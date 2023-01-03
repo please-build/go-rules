@@ -15,17 +15,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// WritePackageInfo writes package info to the given file.
-func WritePackageInfo(importPath, plzPkg string, w io.Writer) error {
-	pkg, err := createPackage(filepath.Join(importPath, plzPkg), plzPkg)
-	if err != nil {
-		return err
-	}
-	return serialise([]*packages.Package{pkg}, w)
-}
-
-// WriteModuleInfo writes a series of package info files to the given file.
-func WriteModuleInfo(modulePath, strip, src string, w io.Writer) error {
+// WritePackageInfo writes a series of package info files to the given file.
+func WritePackageInfo(modulePath, strip, src string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {

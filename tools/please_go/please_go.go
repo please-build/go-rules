@@ -155,14 +155,14 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, "", pi.Pkg, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WriteModuleInfo(mi.ModulePath, mi.Strip, mi.Srcs, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
