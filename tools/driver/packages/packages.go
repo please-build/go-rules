@@ -15,6 +15,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/logging"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/term"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/please-build/go-rules/tools/please_go/packageinfo"
@@ -138,6 +139,17 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 // A cooler way of handling this in future would be to do this in-process; for that we'd
 // need to define the SDK we keep talking about as a supported programmatic interface.
 func loadPackageInfo(files []string) ([]*packages.Package, error) {
+	isTerminal := term.IsTerminal(int(os.Stderr.Fd()))
+	plz := func(args ...string) *exec.Cmd {
+		cmd := exec.Command("plz", args...)
+		if !isTerminal {
+			cmd.Stderr = &bytes.Buffer{}
+		} else {
+			cmd.Stderr = os.Stderr
+		}
+		return cmd
+	}
+
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -147,16 +159,13 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 		return nil, err
 	}
 	// N.B. deliberate not to close these here, they happen exactly when needed.
-	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, files...)...)
-	whatinputs.Stderr = &bytes.Buffer{}
+	whatinputs := plz(append([]string{"query", "whatinputs"}, files...)...)
 	whatinputs.Stdout = w1
-	deps := exec.Command("plz", "query", "deps", "-", "--hidden", "--include", "go_pkg_info")
+	deps := plz("query", "deps", "-", "--hidden", "--include", "go_pkg_info")
 	deps.Stdin = r1
-	deps.Stderr = &bytes.Buffer{}
 	deps.Stdout = w2
-	build := exec.Command("plz", "build", "-")
+	build := plz("build", "-")
 	build.Stdin = r2
-	build.Stderr = &bytes.Buffer{}
 	build.Stdout = &bytes.Buffer{}
 	if err := whatinputs.Start(); err != nil {
 		return nil, err
@@ -235,7 +244,11 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 }
 
 func handleSubprocessErr(cmd *exec.Cmd, err error) error {
-	return fmt.Errorf("%s Stdout:\n%s", err, cmd.Stderr.(*bytes.Buffer).String())
+	if buf, ok := cmd.Stderr.(*bytes.Buffer); ok {
+		return fmt.Errorf("%s Stdout:\n%s", err, buf.String())
+	}
+	// If it's not a buffer, it was probably stderr, so the user has already seen it.
+	return err
 }
 
 // directoriesToFiles expands any directories in the given list to files in that directory.

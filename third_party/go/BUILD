@@ -242,6 +242,7 @@ go_module(
     module = "golang.org/x/term",
     version = "v0.0.0-20210615171337-6886f2dfbf5b",
     deps = [":xsys"],
+    visibility = ["PUBLIC"],
 )
 
 # This is not really necessary, it's here to test the case of a separate go_mod_download
