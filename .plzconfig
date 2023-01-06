@@ -1,6 +1,9 @@
 [Please]
 Version = 16.26.1
 
+[build]
+hashcheckers = sha256
+
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap

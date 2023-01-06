@@ -1,3 +1,7 @@
+Version 1.1.1
+-------------
+    * Use sha256 only for hashes
+
 Version 1.1.0
 -------------
     * Add `go_get()`, a subrepo based approach to third party code #49
