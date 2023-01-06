@@ -1,3 +1,7 @@
+Version 1.1.2
+-------------
+    * Fix some issues with package info generation when go sources are in a subdirectory
+
 Version 1.1.1
 -------------
     * Use sha256 only for hashes
