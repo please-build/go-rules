@@ -1,3 +1,7 @@
+Version 1.1.3
+-------------
+    * Remove hashes test as the arch subrepo labels break things
+
 Version 1.1.2
 -------------
     * Fix some issues with package info generation when go sources are in a subdirectory
@@ -15,7 +19,6 @@ Version 1.1.0
       and various linters.
     * Backport a fix to the cgo code generation to include compiler flags,
       and package configuration #64
-
 
 Version 1.0.0
 -------------

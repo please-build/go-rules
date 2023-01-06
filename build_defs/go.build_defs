@@ -536,6 +536,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
                      used to contruct the list of definitions passed to the linker.
       env (dict): Additional environment variables to set for the test
     """
+
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
