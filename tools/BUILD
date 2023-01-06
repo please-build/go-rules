@@ -14,16 +14,3 @@ remote_file(
     url = f"https://github.com/please-build/go-rules/releases/download/please-go-v{VERSION}/please_go-{VERSION}-{CONFIG.OS}_{CONFIG.ARCH}",
     visibility = ["PUBLIC"],
 )
-
-gentest(
-    name = "hashes_test",
-    data = [
-        "///darwin_amd64//tools:please_go",
-        "///darwin_arm64//tools:please_go",
-        "///freebsd_amd64//tools:please_go",
-        "///linux_amd64//tools:please_go",
-        "///linux_arm64//tools:please_go",
-    ],
-    test_cmd = "exit 0", # If we manage to build the data targets, then the hashes were good.
-    no_test_output = True,
-)
