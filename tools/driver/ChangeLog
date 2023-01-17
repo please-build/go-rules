@@ -1,9 +1,14 @@
+Version 0.2.2
+-------------
+    * Better handle the case of no input files
+    * Honour the 'tests' field on input request correctly.
+
 Version 0.2.1
 -------------
     * `go_src` dependencies are now explicitly built, ensuring that e.g. code generated from
       protobufs gets downloaded when using remote execution.
 
-Version 0.2.0
+ersion 0.2.0
 -------------
     * `plz build` output now appears on stderr if the terminal is interactive.
 
