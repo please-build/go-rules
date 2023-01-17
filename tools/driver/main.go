@@ -13,10 +13,11 @@ import (
 var log = logging.MustGetLogger()
 
 var opts = struct {
-	Usage     string
-	Verbosity logging.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
-	NoInput   bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
-	Args      struct {
+	Usage      string
+	Verbosity  logging.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
+	NoInput    bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
+	WorkingDir string            `short:"w" long:"working_dir" description:"Change to this working directory before running"`
+	Args       struct {
 		Files []string `positional-arg-name:"file" required:"true"`
 	} `positional-args:"true"`
 }{
@@ -33,6 +34,12 @@ This tool is experimental.
 func main() {
 	flags.ParseFlagsOrDie("Please Go package driver", &opts, nil)
 	logging.InitLogging(opts.Verbosity)
+
+	if opts.WorkingDir != "" {
+		if err := os.Chdir(opts.WorkingDir); err != nil {
+			log.Fatalf("Failed to change working directory: %s", err)
+		}
+	}
 
 	req := &packages.DriverRequest{}
 	if !opts.NoInput {
