@@ -54,11 +54,14 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		files[i] = file
 	}
 	// Inputs can be either files or directories; here we turn them all into files.
-	files, err := directoriesToFiles(files)
+	files, err := directoriesToFiles(files, req.Tests)
 	if err != nil {
 		return nil, err
-	}
-	if err := os.Chdir(filepath.Dir(files[0])); err != nil {
+	} else if len(files) == 0 {
+		// Not obvious that this really is an error case.
+		log.Warning("No Go files found in initial query")
+		return &DriverResponse{NotHandled: true}, nil
+	} else if err := os.Chdir(filepath.Dir(files[0])); err != nil {
 		return nil, err
 	}
 	reporoot := exec.Command("plz", "query", "reporoot")
@@ -255,13 +258,13 @@ func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 }
 
 // directoriesToFiles expands any directories in the given list to files in that directory.
-func directoriesToFiles(in []string) ([]string, error) {
+func directoriesToFiles(in []string, includeTests bool) ([]string, error) {
 	files := make([]string, 0, len(in))
 	for _, x := range in {
 		if info, err := os.Stat(x); err != nil {
 			return nil, err
 		} else if info.IsDir() {
-			for _, f := range allGoFilesInDir(x) {
+			for _, f := range allGoFilesInDir(x, includeTests) {
 				files = append(files, filepath.Join(x, f))
 			}
 		} else {
@@ -272,7 +275,7 @@ func directoriesToFiles(in []string) ([]string, error) {
 }
 
 // allGoFilesInDir returns all the files ending in a particular suffix in a given directory.
-func allGoFilesInDir(dirname string) []string {
+func allGoFilesInDir(dirname string, includeTests bool) []string {
 	entries, err := os.ReadDir(dirname)
 	if err != nil {
 		log.Error("Failed to read directory %s: %s", dirname, err)
@@ -280,7 +283,7 @@ func allGoFilesInDir(dirname string) []string {
 	}
 	files := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if name := entry.Name(); strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+		if name := entry.Name(); strings.HasSuffix(name, ".go") && (includeTests || !strings.HasSuffix(name, "_test.go")) {
 			files = append(files, name)
 		}
 	}
