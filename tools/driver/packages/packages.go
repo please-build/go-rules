@@ -161,7 +161,7 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	// N.B. deliberate not to close these here, they happen exactly when needed.
 	whatinputs := plz(append([]string{"query", "whatinputs"}, files...)...)
 	whatinputs.Stdout = w1
-	deps := plz("query", "deps", "-", "--hidden", "--include", "go_pkg_info")
+	deps := plz("query", "deps", "-", "--hidden", "--include", "go_pkg_info", "--include", "go_src")
 	deps.Stdin = r1
 	deps.Stdout = w2
 	build := plz("build", "-")
@@ -198,6 +198,9 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	g.SetLimit(8) // arbitrary limit since we're doing I/O
 	for _, file := range strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())) {
 		file := file
+		if !strings.HasSuffix(file, ".json") {
+			continue // Ignore all the various Go sources etc.
+		}
 		g.Go(func() error {
 			f, err := os.Open(file)
 			if err != nil {
@@ -206,7 +209,7 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 			defer f.Close()
 			lpkgs := []*packages.Package{}
 			if err := json.NewDecoder(f).Decode(&lpkgs); err != nil {
-				return err
+				return fmt.Errorf("failed to decode package info from %s: %s", file, err)
 			}
 			lock.Lock()
 			defer lock.Unlock()
@@ -219,7 +222,7 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 
 // loadStdlibPackages returns all the packages from the Go stdlib.
 // TODO(peterebden): This is very much temporary, we should ideally be able to get this from
-//                   a plz target as well (especially for go_toolchain)
+// a plz target as well (especially for go_toolchain)
 func loadStdlibPackages() ([]*packages.Package, error) {
 	// We just list the entire stdlib set, it's not worth trying to filter it right now.
 	log.Debug("Loading stdlib packages...")
