@@ -1,3 +1,7 @@
+Version 1.1.4
+-------------
+    * Don't generate Go package info targets when not generating import config
+
 Version 1.1.3
 -------------
     * Remove hashes test as the arch subrepo labels break things
