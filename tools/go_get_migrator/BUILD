@@ -7,5 +7,6 @@ go_binary(
         "//tools/please_go/generate",
         "//third_party/go:buildtools",
         "//third_party/go:mod",
+        "//third_party/go:flags",
     ],
 )

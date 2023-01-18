@@ -212,7 +212,7 @@ go_mod_download(
     name = "build_tools_dl",
     licences = ["Apache-2.0"],
     module = "github.com/peterebden/buildtools",
-    version = "master",
+    version = "ce40803f44fb09c5cf60b5554fe5819d02df23fc",
 )
 
 go_module(

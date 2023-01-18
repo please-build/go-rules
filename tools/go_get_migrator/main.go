@@ -11,8 +11,10 @@ import (
 	"strings"
 
 	"github.com/bazelbuild/buildtools/build"
-	"github.com/please-build/go-rules/tools/please_go/generate"
+	"github.com/peterebden/go-cli-init/v5/flags"
 	"golang.org/x/mod/semver"
+
+	"github.com/please-build/go-rules/tools/please_go/generate"
 )
 
 func getModules() map[string]string {
@@ -119,6 +121,8 @@ func getGoPackageTargetMapping() (map[string]string, error) {
 var opts = struct {
 	Usage string
 
+	ThirdPartyFolder string `long:"third_party_folder" default:"third_party/go"`
+
 	Update struct {
 		Args struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
@@ -127,17 +131,15 @@ var opts = struct {
 	Mod struct {
 		Sync struct {
 		} `command:"sync" alias:"i" description:"synchronises Please with a go.mod file"`
-	} `command:"mod" alias:"i" description:""`
-}{
-	Usage: `
-`,
-}
+	} `command:"mod" alias:"i" description:"Commands to interact with go.mod files"`
+}{}
 
-func main() {
-	// TODO(jpoole): configure the third party build file path
-	file, err := parseBuildFile("third_party/go/BUILD")
+func syncModFile() error {
+	//TODO(jpoole): make the build file configurable
+	path := filepath.Join(opts.ThirdPartyFolder, "BUILD")
+	file, err := parseBuildFile(path)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var stmts []build.Expr
@@ -166,23 +168,57 @@ func main() {
 		modules = append(modules, mod)
 	}
 
-	if err := os.WriteFile("third_party/go/BUILD", build.Format(file), 660); err != nil {
-		panic(err)
+	if err := os.WriteFile(path, build.Format(file), 660); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updatePaths() error {
+	modReqs := getModules()
+	modules := make([]string, 0, len(modReqs))
+
+	for mod, _ := range modReqs {
+		modules = append(modules, mod)
 	}
 
 	reporoot, err := findRepoRoot()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	importPath, err := getImportPath()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	g := generate.New(reporoot, "third_party/go", []string{"BUILD", "BUILD.plz"}, modules)
 
 	if err := g.Update(importPath, os.Args[1:]); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
+}
+
+var subCommands = map[string]func(){
+	"update": func() {
+		if err := updatePaths(); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		os.Exit(0)
+	},
+	"sync": func() {
+		if err := syncModFile(); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		os.Exit(0)
+	},
+}
+
+func main() {
+	command := flags.ParseFlagsOrDie("wrangler", &opts, nil)
+	subCommands[command]()
 }

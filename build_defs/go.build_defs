@@ -937,7 +937,7 @@ def go_get(module: str, version:str=None, download:str=None, requirements:list=[
     if not version and not download:
         fail("must provide either version or download")
 
-    download = download or go_mod_download(f"{name}_dl", module, version, licences=licences, patch=patch)
+    download = download or go_mod_download(tag(name, "dl"), module, version, licences=licences, patch=patch)
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
@@ -946,6 +946,7 @@ def go_get(module: str, version:str=None, download:str=None, requirements:list=[
         outs = [name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         _subrepo = True,
+        labels=["go_module_path:" + module],
     )
     subrepo(
         name = name,
