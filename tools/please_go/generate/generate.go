@@ -17,37 +17,27 @@ type Generate struct {
 	moduleName         string
 	srcRoot            string
 	buildContext       build.Context
-	buildFileName      string
-	deps               []string
+	buildFileNames     []string
+	moduleDeps         []string
 	pluginTarget       string
 	replace            map[string]string
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
+	thirdPartyFolder   string
 }
 
-type rule struct {
-	name          string
-	kind          string
-	srcs          []string
-	cgoSrcs       []string
-	compilerFlags []string
-	linkerFlags   []string
-	pkgConfigs    []string
-	asmFiles      []string
-	hdrs          []string
-	deps          []string
-	embedPatterns []string
-}
-
-func New(srcRoot string, requirements []string) *Generate {
+func New(srcRoot, thirdPartyFolder string, buildFileNames, moduleDeps []string) *Generate {
 	return &Generate{
 		srcRoot:            srcRoot,
 		buildContext:       build.Default,
-		buildFileName:      "BUILD",
-		deps:               requirements,
+		buildFileNames:     buildFileNames,
+		moduleDeps:         moduleDeps,
 		knownImportTargets: map[string]string{},
+		thirdPartyFolder:   thirdPartyFolder,
 	}
 }
 
+// Generate generates a new Please project at the src root. It will walk through the directory tree generating new BUILD
+// files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
 	if err := g.readGoMod(); err != nil {
 		return err
@@ -72,11 +62,11 @@ func (g *Generate) readGoMod() error {
 
 	// TODO we could probably validate these are known modules
 	for _, req := range modFile.Require {
-		g.deps = append(g.deps, req.Mod.Path)
+		g.moduleDeps = append(g.moduleDeps, req.Mod.Path)
 	}
 
 	g.moduleName = modFile.Module.Mod.Path
-	g.deps = append(g.deps, g.moduleName)
+	g.moduleDeps = append(g.moduleDeps, g.moduleName)
 
 	g.replace = make(map[string]string, len(modFile.Replace))
 	for _, replace := range modFile.Replace {
@@ -137,12 +127,21 @@ func (g *Generate) generate(dir string) error {
 	if err != nil {
 		return err
 	}
-	return g.writeFile(dir, g.newRule(pkg))
+	return g.createBuildFile(dir, g.libRule(pkg))
 }
 
-func (g *Generate) writeFile(pkg string, rules []*rule) error {
-	path := filepath.Join(g.pkgDir(pkg), g.buildFileName)
-	f, err := os.Create(filepath.Join(g.pkgDir(pkg), g.buildFileName))
+func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
+	r := NewRule(rule.kind, rule.name)
+	pupulateRule(r, rule)
+	r.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
+
+	return r
+}
+
+func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
+	// Use the first build file name for new files as this will almost always be set to []string{"BUILD", "BUILD.plz"}
+	path := filepath.Join(g.pkgDir(pkg), g.buildFileNames[0])
+	f, err := os.Create(filepath.Join(g.pkgDir(pkg), g.buildFileNames[0]))
 	if err != nil {
 		return err
 	}
@@ -162,51 +161,12 @@ func (g *Generate) writeFile(pkg string, rules []*rule) error {
 		},
 	}
 
-	for _, rule := range rules {
-		r := NewRule(buildFile, rule.kind, rule.name)
-		if len(rule.cgoSrcs) > 0 {
-			r.SetAttr("srcs", NewStringList(rule.cgoSrcs))
-			r.SetAttr("go_srcs", NewStringList(rule.srcs))
-		} else {
-			r.SetAttr("srcs", NewStringList(rule.srcs))
-		}
-		if len(rule.deps) > 0 {
-			r.SetAttr("deps", NewStringList(rule.deps))
-		}
-		if len(rule.compilerFlags) > 0 {
-			r.SetAttr("pkg_config", NewStringList(rule.pkgConfigs))
-		}
-		if len(rule.compilerFlags) > 0 {
-			r.SetAttr("compiler_flags", NewStringList(rule.compilerFlags))
-		}
-		if len(rule.linkerFlags) > 0 {
-			r.SetAttr("linker_flags", NewStringList(rule.linkerFlags))
-		}
-		if len(rule.hdrs) > 0 {
-			r.SetAttr("hdrs", NewStringList(rule.hdrs))
-		}
-		if len(rule.asmFiles) > 0 {
-			r.SetAttr("asm_srcs", NewStringList(rule.asmFiles))
-		}
-		if len(rule.deps) > 0 {
-			r.SetAttr("deps", NewStringList(rule.deps))
-		}
-		if len(rule.embedPatterns) > 0 {
-			r.SetAttr("resources", &bazelbuild.CallExpr{
-				X: &bazelbuild.Ident{Name: "glob"},
-				List: []bazelbuild.Expr{
-					NewStringList(rule.embedPatterns),
-				},
-			})
-		}
-		r.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
-	}
-
+	buildFile.Stmt = append(buildFile.Stmt, g.rule(rule).Call)
 	_, err = f.Write(bazelbuild.Format(buildFile))
 	return err
 }
 
-func NewRule(f *bazelbuild.File, kind, name string) *bazelbuild.Rule {
+func NewRule(kind, name string) *bazelbuild.Rule {
 	rule, _ := bazeledit.ExprToRule(&bazelbuild.CallExpr{
 		X:    &bazelbuild.Ident{Name: kind},
 		List: []bazelbuild.Expr{},
@@ -214,7 +174,6 @@ func NewRule(f *bazelbuild.File, kind, name string) *bazelbuild.Rule {
 
 	rule.SetAttr("name", NewStringExpr(name))
 
-	f.Stmt = append(f.Stmt, rule.Call)
 	return rule
 }
 
@@ -256,36 +215,55 @@ func (g *Generate) depTargets(imports []string) []string {
 	return deps
 }
 
-func (g *Generate) newRule(pkg *build.Package) []*rule {
-
+func (g *Generate) libRule(pkg *build.Package) *Rule {
 	// The name of the target should match the dir it's in, or the basename of the module if it's in the repo root.
 	name := filepath.Base(pkg.Dir)
 	if strings.HasSuffix(pkg.Dir, g.srcRoot) || name == "" {
 		name = filepath.Base(g.moduleName)
 	}
 
-	if name == "." {
-		panic(fmt.Sprintf("%v %v", g.moduleName, pkg.Dir))
+	if len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) > 0 {
+		return nil
 	}
-	var rules []*rule
 
-	if len(pkg.GoFiles) > 0 || len(pkg.CgoFiles) > 0 {
-		packageRule := &rule{
-			name:          name,
-			kind:          packageKind(pkg),
-			srcs:          pkg.GoFiles,
-			cgoSrcs:       pkg.CgoFiles,
-			compilerFlags: pkg.CgoCFLAGS,
-			linkerFlags:   pkg.CgoLDFLAGS,
-			pkgConfigs:    pkg.CgoPkgConfig,
-			asmFiles:      pkg.SFiles,
-			hdrs:          pkg.HFiles,
-			deps:          g.depTargets(pkg.Imports),
-			embedPatterns: pkg.EmbedPatterns,
-		}
-		rules = append(rules, packageRule)
+	return &Rule{
+		name:          name,
+		kind:          packageKind(pkg),
+		srcs:          pkg.GoFiles,
+		cgoSrcs:       pkg.CgoFiles,
+		compilerFlags: pkg.CgoCFLAGS,
+		linkerFlags:   pkg.CgoLDFLAGS,
+		pkgConfigs:    pkg.CgoPkgConfig,
+		asmFiles:      pkg.SFiles,
+		hdrs:          pkg.HFiles,
+		deps:          g.depTargets(pkg.Imports),
+		embedPatterns: pkg.EmbedPatterns,
 	}
-	return rules
+}
+
+func (g *Generate) testRule(pkg *build.Package, prodRule *Rule) *Rule {
+	// The name of the target should match the dir it's in, or the basename of the module if it's in the repo root.
+	name := filepath.Base(pkg.Dir)
+	if strings.HasSuffix(pkg.Dir, g.srcRoot) || name == "" {
+		name = filepath.Base(g.moduleName)
+	}
+
+	if len(pkg.TestGoFiles) == 0 {
+		return nil
+	}
+	deps := g.depTargets(pkg.TestImports)
+
+	if prodRule != nil {
+		deps = append(deps, ":"+prodRule.name)
+	}
+	// TODO(jpoole): handle external tests
+	return &Rule{
+		name:          name,
+		kind:          "go_test",
+		srcs:          pkg.TestGoFiles,
+		deps:          deps,
+		embedPatterns: pkg.TestEmbedPatterns,
+	}
 }
 
 func (g *Generate) depTarget(importPath string) string {
@@ -300,9 +278,7 @@ func (g *Generate) depTarget(importPath string) string {
 	}
 
 	module := ""
-
-	// TODO a trie would be a more sensible data structure here
-	for _, mod := range g.deps {
+	for _, mod := range append(g.moduleDeps, g.moduleName) {
 		if strings.HasPrefix(importPath, mod) {
 			if len(module) < len(mod) {
 				module = mod
@@ -316,18 +292,33 @@ func (g *Generate) depTarget(importPath string) string {
 		return ""
 	}
 
-	subrepoName := strings.ReplaceAll(module, "/", "_")
-
+	subrepoName := g.subrepoName(module)
 	packageName := strings.TrimPrefix(importPath, module)
 	packageName = strings.TrimPrefix(packageName, "/")
-
-	target := ""
+	name := filepath.Base(packageName)
 	if packageName == "" {
-		target = fmt.Sprintf("///third_party/go/%s//:%s", subrepoName, filepath.Base(module))
-	} else {
-		target = fmt.Sprintf("///third_party/go/%s//%s:%s", subrepoName, packageName, filepath.Base(packageName))
+		name = filepath.Base(module)
 	}
 
+	target := buildTarget(name, packageName, subrepoName)
 	g.knownImportTargets[importPath] = target
 	return target
+}
+
+func (g *Generate) subrepoName(module string) string {
+	if g.moduleName == module {
+		return ""
+	}
+	return filepath.Join(g.thirdPartyFolder, strings.ReplaceAll(module, "/", "_"))
+}
+
+func buildTarget(name, pkg, subrepo string) string {
+	if name == "" {
+		name = filepath.Base(pkg)
+	}
+	target := fmt.Sprintf("%v:%v", pkg, name)
+	if subrepo == "" {
+		return fmt.Sprintf("//%v", target)
+	}
+	return fmt.Sprintf("///%v//%v", subrepo, target)
 }

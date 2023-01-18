@@ -76,9 +76,10 @@ var opts = struct {
 		Srcs       string `long:"srcs" env:"SRCS" required:"true" description:"Source files of the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 	Generate struct {
-		SrcRoot string `short:"r" long:"src_root" description:"The src root of the module to inspect"`
-		ModFile string `long:"mod_file"`
-		Args    struct {
+		SrcRoot          string `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+		ThirdPartyFolder string `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" deafult:"third_party/go"`
+		ModFile          string `long:"mod_file"`
+		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
 	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
@@ -136,7 +137,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		if err := generate.New(opts.Generate.SrcRoot, opts.Generate.Args.Requirements).Generate(); err != nil {
+		if err := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, []string{"BUILD"}, opts.Generate.Args.Requirements).Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
 		return 0
