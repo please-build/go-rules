@@ -116,6 +116,23 @@ func getGoPackageTargetMapping() (map[string]string, error) {
 	return ret, nil
 }
 
+var opts = struct {
+	Usage string
+
+	Update struct {
+		Args struct {
+			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
+		} `positional-args:"true" required:"true"`
+	} `command:"update" alias:"i" description:"Updates some build files"`
+	Mod struct {
+		Sync struct {
+		} `command:"sync" alias:"i" description:"synchronises Please with a go.mod file"`
+	} `command:"mod" alias:"i" description:""`
+}{
+	Usage: `
+`,
+}
+
 func main() {
 	// TODO(jpoole): configure the third party build file path
 	file, err := parseBuildFile("third_party/go/BUILD")
@@ -162,7 +179,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 
 	g := generate.New(reporoot, "third_party/go", []string{"BUILD", "BUILD.plz"}, modules)
 

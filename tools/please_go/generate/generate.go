@@ -127,7 +127,13 @@ func (g *Generate) generate(dir string) error {
 	if err != nil {
 		return err
 	}
-	return g.createBuildFile(dir, g.libRule(pkg))
+
+	lib := g.libRule(pkg)
+	if lib == nil {
+		return nil
+	}
+
+	return g.createBuildFile(dir, lib)
 }
 
 func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {

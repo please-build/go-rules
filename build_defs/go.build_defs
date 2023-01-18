@@ -929,16 +929,19 @@ def _add_ld_flags(name:str, stdout:list):
 def _module_rule_name(module):
     return module.replace("/", "_")
 
-def go_get(module: str, version:str, requirements:list=[], licences=None, patch=None):
+def go_get(module: str, version:str=None, download:str=None, requirements:list=[], licences=None, patch=None):
     if "go_get" not in CONFIG.GO.FEATURE_FLAGS:
         fail("go_get() is not ready for production use. To use it, add \"go_get\" to plugin.go.featureflags")
-
     name = _module_rule_name(module)
-    dl = go_mod_download(f"{name}_dl", module, version, licences=licences, patch=patch)
+
+    if not version and not download:
+        fail("must provide either version or download")
+
+    download = download or go_mod_download(f"{name}_dl", module, version, licences=licences, patch=patch)
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
-        srcs = [dl],
+        srcs = [download],
         cmd  = f"rm -rf $SRC/.plzconfig && find $SRC -name BUILD -delete && $TOOL generate --src_root=$SRC {requirements} && mv $SRC $OUT",
         outs = [name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
