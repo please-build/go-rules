@@ -275,17 +275,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         test_only=test_only,
     )
 
-    # Package info rule for the Go packages driver
-    pkg_info_rule = build_rule(
-        name = name,
-        tag = "pkg_info",
-        tools = [CONFIG.GO.PLEASE_GO_TOOL],
-        srcs = srcs + resources,
-        outs = [f"_{name}_pkg_info.json"],
-        cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
-        labels = ["go_pkg_info"],
-        test_only = test_only,
-    )
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs:
@@ -311,7 +300,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     return build_rule(
         name = name,
         srcs = srcs,
-        deps = deps + [pkg_info_rule],
+        deps = deps,
         internal_deps = [src_rule],
         outs = outs,
         cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
@@ -1094,18 +1083,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         )
     outs = []
 
-    # Package info rule for the Go packages driver
-    pkg_info = build_rule(
-        name = name,
-        tag = "pkg_info",
-        tools = [CONFIG.GO.PLEASE_GO_TOOL],
-        srcs = [download],
-        outs = [f"_{name}_pkg_info.json"],
-        cmd = f'$TOOL m -m {module} -s "$SRCS" > $OUT',
-        labels = ["go_pkg_info"],
-        test_only = test_only,
-    )
-
     # Gets the expected archive name given a target package
     def archive_name(i):
         base = basename(i)
@@ -1131,7 +1108,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         binary = binary,
         src = download,
         outs = outs,
-        deps = deps + exported_deps + [pkg_info],
+        deps = deps + exported_deps,
         test_only = test_only,
         visibility = visibility,
         licences = licences,
@@ -1163,7 +1140,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         provides = {
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
-            "pkg_info": pkg_info,
         },
         labels = labels + [f"go_package:{i}" for i in install] + ["go_module_path:" + module],
         visibility = visibility,
