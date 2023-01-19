@@ -132,10 +132,14 @@ func writeExports(filename string, pkgs []*packages.Package, tree, complete bool
 	}
 	for i, pkg := range pkgs {
 		imports := make([]*types.Package, 0, len(pkg.Imports))
-		for imp := range pkg.Imports {
-			imports = append(imports, m[imp])
+		for name := range pkg.Imports {
+			if imp, present := m[name]; present {
+				imports = append(imports, imp)
+			} else {
+				imports = append(imports, types.NewPackage(name, filepath.Base(name)))
+			}
 		}
-		sort.Slice(imports, func(i, j int) bool { return imports[i].Path() < imports[j].Path() })
+		//sort.Slice(imports, func(i, j int) bool { return imports[i].Path() < imports[j].Path() })
 		tpkgs[i].SetImports(imports)
 	}
 	for i, pkg := range pkgs {
