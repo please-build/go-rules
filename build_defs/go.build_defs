@@ -1269,8 +1269,11 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         tag = "pkg_info",
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         srcs = [download],
-        outs = [f"_{name}_pkg_info.json"],
-        cmd = f'$TOOL m -m {module} -s "$SRCS" > $OUT',
+        outs = {
+            "pkg_info": [f"_{name}_pkg_info.json"],
+            "exports": [f"_{name}_gc_exports"],
+        },
+        cmd = f'$TOOL m -m {module} -s "$SRCS" -e "$OUTS_EXPORTS" > "$OUTS_PKG_INFO"',
         labels = ["go_pkg_info"],
         test_only = test_only,
     )

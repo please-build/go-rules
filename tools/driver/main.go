@@ -46,6 +46,7 @@ func main() {
 		if err := json.NewDecoder(os.Stdin).Decode(req); err != nil {
 			log.Fatalf("Failed to read request: %s", err)
 		}
+		log.Debug("Received driver request: %v", req)
 	}
 	resp, err := packages.Load(req, opts.Args.Files)
 	if err != nil {

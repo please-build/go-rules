@@ -6,17 +6,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
+	"go/importer"
+	"go/parser"
+	"go/token"
 	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"golang.org/x/tools/go/gcexportdata"
 	"golang.org/x/tools/go/packages"
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src string, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, exportsFile string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -42,6 +47,11 @@ func WritePackageInfo(modulePath, strip, src string, w io.Writer) error {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
 		pkgs = append(pkgs, pkg)
+		if exportsFile != "" {
+			if err := writeExports(exportsFile, pkg, strip != ""); err != nil {
+				return fmt.Errorf("failed to write export data for %s: %w", pkg.ID, err)
+			}
+		}
 	}
 	// Ensure output is deterministic
 	sort.Slice(pkgs, func(i, j int) bool {
@@ -100,4 +110,38 @@ func mappend(s []string, args ...[]string) []string {
 		s = append(s, arg...)
 	}
 	return s
+}
+
+// writeExports writes the gc export data, which is needed by the package driver for at least some requests.
+// This may be inefficient - we may be re-parsing files that build.ImportDir has already done, but
+// it doesn't seem to be possible to get the AST info back from build.whatever :(
+func writeExports(filename string, pkg *packages.Package, tree bool) error {
+	fset := token.NewFileSet()
+	for _, file := range pkg.GoFiles {
+		if _, err := parser.ParseFile(fset, file, nil, 0); err != nil {
+			return fmt.Errorf("failed to parse %s: %w", file, err)
+		}
+	}
+	if tree {
+		// Output needs to be a tree of files
+		filename = filepath.Join(filename, pkg.Name)
+		if err := os.MkdirAll(filepath.Dir(filename), 0775); err != nil {
+			return fmt.Errorf("failed to make directory: %w", err)
+		}
+	}
+	// We need to convert the packages.Package to a types.Package here, because it'd be too easy
+	// if all the different packages we need to use agreed on the same types.
+	imp := importer.ForCompiler(fset, "gc", func(path string) (io.ReadCloser, error) {
+		return os.Open(path)
+	})
+	p, err := imp.Import(pkg.PkgPath)
+	if err != nil {
+		return fmt.Errorf("failed to import package: %w", err)
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer f.Close()
+	return gcexportdata.Write(f, fset, p)
 }
