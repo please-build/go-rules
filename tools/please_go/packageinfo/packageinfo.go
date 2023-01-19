@@ -139,7 +139,7 @@ func writeExports(filename string, pkgs []*packages.Package, tree, complete bool
 				imports = append(imports, types.NewPackage(name, filepath.Base(name)))
 			}
 		}
-		//sort.Slice(imports, func(i, j int) bool { return imports[i].Path() < imports[j].Path() })
+		sort.Slice(imports, func(i, j int) bool { return imports[i].Path() < imports[j].Path() })
 		tpkgs[i].SetImports(imports)
 	}
 	for i, pkg := range pkgs {
@@ -164,6 +164,7 @@ func writeExport(filename string, pkg *packages.Package, tpkg *types.Package, tr
 			return fmt.Errorf("failed to make directory: %w", err)
 		}
 	}
+	pkg.ExportFile = filename
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)

@@ -124,6 +124,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 			}
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
+		pkg.ExportFile = filepath.Join(rootpath, "plz-out/gen", pkg.ExportFile)
 	}
 	// Handle stdlib imports which are not currently done elsewhere.
 	stdlib, err := loadStdlibPackages()
@@ -217,6 +218,10 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 			lpkgs := []*packages.Package{}
 			if err := json.NewDecoder(f).Decode(&lpkgs); err != nil {
 				return fmt.Errorf("failed to decode package info from %s: %s", file, err)
+			}
+			// Update the ExportFile paths which are relative
+			for _, pkg := range lpkgs {
+				pkg.ExportFile = filepath.Join(filepath.Dir(file), pkg.ExportFile)
 			}
 			lock.Lock()
 			defer lock.Unlock()
