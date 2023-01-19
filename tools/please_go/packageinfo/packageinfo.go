@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
-	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"io"
 	"io/fs"
 	"os"
@@ -21,7 +21,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src, exportsFile string, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, exportsFile string, complete bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -47,10 +47,10 @@ func WritePackageInfo(modulePath, strip, src, exportsFile string, w io.Writer) e
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
 		pkgs = append(pkgs, pkg)
-		if exportsFile != "" {
-			if err := writeExports(exportsFile, pkg, strip != ""); err != nil {
-				return fmt.Errorf("failed to write export data for %s: %w", pkg.ID, err)
-			}
+	}
+	if exportsFile != "" {
+		if err := writeExports(exportsFile, pkgs, strip != "", complete); err != nil {
+			return fmt.Errorf("failed to write export data: %w", err)
 		}
 	}
 	// Ensure output is deterministic
@@ -115,7 +115,38 @@ func mappend(s []string, args ...[]string) []string {
 // writeExports writes the gc export data, which is needed by the package driver for at least some requests.
 // This may be inefficient - we may be re-parsing files that build.ImportDir has already done, but
 // it doesn't seem to be possible to get the AST info back from build.whatever :(
-func writeExports(filename string, pkg *packages.Package, tree bool) error {
+func writeExports(filename string, pkgs []*packages.Package, tree, complete bool) error {
+	// We have to build a parallel set of Package objects of a different flavour, because it'd be
+	// too easy if all the different packages we need to use agreed on the same types.
+	// We get to loop over them all several times to ensure we can populate everything fully
+	// (especially imports) before writing anything out to disk.
+	tpkgs := make([]*types.Package, len(pkgs))
+	m := make(map[string]*types.Package, len(pkgs))
+	for i, pkg := range pkgs {
+		p := types.NewPackage(pkg.PkgPath, pkg.Name)
+		if complete {
+			p.MarkComplete()
+		}
+		tpkgs[i] = p
+		m[pkg.PkgPath] = p
+	}
+	for i, pkg := range pkgs {
+		imports := make([]*types.Package, 0, len(pkg.Imports))
+		for imp := range pkg.Imports {
+			imports = append(imports, m[imp])
+		}
+		sort.Slice(imports, func(i, j int) bool { return imports[i].Path() < imports[j].Path() })
+		tpkgs[i].SetImports(imports)
+	}
+	for i, pkg := range pkgs {
+		if err := writeExport(filename, pkg, tpkgs[i], tree); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeExport(filename string, pkg *packages.Package, tpkg *types.Package, tree bool) error {
 	fset := token.NewFileSet()
 	for _, file := range pkg.GoFiles {
 		if _, err := parser.ParseFile(fset, file, nil, 0); err != nil {
@@ -129,19 +160,10 @@ func writeExports(filename string, pkg *packages.Package, tree bool) error {
 			return fmt.Errorf("failed to make directory: %w", err)
 		}
 	}
-	// We need to convert the packages.Package to a types.Package here, because it'd be too easy
-	// if all the different packages we need to use agreed on the same types.
-	imp := importer.ForCompiler(fset, "gc", func(path string) (io.ReadCloser, error) {
-		return os.Open(path)
-	})
-	p, err := imp.Import(pkg.PkgPath)
-	if err != nil {
-		return fmt.Errorf("failed to import package: %w", err)
-	}
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
 	defer f.Close()
-	return gcexportdata.Write(f, fset, p)
+	return gcexportdata.Write(f, fset, tpkg)
 }

@@ -381,13 +381,14 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
 
     # Package info rule for the Go packages driver
     if _generate_pkg_info:
+        flag = '-c' if complete else ''
         deps += [build_rule(
             name = name,
             tag = "pkg_info",
             tools = [CONFIG.GO.PLEASE_GO_TOOL],
             srcs = srcs + resources,
             outs = [f"_{name}_pkg_info.json"],
-            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
+            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' {flag} > $OUT",
             labels = ["go_pkg_info"],
             test_only = test_only,
         )]
