@@ -139,7 +139,7 @@ var subCommands = map[string]func() int{
 	},
 	"generate": func() int {
 		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, []string{"BUILD"}, opts.Generate.Args.Requirements)
-		if err := g.Generate(opts.Generate.ImportPath); err != nil {
+		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
 		return 0

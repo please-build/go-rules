@@ -8,7 +8,7 @@ filegroup(
 
 go_library(
     name = "generate",
-    srcs = ["generate.go", "rules.go", "update.go"],
+    srcs = [":srcs"],
     visibility = ["//tools/..."],
     deps = [
         "//third_party/go:buildtools",

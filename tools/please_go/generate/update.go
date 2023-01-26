@@ -101,7 +101,7 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 	}
 
 	libRule := g.libRule(pkg)
-	//testRule := g.testRule(pkg, libRule)
+	testRule := g.testRule(pkg, libRule)
 
 	file, err := g.loadBuildFile(path)
 	if err != nil {
@@ -109,7 +109,7 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 	}
 
 	libDone := false
-	//testDone := false
+	testDone := false
 
 	for _, stmt := range file.Stmt {
 		if call, ok := stmt.(*build.CallExpr); ok {
@@ -121,16 +121,17 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 				pupulateRule(rule, libRule)
 				libDone = true
 			}
-			//if rule.Kind() == "go_test" {
-			//	if testDone {
-			//		return fmt.Errorf("too many go_test rules in %v", path)
-			//	}
-			//	if rule.Attr("external") != nil {
-			//		continue
-			//	}
-			//	pupulateRule(rule, testRule)
-			//	testDone = true
-			//}
+			if rule.Kind() == "go_test" {
+				if testDone {
+					fmt.Fprintln(os.Stderr, "WARNING: too many go_test rules in ", path)
+					continue
+				}
+				if rule.Attr("external") != nil {
+					continue
+				}
+				pupulateRule(rule, testRule)
+				testDone = true
+			}
 		}
 	}
 
@@ -140,10 +141,10 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 		file.Stmt = append(file.Stmt, r.Call)
 	}
 
-	//if !testDone && testRule != nil {
-	//	r := NewRule("go_test", testRule.name)
-	//	pupulateRule(r, testRule)
-	//	file.Stmt = append(file.Stmt, r.Call)
-	//}
+	if !testDone && testRule != nil {
+		r := NewRule("go_test", testRule.name)
+		pupulateRule(r, testRule)
+		file.Stmt = append(file.Stmt, r.Call)
+	}
 	return os.WriteFile(file.Path, build.Format(file), 0664)
 }
