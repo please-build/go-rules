@@ -15,7 +15,8 @@ go_toolchain(
         "netgo",
         "osusergo",
     ],
-    version = "1.18",
+    version = "1.20",
+    install_std = True,
 )
 
 go_module(
