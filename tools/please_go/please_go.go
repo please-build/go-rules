@@ -24,7 +24,7 @@ var opts = struct {
 	Install struct {
 		BuildTags         []string `long:"build_tag" description:"Any build tags to apply to the build"`
 		SrcRoot           string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
-		ModuleName        string   `short:"n" long:"module_name" description:"The name of the module" required:"true"`
+		ModuleName        string   `short:"n" long:"module_name" description:"The name of the module"`
 		ImportConfig      string   `short:"i" long:"importcfg" description:"The import config for the modules dependencies" required:"true"`
 		LDFlags           string   `long:"ld_flags" description:"Any additional flags to apply to the C linker" env:"LDFLAGS"`
 		CFlags            string   `long:"c_flags" description:"Any additional flags to apply when compiling C" env:"CFLAGS"`
@@ -33,6 +33,8 @@ var opts = struct {
 		Out               string   `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
 		TrimPath          string   `short:"t" long:"trim_path" description:"Removes prefix from recorded source file paths."`
 		PackageConfigTool string   `short:"p" long:"pkg_config_tool" description:"The path to the pkg config" default:"pkg-config"`
+		SDK               bool     `long:"sdk" description:"Whether we're compiling the go SDK'"`
+		Runtime           bool     `long:"runtime" description:"Whether we're compiling runtime from the SDK'"`
 		Args              struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 		} `positional-args:"true" required:"true"`
@@ -111,6 +113,8 @@ var subCommands = map[string]func() int{
 			opts.Install.PackageConfigTool,
 			opts.Install.Out,
 			opts.Install.TrimPath,
+			opts.Install.SDK,
+			opts.Install.Runtime,
 		)
 		if err := pleaseGoInstall.Install(opts.Install.Args.Packages); err != nil {
 			log.Fatal(err)

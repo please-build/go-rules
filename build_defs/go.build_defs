@@ -81,6 +81,24 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         building_description = "Installing...",
     )
 
+def go_sdk(name:str):
+    def install(runtime, packages):
+        sdk_flag = "--sdk --runtime" if runtime else "--sdk"
+        return f"$TOOLS_PLEASE_GO install {sdk_flag} --trim_path $TMP_DIR --src_root=$($TOOLS_GO env GOROOT)/src --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.OS}_{CONFIG.ARCH} {packages}"
+
+    runtime = install(True, "runtime")
+    sdk = install(False, "runtime/cgo ./...")
+    cmd = f"touch importconfig && {runtime} && {sdk}"
+    return build_rule(
+        name = name,
+        cmd = cmd,
+        tools = {
+            "PLEASE_GO": [CONFIG.GO.PLEASE_GO_TOOL],
+            "GO": [CONFIG.GO.GO_TOOL],
+            "CC": [CONFIG.GO.CC_TOOL],
+        },
+    )
+
 def _pkg_sources(name: str, deps: list, test_only:bool):
     """
     This rule generates a list of go srcs for any rule in the deps list that is local to this package.

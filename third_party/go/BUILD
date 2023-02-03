@@ -18,6 +18,10 @@ go_toolchain(
     version = "1.18",
 )
 
+go_sdk(
+    name = "sdk",
+)
+
 go_module(
     name = "testify",
     install = [

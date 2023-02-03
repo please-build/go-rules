@@ -29,6 +29,9 @@ type PleaseGoInstall struct {
 	outDir       string
 	trimPath     string
 
+	// Set if we're compiling SDK. We need to pass a few extra flags to the compiler commands.
+	sdk, runtime bool
+
 	additionalCFlags string
 	// A set of flags we may get from: pkg-config, #cgo directives,
 	// go rules' `linker_flags` argument and `go.ldflags` config value.
@@ -55,7 +58,7 @@ func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
 }
 
 // New creates a new PleaseGoInstall
-func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
+func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string, sdk, runtime bool) *PleaseGoInstall {
 	i := &PleaseGoInstall{
 		srcRoot:      srcRoot,
 		moduleName:   moduleName,
@@ -71,6 +74,9 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags,
 			PkgConfigTool: pkgConfTool,
 			Exec:          &exec.Executor{Stdout: os.Stdout, Stderr: os.Stderr},
 		},
+
+		sdk:     sdk,
+		runtime: runtime,
 	}
 	if len(ldFlags) > 0 {
 		i.collectedLdFlags = []string{ldFlags}
@@ -145,7 +151,7 @@ func (install *PleaseGoInstall) linkPackage(target string) error {
 // compileAll walks the provided directory looking for go packages to compile. Unlike compile(), this will skip any
 // directories that contain no .go files for the current architecture.
 func (install *PleaseGoInstall) compileAll(dir string) error {
-	pkgRoot := install.pkgDir(dir)
+	pkgRoot := filepath.Join(install.srcRoot, install.pkgDir(dir))
 	return filepath.Walk(pkgRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -162,8 +168,10 @@ func (install *PleaseGoInstall) compileAll(dir string) error {
 					return err
 				}
 			}
-		} else if info.Name() == "testdata" {
+		} else if info.Name() == "testdata" || strings.HasPrefix(info.Name(), "_") {
 			return filepath.SkipDir // Dirs named testdata are deemed not to contain buildable Go code.
+		} else if install.sdk && info.Name() == "cmd" { // We don't need to compile all the tools from the SDK
+			return filepath.SkipDir
 		}
 		return nil
 	})
@@ -178,23 +186,17 @@ func (install *PleaseGoInstall) initBuildEnv() error {
 
 // pkgDir returns the file path to the given target package
 func (install *PleaseGoInstall) pkgDir(target string) string {
-	p := strings.TrimPrefix(target, install.moduleName)
-	p = filepath.Join(install.srcRoot, p)
-
-	// TODO(jpoole): is this really the right thing to do? I think this is a please specific "bug"?
-	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
-	if _, err := os.Lstat(p); os.IsNotExist(err) {
-		p = filepath.Dir(p)
-	}
-
-	return p
+	return strings.TrimPrefix(target, install.moduleName)
 }
 
 func (install *PleaseGoInstall) parseImportConfig() error {
 	install.compiledPackages = map[string]string{
 		"unsafe": "", // Not sure how many other packages like this I need to handle
 		"C":      "", // Pseudo-package for cgo symbols
-		"embed":  "", // Another psudo package
+	}
+	if !install.sdk {
+		// TODO(jpoole): is this necessary?
+		install.compiledPackages["embed"] = ""
 	}
 
 	if install.importConfig != "" {
@@ -225,8 +227,7 @@ func checkCycle(path []string, next string) ([]string, error) {
 }
 
 func (install *PleaseGoInstall) importDir(target string) (*build.Package, error) {
-	dir := filepath.Join(os.Getenv("TMP_DIR"), install.pkgDir(target))
-	return install.buildContext.ImportDir(dir, build.ImportComment)
+	return install.buildContext.Import(target, install.srcRoot, build.ImportComment)
 }
 
 func (install *PleaseGoInstall) compile(from []string, target string) error {
@@ -242,7 +243,11 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 
 	pkg, err := install.importDir(target)
 	if err != nil {
-		return err
+		var err2 error
+		pkg, err2 = install.importDir(filepath.Join("vendor", target))
+		if err2 != nil {
+			return err
+		}
 	}
 
 	for _, i := range pkg.Imports {
@@ -310,6 +315,10 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		return nil
 	}
 
+	if install.sdk && target == "builtin" {
+		return nil
+	}
+
 	out := outPath(install.outDir, target)
 	workDir := filepath.Join(os.Getenv("TMP_DIR"), baseWorkDir, install.pkgDir(target))
 
@@ -351,7 +360,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			cFlags = append(cFlags, f)
 		}
 
-		cgoGoWorkFiles, cgoCWorkFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, cgoFiles)
+		cgoGoWorkFiles, cgoCWorkFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, cgoFiles, target != "runtime/cgo")
 		if err != nil {
 			return err
 		}
@@ -400,22 +409,34 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 	asmFiles := prefixPaths(pkg.SFiles, pkg.Dir)
 	if len(asmFiles) > 0 {
-		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, asmFiles)
+		// The go SDK includes .S files which use the pre-processor but then store the outputted .s files next to them.
+		// We should just ignore these.
+		if install.sdk {
+			var newFiles []string
+			for _, file := range asmFiles {
+				if strings.HasSuffix(file, ".s") {
+					newFiles = append(newFiles, file)
+				}
+			}
+			asmFiles = newFiles
+		}
+
+		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, asmFiles, install.sdk)
 		if err != nil {
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis, install.sdk, install.runtime); err != nil {
 			return err
 		}
 
-		asmObjFiles, err := install.tc.Asm(importPath, pkg.Dir, workDir, install.trimPath, asmFiles)
+		asmObjFiles, err := install.tc.Asm(importPath, pkg.Dir, workDir, install.trimPath, asmFiles, install.runtime)
 		if err != nil {
 			return err
 		}
 
 		objFiles = append(objFiles, asmObjFiles...)
-	} else if err := install.tc.GoCompile(pkg.Dir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles); err != nil {
+	} else if err := install.tc.GoCompile(importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, install.sdk, install.runtime); err != nil {
 		return err
 	}
 
