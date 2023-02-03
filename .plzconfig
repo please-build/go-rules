@@ -8,6 +8,7 @@ hashcheckers = sha256
 GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
+SDKRule = //third_party/go:sdk
 
 [Plugin "cc"]
 Target = //plugins:cc
@@ -21,6 +22,10 @@ Name = go
 
 [PluginConfig "go_tool"]
 DefaultValue = go
+Inherit = true
+
+[PluginConfig "sdk_rule"]
+Optional = true
 Inherit = true
 
 [PluginConfig "require_licences"]

@@ -81,22 +81,42 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         building_description = "Installing...",
     )
 
-def go_sdk(name:str):
+def go_sdk(name:str, go_tool:str=CONFIG.GO.GO_TOOL):
     def install(runtime, packages):
         sdk_flag = "--sdk --runtime" if runtime else "--sdk"
-        return f"$TOOLS_PLEASE_GO install {sdk_flag} --trim_path $TMP_DIR --src_root=$($TOOLS_GO env GOROOT)/src --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.OS}_{CONFIG.ARCH} {packages}"
+        return f"$TOOLS_PLEASE_GO install {sdk_flag} --trim_path $TMP_DIR --src_root=$($TOOLS_GO env GOROOT)/src --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=$OUT {packages}"
 
     runtime = install(True, "runtime")
     sdk = install(False, "runtime/cgo ./...")
-    cmd = f"touch importconfig && {runtime} && {sdk}"
-    return build_rule(
+    cmd = f"touch importconfig && {runtime} && {sdk} && cat LD_FLAGS"
+    a_rule = build_rule(
         name = name,
+        tag = "a_rule",
         cmd = cmd,
         tools = {
             "PLEASE_GO": [CONFIG.GO.PLEASE_GO_TOOL],
-            "GO": [CONFIG.GO.GO_TOOL],
+            "GO": [go_tool],
             "CC": [CONFIG.GO.CC_TOOL],
         },
+        outs = [f"{name}/pkg/{CONFIG.OS}_{CONFIG.ARCH}"],
+        post_build=_add_ld_flags,
+    )
+    import_config = build_rule(
+        name=name,
+        tag='import_config',
+        deps = [a_rule],
+        visibility = ["PUBLIC"],
+        cmd = _generate_pkg_import_cfg_cmd('"$OUT"', f'"$PKG_DIR"/{name}', True),
+        outs = [f'{name}.importconfig'],
+    )
+    return filegroup(
+        name = name,
+        srcs = [a_rule],
+        exported_deps = [import_config],
+        provides = {
+            "go": f":{name}", # provide the filegroup otherwise exported deps don't work
+        },
+        visibility = ["PUBLIC"],
     )
 
 def _pkg_sources(name: str, deps: list, test_only:bool):
@@ -157,6 +177,9 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     # package like third party sources which is especially slow on systems with slow syscall performance (macOS)
     if _all_srcs:
         deps += [_pkg_sources(name, deps, test_only)]
+
+    if CONFIG.GO.SDK_RULE:
+        deps += [CONFIG.GO.SDK_RULE]
 
     if _generate_import_config:
         import_cfg = build_rule(
@@ -913,7 +936,6 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     cc_tool_flag = "--cc_tool=$TOOLS_CC" if CONFIG.GO.CC_TOOL else ''
     cmd = [
         _set_go_env(),
-        _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
         f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO {cc_tool_flag} --out=pkg/{CONFIG.OS}_{CONFIG.ARCH} " + " ".join(install),
         "cat LD_FLAGS",
@@ -928,8 +950,12 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         'go': [CONFIG.GO.GO_TOOL],
         'please_go': [CONFIG.GO.PLEASE_GO_TOOL],
     }
+
     if CONFIG.GO.CC_TOOL:
         tools["cc"] = [CONFIG.GO.CC_TOOL]
+
+    if CONFIG.GO.SDK_RULE:
+        deps += [CONFIG.GO.SDK_RULE]
 
     return build_rule(
         name = name,
@@ -1229,8 +1255,7 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS_GO; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
-    gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
+    gen_import_cfg = _set_go_env() + ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
 
     package_flag = f" -p {import_path}" if import_path else ""
@@ -1248,7 +1273,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
+    gen_import_cfg = _set_go_env()
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
 
     linkerdefs = []

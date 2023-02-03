@@ -170,7 +170,7 @@ func (install *PleaseGoInstall) compileAll(dir string) error {
 			}
 		} else if info.Name() == "testdata" || strings.HasPrefix(info.Name(), "_") {
 			return filepath.SkipDir // Dirs named testdata are deemed not to contain buildable Go code.
-		} else if install.sdk && info.Name() == "cmd" { // We don't need to compile all the tools from the SDK
+		} else if install.sdk && (info.Name() == "cmd" || strings.HasSuffix(info.Name(), "test")) { // We don't need to compile all the tools from the SDK
 			return filepath.SkipDir
 		}
 		return nil
@@ -227,7 +227,13 @@ func checkCycle(path []string, next string) ([]string, error) {
 }
 
 func (install *PleaseGoInstall) importDir(target string) (*build.Package, error) {
-	return install.buildContext.Import(target, install.srcRoot, build.ImportComment)
+	// TODO(jpoole): I think Import should work in both cases. It seems to want a GOPATH structure where the package
+	// 	exists in the right place under the src root to resolve based on the full target path including the module name
+	if install.sdk {
+		return install.buildContext.Import(target, install.srcRoot, build.ImportComment)
+	}
+	dir := filepath.Join(os.Getenv("TMP_DIR"), install.srcRoot, install.pkgDir(target))
+	return install.buildContext.ImportDir(dir, build.ImportComment)
 }
 
 func (install *PleaseGoInstall) compile(from []string, target string) error {
@@ -409,16 +415,23 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 	asmFiles := prefixPaths(pkg.SFiles, pkg.Dir)
 	if len(asmFiles) > 0 {
-		// The go SDK includes .S files which use the pre-processor but then store the outputted .s files next to them.
-		// We should just ignore these.
+		// The go SDK includes .S files for each architecture. We
 		if install.sdk {
 			var newFiles []string
+			var cPreprocessAsmFiles []string
 			for _, file := range asmFiles {
 				if strings.HasSuffix(file, ".s") {
 					newFiles = append(newFiles, file)
+				} else {
+					cPreprocessAsmFiles = append(cPreprocessAsmFiles, file)
 				}
 			}
 			asmFiles = newFiles
+			of, err := install.tc.CCompile(pkg.Dir, workDir, cPreprocessAsmFiles, append(pkg.CgoCXXFLAGS, "-I"+workDir))
+			if err != nil {
+				return err
+			}
+			objFiles = append(objFiles, of...)
 		}
 
 		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, asmFiles, install.sdk)

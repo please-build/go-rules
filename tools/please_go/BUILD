@@ -30,7 +30,7 @@ genrule(
     outs = ["please_go.bootstrap"],
     binary = True,
     sandbox = False,
-    cmd = "(cd $PKG_DIR && $TOOL build please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
+    cmd = "cd $PKG_DIR && $TOOL build -modcacherw please_go.go && mv please_go $OUT",
     requires = ["go_src"],
     tools = [CONFIG.GO.GO_TOOL],
     visibility = ["PUBLIC"],
