@@ -43,6 +43,10 @@ type DriverResponse struct {
 // Load reads a set of packages and returns information about them.
 // Most of the request structure isn't honoured at the moment.
 func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
+	// If there are no files provided, do nothing.
+	if len(files) == 0 {
+		return &DriverResponse{NotHandled: true}, nil
+	}
 	// We need to find the plz repo that we need to be in (we might be invoked from outside it)
 	// For now we're assuming they're all in the same repo (which is probably reasonable) and just
 	// take the first one as indicative (which is maybe less so).
