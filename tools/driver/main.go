@@ -18,7 +18,7 @@ var opts = struct {
 	NoInput    bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
 	WorkingDir string            `short:"w" long:"working_dir" description:"Change to this working directory before running"`
 	Args       struct {
-		Files []string `positional-arg-name:"file" required:"true"`
+		Files []string `positional-arg-name:"file"`
 	} `positional-args:"true"`
 }{
 	Usage: `
