@@ -1,5 +1,5 @@
 [Please]
-Version = 16.27.2
+Version = 16.26.1
 
 [build]
 hashcheckers = sha256
