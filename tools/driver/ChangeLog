@@ -1,5 +1,9 @@
 Version 0.2.2
 -------------
+    * Allow the caller not to provide any input files at all
+
+Version 0.2.2
+-------------
     * Better handle the case of no input files
     * Honour the 'tests' field on input request correctly.
 
