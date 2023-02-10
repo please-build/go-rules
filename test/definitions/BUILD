@@ -9,6 +9,6 @@ go_binary(
 
 plz_e2e_test(
     name = "definitions_test",
-    cmd = "plz run //test/definitions:main",
+    cmd = "plz run --noupdate //test/definitions:main",
     expect_output_contains = "v1.0.0",
 )

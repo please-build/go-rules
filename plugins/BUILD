@@ -9,3 +9,8 @@ plugin_repo(
     plugin = "cc-rules",
     revision="v0.3.2"
 )
+
+plugin_repo(
+  name = "shell",
+  revision = "v0.1.2",
+)

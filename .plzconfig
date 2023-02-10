@@ -96,3 +96,6 @@ Help = Flags to enable in-development features, or toggle breaking changes
 
 [BuildConfig]
 Release = False
+
+[Plugin "shell"]
+Target = //plugins:shell
