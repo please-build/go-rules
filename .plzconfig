@@ -1,5 +1,5 @@
 [Please]
-Version = 16.26.1
+Version = 17.0.0-beta.1
 
 [build]
 hashcheckers = sha256
@@ -93,9 +93,6 @@ Repeatable = true
 Optional = true
 Inherit = true
 Help = Flags to enable in-development features, or toggle breaking changes
-
-[FeatureFlags]
-ExcludeGoRules = true
 
 [BuildConfig]
 Release = False
