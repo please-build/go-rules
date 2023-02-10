@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[], strip_srcs:bool=False, tags:list=None, install_std=False):
+                 architectures:list=[], strip_srcs:bool=False, tags:list=None, install_std=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -28,6 +28,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                          improve performance, especially for remote execution. This doesn't work with go_get() however
                          it is recommended to set this to True if you're using go_module() exclusively.
       tags (bool): Build tags to pass when installing the standard library.
+      install_std (bool): Whether we should install the standard library. This is required for go 1.20+. If not set,
+                          Please will do whatever is appropriate based on the Go version.
     """
     if url and version:
         fail("Either version or url should be provided but not both")
@@ -58,7 +60,10 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
         cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} --trimpath std)'
-    # TODO(jpoole): we should parse the version and figure out if we're post 1.20 but asp doesn't really facilitate that
+
+    if semver_check(version, ">= 1.20.0") and install_std is None:
+        install_std = True
+
     if install_std:
         cmd += f" && $OUT/bin/go install{tag_flag} --trimpath std"
     if strip_srcs:
