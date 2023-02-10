@@ -9,7 +9,7 @@ exports = [
 
 genrule(
     name = "export",
-    cmd = "rm .plzconfig && $TOOL export {exports} -o $TMP_DIR/_tmp && tar -czf $OUT _tmp".format(exports=" ".join(exports)),
+    cmd = "rm .plzconfig && $TOOL --noupdate export {exports} -o $TMP_DIR/_tmp && tar -czf $OUT _tmp".format(exports=" ".join(exports)),
     outs = ["go_rules.tar.gz"],
     deps = exports,
     visibility=["//test/..."],
