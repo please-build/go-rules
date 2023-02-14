@@ -110,7 +110,8 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
-               _generate_import_config:bool=True, import_path:str='', labels:list=[], package:str=None):
+               _generate_import_config:bool=True, _generate_pkg_info:bool=True,
+               import_path:str='', labels:list=[], package:str=None):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -284,7 +285,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     )
 
     # Package info rule for the Go packages driver
-    if _generate_import_config:
+    if _generate_pkg_info:
         deps += [build_rule(
             name = name,
             tag = "pkg_info",
@@ -561,6 +562,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _link_extra = False,
         complete = False,
         _generate_import_config=False,
+        _generate_pkg_info = False,
         import_path = test_package,
     )
 
