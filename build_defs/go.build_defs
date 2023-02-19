@@ -613,7 +613,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
-    test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
+    test_cmd = f'$TEST {flags} 2>&1 | $TOOLS_JUNIT_REPORT -skipped-node-text-location message-attr | tee $RESULTS_FILE'
     worker_cmd = f'$(worker {worker})' if worker else ""
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
@@ -646,6 +646,9 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         debug_tools = debug_tools,
         cmd = cmds,
         test_cmd = test_cmd,
+        test_tools = {
+            "junit_report": "//third_party/go:junit_report",
+        },
         debug_cmd = debug_cmd,
         visibility = visibility,
         test_sandbox = sandbox,

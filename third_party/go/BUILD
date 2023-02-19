@@ -45,6 +45,21 @@ go_module(
     visibility = ["PUBLIC"],
 )
 
+go_mod_download(
+    name = "junit_report_download",
+    module = "github.com/marcuscaisey/go-junit-report/v2",
+    version = "b576769f22db5b6a7880775f723c0b29e5a03ac7",
+)
+
+go_module(
+    name = "junit_report",
+    binary = True,
+    download = ":junit_report_download",
+    licences = ["MIT"],
+    module = "github.com/jstemmer/go-junit-report/v2",
+    visibility = ["PUBLIC"],
+)
+
 go_module(
     name = "spew",
     install = ["spew"],
