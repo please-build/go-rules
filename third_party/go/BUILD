@@ -48,7 +48,7 @@ go_module(
 go_mod_download(
     name = "junit_report_download",
     module = "github.com/marcuscaisey/go-junit-report/v2",
-    version = "b576769f22db5b6a7880775f723c0b29e5a03ac7",
+    version = "f9f65c7e2eb4a7e4a98b4cc8757772ae1092d211",
 )
 
 go_module(
