@@ -163,20 +163,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     else:
         exported_deps = []
 
-    if cover:
-        cover_vars = build_rule(
-            name = name,
-            tag = "cover_vars",
-            srcs = srcs,
-            cmd = f"$TOOL covervars --import_path {package_path} $($TOOL filter $SRCS) > $OUT",
-            tools = [CONFIG.GO.PLEASE_GO_TOOL],
-            outs = [f"{name}.cover_vars"],
-            visibility = visibility,
-            test_only = test_only,
-        )
-        deps += [cover_vars]
-    else:
-        cover_vars = None
     if resources:
         embedcfg = build_rule(
             name = name,
@@ -251,8 +237,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             labels=labels,
         )
         provides = {'go': ':' + name, 'go_src': lib_rule}
-        if cover:
-            provides['cover_vars'] = cover_vars
         return build_rule(
             name = name,
             srcs = {
@@ -316,8 +300,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         outs = [out]
 
     provides = {'go': ':' + name, 'go_src': src_rule}
-    if cover:
-        provides['cover_vars'] = cover_vars
     return build_rule(
         name = name,
         srcs = srcs,
@@ -819,8 +801,7 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
         outs = [name + '_main.go'],
         deps = deps,
         cmd = cmds,
-        needs_transitive_deps = cover,  # Need all dependencies to template coverage variables
-        requires = ['go', 'cover_vars'] if cover else ['go'],
+        requires = ['go'] if cover else ['go'],
         test_only = test_only,
         tools = {
             'plz': [CONFIG.GO.PLEASE_GO_TOOL],

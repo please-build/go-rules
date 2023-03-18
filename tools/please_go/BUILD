@@ -10,7 +10,6 @@ go_binary(
     deps = [
         "//third_party/go:flags",
         "//tools/please_go/cover",
-        "//tools/please_go/covervars",
         "//tools/please_go/embed",
         "//tools/please_go/filter",
         "//tools/please_go/install",
