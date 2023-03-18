@@ -9,3 +9,6 @@ Target = //plugins:go
 
 [FeatureFlags]
 ExcludeGoRules = true
+
+[buildenv]
+goexperiment = nocoverageredesign

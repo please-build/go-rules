@@ -9,3 +9,6 @@ TestRootCompat = true
 
 [FeatureFlags]
 ExcludeGoRules = true
+
+[buildenv]
+goexperiment = nocoverageredesign
