@@ -54,6 +54,7 @@ var opts = struct {
 		CoverageCfg string `short:"c" long:"covcfg" required:"true" description:"Output coveragecfg file to feed into go tool compile"`
 		Output      string `short:"o" long:"output" required:"true" description:"File that will contain output names of modified files"`
 		Pkg         string `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
+		PkgName     string `short:"p" long:"pkg_name" description:"Name of the package we're compiling"`
 		Args        struct {
 			Sources []string `positional-arg-name:"sources" required:"true" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
@@ -125,7 +126,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"cover": func() int {
-		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.Args.Sources); err != nil {
+		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.PkgName, opts.Cover.Args.Sources); err != nil {
 			log.Fatalf("failed to write coverage: %s", err)
 		}
 		return 0

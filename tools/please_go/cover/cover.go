@@ -11,11 +11,12 @@ import (
 )
 
 // WriteCoverage writes the necessary Go coverage information for a set of sources.
-func WriteCoverage(goTool, covercfg, output, pkg string, srcs []string) error {
+func WriteCoverage(goTool, covercfg, output, pkg, pkgName string, srcs []string) error {
 	const pkgConfigFile = "pkgcfg"
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
 		PkgPath:     pkg,
+		PkgName:     pkgName,
 		Granularity: "perblock",
 	})
 	if err := os.WriteFile(pkgConfigFile, b, 0644); err != nil {
