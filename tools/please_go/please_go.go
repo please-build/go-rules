@@ -132,7 +132,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"cover": func() int {
-		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Package, opts.Cover.Args.Sources); err != nil {
+		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.Args.Sources); err != nil {
 			log.Fatalf("failed to write coverage: %s", err)
 		}
 		return 0
