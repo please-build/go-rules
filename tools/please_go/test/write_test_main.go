@@ -20,29 +20,24 @@ type testDescr struct {
 	BenchFunctions []string
 	FuzzFunctions  []string
 	Examples       []*doc.Example
-	CoverVars      []CoverVar
 	Imports        []string
 	Coverage       bool
 	Benchmark      bool
-	HasFuzz        bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
-// This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark, hasFuzz bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage bool, benchmark bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
 	testDescr.Coverage = coverage
-	testDescr.CoverVars = coverVars
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
+		testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
 	}
 
 	testDescr.Benchmark = benchmark
-	testDescr.HasFuzz = hasFuzz
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -52,19 +47,6 @@ func WriteTestMain(testPackage string, sources []string, output string, coverage
 	// This might be consumed by other things.
 	fmt.Printf("Package: %s\n", testDescr.Package)
 	return testMainTmpl.Execute(f, testDescr)
-}
-
-// extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(testPackage, alias string, coverVars []CoverVar) []string {
-	ret := make([]string, 0, len(coverVars)+1)
-	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
-
-	for i, v := range coverVars {
-		name := fmt.Sprintf("_cover%d", i)
-		coverVars[i].ImportName = name
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, v.ImportPath))
-	}
-	return ret
 }
 
 // parseTestSources parses the test sources and returns the package and set of test functions in them.
@@ -151,6 +133,11 @@ import (
 	_gostdlib_testing "testing"
 	_gostdlib_testdeps "testing/internal/testdeps"
 
+{{if .Coverage}}
+	_ "runtime/coverage"
+	_ "unsafe"
+{{end}}
+
 {{range .Imports}}
 	{{.}}
 {{end}}
@@ -173,50 +160,36 @@ var benchmarks = []_gostdlib_testing.InternalBenchmark{
 {{end}}
 }
 
-{{ if .HasFuzz }}
 var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
 {{ range .FuzzFunctions }}
 	{"{{.}}", {{$.Package}}.{{.}}},
 {{ end }}
 }
-{{ end }}
 
 {{if .Coverage}}
+//go:linkname runtime_coverage_processCoverTestDir runtime/coverage.processCoverTestDir
+func runtime_coverage_processCoverTestDir(dir string, cfile string, cmode string, cpkgs string) error
 
-// Only updated by init functions, so no need for atomicity.
-var (
-	coverCounters = make(map[string][]uint32)
-	coverBlocks = make(map[string][]_gostdlib_testing.CoverBlock)
-)
+//go:linkname testing_registerCover2 testing.registerCover2
+func testing_registerCover2(mode string, tearDown func(coverprofile string, gocoverdir string) (string, error))
 
-func init() {
-	{{range $i, $c := .CoverVars}}
-		{{if $c.ImportName }}
-			coverRegisterFile({{printf "%q" $c.File}}, {{$c.ImportName}}.{{$c.Var}}.Count[:], {{$c.ImportName}}.{{$c.Var}}.Pos[:], {{$c.ImportName}}.{{$c.Var}}.NumStmt[:])
-		{{end}}
-	{{end}}
-}
+//go:linkname runtime_coverage_markProfileEmitted runtime/coverage.markProfileEmitted
+func runtime_coverage_markProfileEmitted(val bool)
 
-func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts []uint16) {
-	if 3*len(counter) != len(pos) || len(counter) != len(numStmts) {
-		panic("coverage: mismatched sizes")
-	}
-	if coverCounters[fileName] != nil {
-		// Already registered.
-		return
-	}
-	coverCounters[fileName] = counter
-	block := make([]_gostdlib_testing.CoverBlock, len(counter))
-	for i := range counter {
-		block[i] = _gostdlib_testing.CoverBlock{
-			Line0: pos[3*i+0],
-			Col0: uint16(pos[3*i+2]),
-			Line1: pos[3*i+1],
-			Col1: uint16(pos[3*i+2]>>16),
-			Stmts: numStmts[i],
+func coverTearDown(coverprofile string, gocoverdir string) (string, error) {
+	var err error
+	if gocoverdir == "" {
+		gocoverdir, err = _gostdlib_os.MkdirTemp("", "gocoverdir")
+		if err != nil {
+			return "error setting GOCOVERDIR: bad os.MkdirTemp return", err
 		}
+		defer _gostdlib_os.RemoveAll(gocoverdir)
 	}
-	coverBlocks[fileName] = block
+	runtime_coverage_markProfileEmitted(true)
+	if err := runtime_coverage_processCoverTestDir(gocoverdir, coverprofile, "set", ""); err != nil {
+		return "error generating coverage report", err
+	}
+	return "", nil
 }
 {{end}}
 
@@ -224,14 +197,9 @@ var testDeps = _gostdlib_testdeps.TestDeps{}
 
 func main() {
 {{if .Coverage}}
-	_gostdlib_testing.RegisterCover(_gostdlib_testing.Cover{
-		Mode: "set",
-		Counters: coverCounters,
-		Blocks: coverBlocks,
-		CoveredPackages: "",
-	})
     coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
     args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
+	testing_registerCover2("set", coverTearDown)
 {{else}}
     args := []string{_gostdlib_os.Args[0], "-test.v"}
 {{end}}
@@ -242,11 +210,11 @@ func main() {
 		args = append(args, "-test.run", testVar)
     }
     _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, tests, nil,{{ if .HasFuzz }} fuzzTargets,{{ end }} examples)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil, fuzzTargets, examples)
 {{else}}
 	args = append(args, "-test.bench", ".*")
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks,{{ if .HasFuzz }} fuzzTargets,{{ end }} nil)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, fuzzTargets, nil)
 {{end}}
 
 {{if .Main}}
