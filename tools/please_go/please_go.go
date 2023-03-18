@@ -53,7 +53,7 @@ var opts = struct {
 		GoTool      string `short:"g" long:"go" default:"go" description:"Go binary to run"`
 		CoverageCfg string `short:"c" long:"covcfg" required:"true" description:"Output coveragecfg file to feed into go tool compile"`
 		Output      string `short:"o" long:"output" required:"true" description:"File that will contain output names of modified files"`
-		Pkg         string `short:"p" long:"package" description:"Go package that we are compiling"`
+		Pkg         string `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
 		Args        struct {
 			Sources []string `positional-arg-name:"sources" required:"true" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
