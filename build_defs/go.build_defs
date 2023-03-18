@@ -298,7 +298,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         )]
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
-    if filter_srcs:
+    if filter_srcs or cover:
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
 
     srcs = {
@@ -1218,20 +1218,18 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
     compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
-    # Annotates files for coverage.
-    cover_cmd = 'for SRC in $SRCS_GO; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
+    package_flag = f" -p {import_path}" if import_path else ""
 
     gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
 
-    package_flag = f" -p {import_path}" if import_path else ""
     cmds = {
         'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} -N -l $SRCS_GO',
         'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd}{package_flag} $SRCS_GO'
+        cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt -g $TOOLS_GO $SRCS_GO {package_flag} && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
     return cmds
 
 
