@@ -912,7 +912,12 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     ]
 
     if binary:
-        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/bin/{name}']
+        # This decouples the name of the target from the name of the installed binary when it's unambiguous what the
+        # output binary should be. This is especially useful when installing a module like
+        # github.com/jstemmer/go-junit-report/v2 which results in a binary called v2 which isn't a very helpful name for
+        # a build target.
+        bin_name = basename(install[0]) if len(install) == 1 else name
+        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/bin/{bin_name}']
     else:
         outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/{out}' for out in _remove_redundant_outs(outs)]
 
