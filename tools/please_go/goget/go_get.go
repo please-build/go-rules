@@ -35,7 +35,7 @@ func (g *getter) getGoMod(mod, ver string) (*modfile.File, error) {
 		return modFile, nil
 	}
 
-	file := fmt.Sprintf("%s/%s/@v/%s.mod", g.proxyUrl, strings.ToLower(mod), ver)
+	file := fmt.Sprintf("%s/%s/@v/%s.mod", g.proxyUrl, mod, ver)
 	resp, err := client.Get(file)
 	if err != nil {
 		return nil, err
