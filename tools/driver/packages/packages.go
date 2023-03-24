@@ -15,6 +15,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/logging"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/term"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/please-build/go-rules/tools/please_go/packageinfo"
@@ -42,6 +43,10 @@ type DriverResponse struct {
 // Load reads a set of packages and returns information about them.
 // Most of the request structure isn't honoured at the moment.
 func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
+	// If there are no files provided, do nothing.
+	if len(files) == 0 {
+		return &DriverResponse{NotHandled: true}, nil
+	}
 	// We need to find the plz repo that we need to be in (we might be invoked from outside it)
 	// For now we're assuming they're all in the same repo (which is probably reasonable) and just
 	// take the first one as indicative (which is maybe less so).
@@ -53,11 +58,14 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		files[i] = file
 	}
 	// Inputs can be either files or directories; here we turn them all into files.
-	files, err := directoriesToFiles(files)
+	files, err := directoriesToFiles(files, req.Tests)
 	if err != nil {
 		return nil, err
-	}
-	if err := os.Chdir(filepath.Dir(files[0])); err != nil {
+	} else if len(files) == 0 {
+		// Not obvious that this really is an error case.
+		log.Warning("No Go files found in initial query")
+		return &DriverResponse{NotHandled: true}, nil
+	} else if err := os.Chdir(filepath.Dir(files[0])); err != nil {
 		return nil, err
 	}
 	reporoot := exec.Command("plz", "query", "reporoot")
@@ -138,6 +146,17 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 // A cooler way of handling this in future would be to do this in-process; for that we'd
 // need to define the SDK we keep talking about as a supported programmatic interface.
 func loadPackageInfo(files []string) ([]*packages.Package, error) {
+	isTerminal := term.IsTerminal(int(os.Stderr.Fd()))
+	plz := func(args ...string) *exec.Cmd {
+		cmd := exec.Command("plz", args...)
+		if !isTerminal {
+			cmd.Stderr = &bytes.Buffer{}
+		} else {
+			cmd.Stderr = os.Stderr
+		}
+		return cmd
+	}
+
 	r1, w1, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -147,16 +166,13 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 		return nil, err
 	}
 	// N.B. deliberate not to close these here, they happen exactly when needed.
-	whatinputs := exec.Command("plz", append([]string{"query", "whatinputs"}, files...)...)
-	whatinputs.Stderr = &bytes.Buffer{}
+	whatinputs := plz(append([]string{"query", "whatinputs"}, files...)...)
 	whatinputs.Stdout = w1
-	deps := exec.Command("plz", "query", "deps", "-", "--hidden", "--include", "go_pkg_info")
+	deps := plz("query", "deps", "-", "--hidden", "--include", "go_pkg_info", "--include", "go_src")
 	deps.Stdin = r1
-	deps.Stderr = &bytes.Buffer{}
 	deps.Stdout = w2
-	build := exec.Command("plz", "build", "-")
+	build := plz("build", "-")
 	build.Stdin = r2
-	build.Stderr = &bytes.Buffer{}
 	build.Stdout = &bytes.Buffer{}
 	if err := whatinputs.Start(); err != nil {
 		return nil, err
@@ -189,6 +205,9 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	g.SetLimit(8) // arbitrary limit since we're doing I/O
 	for _, file := range strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())) {
 		file := file
+		if !strings.HasSuffix(file, ".json") {
+			continue // Ignore all the various Go sources etc.
+		}
 		g.Go(func() error {
 			f, err := os.Open(file)
 			if err != nil {
@@ -197,7 +216,7 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 			defer f.Close()
 			lpkgs := []*packages.Package{}
 			if err := json.NewDecoder(f).Decode(&lpkgs); err != nil {
-				return err
+				return fmt.Errorf("failed to decode package info from %s: %s", file, err)
 			}
 			lock.Lock()
 			defer lock.Unlock()
@@ -210,7 +229,7 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 
 // loadStdlibPackages returns all the packages from the Go stdlib.
 // TODO(peterebden): This is very much temporary, we should ideally be able to get this from
-//                   a plz target as well (especially for go_toolchain)
+// a plz target as well (especially for go_toolchain)
 func loadStdlibPackages() ([]*packages.Package, error) {
 	// We just list the entire stdlib set, it's not worth trying to filter it right now.
 	log.Debug("Loading stdlib packages...")
@@ -235,17 +254,21 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 }
 
 func handleSubprocessErr(cmd *exec.Cmd, err error) error {
-	return fmt.Errorf("%s Stdout:\n%s", err, cmd.Stderr.(*bytes.Buffer).String())
+	if buf, ok := cmd.Stderr.(*bytes.Buffer); ok {
+		return fmt.Errorf("%s Stdout:\n%s", err, buf.String())
+	}
+	// If it's not a buffer, it was probably stderr, so the user has already seen it.
+	return err
 }
 
 // directoriesToFiles expands any directories in the given list to files in that directory.
-func directoriesToFiles(in []string) ([]string, error) {
+func directoriesToFiles(in []string, includeTests bool) ([]string, error) {
 	files := make([]string, 0, len(in))
 	for _, x := range in {
 		if info, err := os.Stat(x); err != nil {
 			return nil, err
 		} else if info.IsDir() {
-			for _, f := range allGoFilesInDir(x) {
+			for _, f := range allGoFilesInDir(x, includeTests) {
 				files = append(files, filepath.Join(x, f))
 			}
 		} else {
@@ -256,7 +279,7 @@ func directoriesToFiles(in []string) ([]string, error) {
 }
 
 // allGoFilesInDir returns all the files ending in a particular suffix in a given directory.
-func allGoFilesInDir(dirname string) []string {
+func allGoFilesInDir(dirname string, includeTests bool) []string {
 	entries, err := os.ReadDir(dirname)
 	if err != nil {
 		log.Error("Failed to read directory %s: %s", dirname, err)
@@ -264,7 +287,7 @@ func allGoFilesInDir(dirname string) []string {
 	}
 	files := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if name := entry.Name(); strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+		if name := entry.Name(); strings.HasSuffix(name, ".go") && (includeTests || !strings.HasSuffix(name, "_test.go")) {
 			files = append(files, name)
 		}
 	}

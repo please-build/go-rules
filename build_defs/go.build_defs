@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[], strip_srcs:bool=False, tags:list=None):
+                 architectures:list=[], strip_srcs:bool=False, tags:list=None, install_std=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -28,6 +28,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                          improve performance, especially for remote execution. This doesn't work with go_get() however
                          it is recommended to set this to True if you're using go_module() exclusively.
       tags (bool): Build tags to pass when installing the standard library.
+      install_std (bool): Whether we should install the standard library. This is required for go 1.20+. If not set,
+                          Please will do whatever is appropriate based on the Go version.
     """
     if url and version:
         fail("Either version or url should be provided but not both")
@@ -44,7 +46,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*; rm -rf $OUT/test'
+    cmd = 'export GODEBUG="installgoroot=all" && tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*; rm -rf $OUT/test'
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
@@ -58,6 +60,12 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
         cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} --trimpath std)'
+
+    if semver_check(version, ">= 1.20.0") and install_std is None:
+        install_std = True
+
+    if install_std:
+        cmd += f" && $OUT/bin/go install{tag_flag} --trimpath std"
     if strip_srcs:
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
@@ -102,7 +110,8 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
-               _generate_import_config:bool=True, import_path:str='', labels:list=[], package:str=None):
+               _generate_import_config:bool=True, _generate_pkg_info:bool=True,
+               import_path:str='', labels:list=[], package:str=None):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -275,6 +284,18 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         test_only=test_only,
     )
 
+    # Package info rule for the Go packages driver
+    if _generate_pkg_info:
+        deps += [build_rule(
+            name = name,
+            tag = "pkg_info",
+            tools = [CONFIG.GO.PLEASE_GO_TOOL],
+            srcs = srcs + resources,
+            outs = [f"_{name}_pkg_info.json"],
+            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
+            labels = ["go_pkg_info"],
+            test_only = test_only,
+        )]
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs:
@@ -525,6 +546,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
                      used to contruct the list of definitions passed to the linker.
       env (dict): Additional environment variables to set for the test
     """
+
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
@@ -540,6 +562,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _link_extra = False,
         complete = False,
         _generate_import_config=False,
+        _generate_pkg_info = False,
         import_path = test_package,
     )
 
@@ -889,7 +912,12 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     ]
 
     if binary:
-        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/bin/{name}']
+        # This decouples the name of the target from the name of the installed binary when it's unambiguous what the
+        # output binary should be. This is especially useful when installing a module like
+        # github.com/jstemmer/go-junit-report/v2 which results in a binary called v2 which isn't a very helpful name for
+        # a build target.
+        bin_name = basename(install[0]) if len(install) == 1 else name
+        outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/bin/{bin_name}']
     else:
         outs = [f'pkg/{CONFIG.OS}_{CONFIG.ARCH}/{out}' for out in _remove_redundant_outs(outs)]
 
