@@ -20,24 +20,32 @@ type testDescr struct {
 	BenchFunctions []string
 	FuzzFunctions  []string
 	Examples       []*doc.Example
+	CoverVars      []CoverVar
 	Imports        []string
 	Coverage       bool
 	Benchmark      bool
+	HasFuzz        bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
-func WriteTestMain(testPackage string, sources []string, output string, coverage bool, benchmark bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark, hasFuzz, coverageRedesign bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
 	testDescr.Coverage = coverage
+	testDescr.CoverVars = coverVars
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
+		if coverageRedesign {
+			testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
+		} else {
+			testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
+		}
 	}
 
 	testDescr.Benchmark = benchmark
+	testDescr.HasFuzz = hasFuzz
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -46,7 +54,23 @@ func WriteTestMain(testPackage string, sources []string, output string, coverage
 	defer f.Close()
 	// This might be consumed by other things.
 	fmt.Printf("Package: %s\n", testDescr.Package)
-	return testMainTmpl.Execute(f, testDescr)
+
+	if coverageRedesign {
+		return testMainTmpl.Execute(f, testDescr)
+	}
+	return oldTestMainTmpl.Execute(f, testDescr)
+}
+
+func extraImportPaths(testPackage, alias string, coverVars []CoverVar) []string {
+	ret := make([]string, 0, len(coverVars)+1)
+	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
+
+	for i, v := range coverVars {
+		name := fmt.Sprintf("_cover%d", i)
+		coverVars[i].ImportName = name
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, v.ImportPath))
+	}
+	return ret
 }
 
 // parseTestSources parses the test sources and returns the package and set of test functions in them.
@@ -215,6 +239,121 @@ func main() {
 	args = append(args, "-test.bench", ".*")
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
 	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, fuzzTargets, nil)
+{{end}}
+
+{{if .Main}}
+	{{.Package}}.{{.Main}}(m)
+{{else}}
+	_gostdlib_os.Exit(m.Run())
+{{end}}
+}
+`))
+
+var oldTestMainTmpl = template.Must(template.New("oldmain").Parse(`
+package main
+
+import (
+	_gostdlib_os "os"
+	{{if not .Benchmark}}_gostdlib_strings "strings"{{end}}
+	_gostdlib_testing "testing"
+	_gostdlib_testdeps "testing/internal/testdeps"
+
+{{range .Imports}}
+	{{.}}
+{{end}}
+)
+
+var tests = []_gostdlib_testing.InternalTest{
+{{range .TestFunctions}}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{end}}
+}
+var examples = []_gostdlib_testing.InternalExample{
+{{range .Examples}}
+	{"{{.Name}}", {{$.Package}}.Example{{.Name}}, {{.Output | printf "%q"}}, {{.Unordered}}},
+{{end}}
+}
+
+var benchmarks = []_gostdlib_testing.InternalBenchmark{
+{{range .BenchFunctions}}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{end}}
+}
+
+{{ if .HasFuzz }}
+var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
+{{ range .FuzzFunctions }}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{ end }}
+}
+{{ end }}
+
+{{if .Coverage}}
+
+// Only updated by init functions, so no need for atomicity.
+var (
+	coverCounters = make(map[string][]uint32)
+	coverBlocks = make(map[string][]_gostdlib_testing.CoverBlock)
+)
+
+func init() {
+	{{range $i, $c := .CoverVars}}
+		{{if $c.ImportName }}
+			coverRegisterFile({{printf "%q" $c.File}}, {{$c.ImportName}}.{{$c.Var}}.Count[:], {{$c.ImportName}}.{{$c.Var}}.Pos[:], {{$c.ImportName}}.{{$c.Var}}.NumStmt[:])
+		{{end}}
+	{{end}}
+}
+
+func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts []uint16) {
+	if 3*len(counter) != len(pos) || len(counter) != len(numStmts) {
+		panic("coverage: mismatched sizes")
+	}
+	if coverCounters[fileName] != nil {
+		// Already registered.
+		return
+	}
+	coverCounters[fileName] = counter
+	block := make([]_gostdlib_testing.CoverBlock, len(counter))
+	for i := range counter {
+		block[i] = _gostdlib_testing.CoverBlock{
+			Line0: pos[3*i+0],
+			Col0: uint16(pos[3*i+2]),
+			Line1: pos[3*i+1],
+			Col1: uint16(pos[3*i+2]>>16),
+			Stmts: numStmts[i],
+		}
+	}
+	coverBlocks[fileName] = block
+}
+{{end}}
+
+var testDeps = _gostdlib_testdeps.TestDeps{}
+
+func main() {
+{{if .Coverage}}
+	_gostdlib_testing.RegisterCover(_gostdlib_testing.Cover{
+		Mode: "set",
+		Counters: coverCounters,
+		Blocks: coverBlocks,
+		CoveredPackages: "",
+	})
+    coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
+    args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
+{{else}}
+    args := []string{_gostdlib_os.Args[0], "-test.v"}
+{{end}}
+{{if not .Benchmark}}
+    testVar := _gostdlib_os.Getenv("TESTS")
+    if testVar != "" {
+		testVar = _gostdlib_strings.ReplaceAll(testVar, " ", "|")
+		args = append(args, "-test.run", testVar)
+    }
+    _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil,{{ if .HasFuzz }} fuzzTargets,{{ end }} examples)
+{{else}}
+	args = append(args, "-test.bench", ".*")
+	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks,{{ if .HasFuzz }} fuzzTargets,{{ end }} nil)
 {{end}}
 
 {{if .Main}}
