@@ -158,12 +158,17 @@ func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
 		return err
 	}
 
+	var subincludes []bazelbuild.Expr
+	if strings.HasPrefix(rule.kind, "cgo") {
+		subincludes = []bazelbuild.Expr{NewStringExpr("///go//build_defs:cgo")}
+	} else {
+		subincludes = []bazelbuild.Expr{NewStringExpr("///go//build_defs:go")}
+	}
+
 	buildFile.Stmt = []bazelbuild.Expr{
 		&bazelbuild.CallExpr{
-			X: &bazelbuild.Ident{Name: "subinclude"},
-			List: []bazelbuild.Expr{
-				NewStringExpr("///go//build_defs:go"),
-			},
+			X:    &bazelbuild.Ident{Name: "subinclude"},
+			List: subincludes,
 		},
 	}
 

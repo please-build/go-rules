@@ -67,10 +67,12 @@ Type = bool
 DefaultValue = false
 
 [PluginConfig "c_flags"]
+Inherit = true
 Repeatable = true
 Optional = true
 
 [PluginConfig "ld_flags"]
+Inherit = true
 Repeatable = true
 Optional = true
 
