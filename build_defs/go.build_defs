@@ -215,7 +215,11 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             },
             outs = [name + '.abi'],
             building_description = 'Creating ABI...',
-            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I $GOROOT/pkg/include -D=GOOS={CONFIG.OS} -D=GOARCH={CONFIG.ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I $GOROOT/pkg/include -D GOOS_{CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
+            env= {
+                "GOOS": CONFIG.OS,
+                "GOARCH": CONFIG.ARCH,
+            },
             tools=[CONFIG.GO.GO_TOOL],
             test_only = test_only,
             labels=labels,
@@ -245,7 +249,11 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D=GOOS={CONFIG.OS} -D=GOARCH={CONFIG.ARCH} -p {package_path} -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS={CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -p {package_path} -o "$OUT" $SRCS_ASM',
+            env= {
+                "GOOS": CONFIG.OS,
+                "GOARCH": CONFIG.ARCH,
+            },
             tools=[CONFIG.GO.GO_TOOL],
             test_only = test_only,
             labels=labels,
@@ -973,7 +981,7 @@ def go_get(module: str, version:str=None, download:str=None, requirements:list=[
         cmd  = f"rm -rf $SRC/.plzconfig && find $SRC -name BUILD -delete && $TOOL generate --src_root=$SRC {requirements} && mv $SRC $OUT",
         outs = [name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
-        env={
+        env= {
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
         },
