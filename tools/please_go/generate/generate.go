@@ -144,10 +144,27 @@ func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
 	return r
 }
 
+// findBuildFileName loops through the available build file names to find one that's available. On linux this does very
+// little but on macos this helps us create a BUILD.plz file when a build directory exists.
+func findBuildFileName(path string, fileNames []string) (string, error) {
+	for _, name := range fileNames {
+		filePath := filepath.Join(path, name)
+		if f, err := os.Lstat(filePath); os.IsNotExist(err) {
+			return filePath, nil
+		} else if !f.IsDir() {
+			return "", fmt.Errorf("Found existing build file %v", filePath)
+		}
+	}
+	return "", fmt.Errorf("build file already exists in directory %v %v", path, fileNames)
+}
+
 func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
 	// Use the first build file name for new files as this will almost always be set to []string{"BUILD", "BUILD.plz"}
-	path := filepath.Join(g.pkgDir(pkg), g.buildFileNames[0])
-	f, err := os.Create(filepath.Join(g.pkgDir(pkg), g.buildFileNames[0]))
+	path, err := findBuildFileName(g.pkgDir(pkg), g.buildFileNames)
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
