@@ -59,8 +59,35 @@ func (g *getter) getGoMod(mod, ver string) (*modfile.File, error) {
 	return modFile, nil
 }
 
+// getGoModWithFallback attempts to get a go.mod for the given module and
+// version with fallback for supporting modules with case insensitivity.
+func (g *getter) getGoModWithFallback(mod, version string) (*modfile.File, error) {
+	modVersionsToAttempt := map[string]string{
+		mod: version,
+	}
+
+	// attempt lowercasing entire mod string for packages like:
+	// - `github.com/Sirupsen/logrus` -> `github.com/sirupsen/logrus`.
+	// https://github.com/sirupsen/logrus/issues/543
+	modVersionsToAttempt[strings.ToLower(mod)] = version
+
+	var errs error
+	for mod, version := range modVersionsToAttempt {
+		modFile, err := g.getGoMod(mod, version)
+		if err != nil {
+			// TODO: when we upgrade to Go 1.20, use `errors.Join(...)`.
+			errs = fmt.Errorf("%w: %w", errs, err)
+			continue
+		}
+
+		return modFile, nil
+	}
+
+	return nil, errs
+}
+
 func (g *getter) getDeps(deps map[string]string, mod, version string) error {
-	modFile, err := g.getGoMod(mod, version)
+	modFile, err := g.getGoModWithFallback(mod, version)
 	if err != nil {
 		return err
 	}
