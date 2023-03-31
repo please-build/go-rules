@@ -28,8 +28,7 @@ type testDescr struct {
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
-// This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark, hasFuzz bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark, hasFuzz, coverageRedesign bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -38,7 +37,11 @@ func WriteTestMain(testPackage string, sources []string, output string, coverage
 	testDescr.CoverVars = coverVars
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
+		if coverageRedesign {
+			testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
+		} else {
+			testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
+		}
 	}
 
 	testDescr.Benchmark = benchmark
@@ -51,10 +54,13 @@ func WriteTestMain(testPackage string, sources []string, output string, coverage
 	defer f.Close()
 	// This might be consumed by other things.
 	fmt.Printf("Package: %s\n", testDescr.Package)
-	return testMainTmpl.Execute(f, testDescr)
+
+	if coverageRedesign {
+		return testMainTmpl.Execute(f, testDescr)
+	}
+	return oldTestMainTmpl.Execute(f, testDescr)
 }
 
-// extraImportPaths returns the set of extra import paths that are needed.
 func extraImportPaths(testPackage, alias string, coverVars []CoverVar) []string {
 	ret := make([]string, 0, len(coverVars)+1)
 	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
@@ -143,6 +149,107 @@ func isTest(fd *ast.FuncDecl, argLen int, name, prefix string) bool {
 // testMainTmpl is the template for our test main, copied from Go's builtin one.
 // Some bits are excluded because we don't support them and/or do them differently.
 var testMainTmpl = template.Must(template.New("main").Parse(`
+package main
+
+import (
+	_gostdlib_os "os"
+	{{if not .Benchmark}}_gostdlib_strings "strings"{{end}}
+	_gostdlib_testing "testing"
+	_gostdlib_testdeps "testing/internal/testdeps"
+
+{{if .Coverage}}
+	_ "runtime/coverage"
+	_ "unsafe"
+{{end}}
+
+{{range .Imports}}
+	{{.}}
+{{end}}
+)
+
+var tests = []_gostdlib_testing.InternalTest{
+{{range .TestFunctions}}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{end}}
+}
+var examples = []_gostdlib_testing.InternalExample{
+{{range .Examples}}
+	{"{{.Name}}", {{$.Package}}.Example{{.Name}}, {{.Output | printf "%q"}}, {{.Unordered}}},
+{{end}}
+}
+
+var benchmarks = []_gostdlib_testing.InternalBenchmark{
+{{range .BenchFunctions}}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{end}}
+}
+
+var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
+{{ range .FuzzFunctions }}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{ end }}
+}
+
+{{if .Coverage}}
+//go:linkname runtime_coverage_processCoverTestDir runtime/coverage.processCoverTestDir
+func runtime_coverage_processCoverTestDir(dir string, cfile string, cmode string, cpkgs string) error
+
+//go:linkname testing_registerCover2 testing.registerCover2
+func testing_registerCover2(mode string, tearDown func(coverprofile string, gocoverdir string) (string, error))
+
+//go:linkname runtime_coverage_markProfileEmitted runtime/coverage.markProfileEmitted
+func runtime_coverage_markProfileEmitted(val bool)
+
+func coverTearDown(coverprofile string, gocoverdir string) (string, error) {
+	var err error
+	if gocoverdir == "" {
+		gocoverdir, err = _gostdlib_os.MkdirTemp("", "gocoverdir")
+		if err != nil {
+			return "error setting GOCOVERDIR: bad os.MkdirTemp return", err
+		}
+		defer _gostdlib_os.RemoveAll(gocoverdir)
+	}
+	runtime_coverage_markProfileEmitted(true)
+	if err := runtime_coverage_processCoverTestDir(gocoverdir, coverprofile, "set", ""); err != nil {
+		return "error generating coverage report", err
+	}
+	return "", nil
+}
+{{end}}
+
+var testDeps = _gostdlib_testdeps.TestDeps{}
+
+func main() {
+{{if .Coverage}}
+    coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
+    args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
+	testing_registerCover2("set", coverTearDown)
+{{else}}
+    args := []string{_gostdlib_os.Args[0], "-test.v"}
+{{end}}
+{{if not .Benchmark}}
+    testVar := _gostdlib_os.Getenv("TESTS")
+    if testVar != "" {
+		testVar = _gostdlib_strings.ReplaceAll(testVar, " ", "|")
+		args = append(args, "-test.run", testVar)
+    }
+    _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil, fuzzTargets, examples)
+{{else}}
+	args = append(args, "-test.bench", ".*")
+	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, fuzzTargets, nil)
+{{end}}
+
+{{if .Main}}
+	{{.Package}}.{{.Main}}(m)
+{{else}}
+	_gostdlib_os.Exit(m.Run())
+{{end}}
+}
+`))
+
+var oldTestMainTmpl = template.Must(template.New("oldmain").Parse(`
 package main
 
 import (
