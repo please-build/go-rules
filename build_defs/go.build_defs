@@ -46,7 +46,23 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    cmd = 'export GODEBUG="installgoroot=all" && tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*; rm -rf $OUT/test'
+    if semver_check(version, ">= 1.20.0") and install_std is None:
+        install_std = True
+
+    return _go_toolchain(
+        name = name,
+        srcs = [download],
+        copy_cmd = 'tar -xf $SRCS && mv go $OUT',
+        visibility = visibility,
+        architectures = architectures,
+        strip_srcs = strip_srcs,
+        tags = tags,
+        install_std = install_std,
+    )
+
+
+def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectures:list, tags:list, strip_srcs:bool=False, install_std:bool=None):
+    cmd = f'export GODEBUG="installgoroot=all" && {copy_cmd} && chmod +x $OUT/bin/*; rm -rf $OUT/test'
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
@@ -61,9 +77,6 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         goos, _, goarch = arch.partition("_")
         cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} --trimpath std)'
 
-    if semver_check(version, ">= 1.20.0") and install_std is None:
-        install_std = True
-
     if install_std:
         cmd += f" && $OUT/bin/go install{tag_flag} --trimpath std"
     if strip_srcs:
@@ -74,7 +87,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     # through to the go_library rules as well though.
     return build_rule(
         name = name,
-        srcs = [download],
+        srcs = srcs,
         cmd = cmd,
         outs = [name],
         entry_points = {
@@ -88,6 +101,33 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         visibility = visibility,
         building_description = "Installing...",
     )
+
+
+def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=None, install_std:bool=True, visibility:list = ["PUBLIC"]):
+    """Defines a Go toolchain that's installed on the local system.
+
+    This is similar to using simply `go` as your gotool, but from 1.20 onwards it's necessary in order to
+    compile the standard library.
+
+    Args:
+      name: Name of the rule
+      cmd: Command to run to locate it (usually just 'go')
+      architectures: Architectures to build the standard library for
+      install_std: Whether we should build the standard library. On by default.
+      tags: Build tags to pass when installing the standard library.
+      visibility: Visibility of this rule
+    """
+    return _go_toolchain(
+        name = name,
+        srcs = [],
+        copy_cmd = f'cp -r `{cmd} env GOROOT` $OUT',
+        visibility = visibility,
+        architectures = architectures,
+        strip_srcs = False,
+        tags = tags,
+        install_std = install_std,
+    )
+
 
 def _pkg_sources(name: str, deps: list, test_only:bool):
     """
