@@ -220,7 +220,7 @@ func coverTearDown(coverprofile string, gocoverdir string) (string, error) {
 
 var testDeps = _gostdlib_testdeps.TestDeps{}
 
-func main() {
+func internalMain() int {
     if resultsFile := _gostdlib_os.Getenv("RESULTS_FILE"); resultsFile != "" {
         f, err := _gostdlib_os.Create(resultsFile)
         if err != nil {
@@ -232,12 +232,18 @@ func main() {
         if err != nil {
             panic(err)
         }
-        go _gostdlib_io.Copy(mw, r)
         _gostdlib_os.Stdout = w
+        done := make(chan struct{})
+        go func() {
+           _gostdlib_io.Copy(mw, r)
+           done <- struct{}{}
+         }()
         defer func() {
-            _gostdlib_os.Stdout = old
             w.Close()
+            <-done
+            r.Close()
             f.Close()
+            _gostdlib_os.Stdout = old
         }()
     }
 {{if .Coverage}}
@@ -260,12 +266,14 @@ func main() {
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
 	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, fuzzTargets, nil)
 {{end}}
-
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
-{{else}}
-	_gostdlib_os.Exit(m.Run())
 {{end}}
+	return m.Run()
+}
+
+func main() {
+	_gostdlib_os.Exit(internalMain())
 }
 `))
 
