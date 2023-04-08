@@ -984,6 +984,7 @@ def go_get(module: str, version:str=None, download:str=None, requirements:list=[
         env= {
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
+            "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
         },
         _subrepo = True,
         labels=["go_module_path:" + module],
