@@ -18,7 +18,7 @@ import (
 )
 
 func getModules() map[string]string {
-	cmd := exec.Command("plz", "query", "print", "--label=go_module:", "//...")
+	cmd := exec.Command(opts.Please, "query", "print", "--label=go_module:", "//...")
 	var stdErr bytes.Buffer
 	var stdOut bytes.Buffer
 
@@ -84,7 +84,7 @@ func findRepoRootInPath(path string) (string, error) {
 }
 
 func getImportPath() (string, error) {
-	out, err := exec.Command("plz", "query", "config", "plugin.go.importpath").CombinedOutput()
+	out, err := exec.Command(opts.Please, "query", "config", "plugin.go.importpath").CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("error running command, \"plz query config pugin.go.importpath\": %v\n%v", err, string(out))
 	}
@@ -96,7 +96,7 @@ type TargetJSON struct {
 }
 
 func getGoPackageTargetMapping() (map[string]string, error) {
-	out, err := exec.Command("plz", "query", "print", "--field", "labels", "--json", "-i", "go", "//...").CombinedOutput()
+	out, err := exec.Command(opts.Please, "query", "print", "--field", "labels", "--json", "-i", "go", "//...").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query go targets: %v\n%v", err, string(out))
 	}
@@ -119,8 +119,8 @@ func getGoPackageTargetMapping() (map[string]string, error) {
 }
 
 var opts = struct {
-	Usage string
-
+	Usage            string
+	Please           string `long:"plz" default:"plz"`
 	ThirdPartyFolder string `long:"third_party_folder" default:"third_party/go"`
 
 	Update struct {
