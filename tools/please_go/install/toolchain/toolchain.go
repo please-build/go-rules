@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/build"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -25,6 +24,23 @@ type Toolchain struct {
 
 func paths(ps []string) string {
 	return strings.Join(ps, " ")
+}
+
+func argsFile(args []string) (string, error) {
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		return "", err
+	}
+
+	p := f.Name()
+
+	_, err = f.WriteString(strings.Join(args, "\n"))
+	if err != nil {
+		return "", err
+	}
+
+	err = f.Close()
+	return p, err
 }
 
 // CGO invokes go tool cgo to generate cgo sources in the target's object directory
@@ -65,23 +81,12 @@ func (tc *Toolchain) GoCompile(sourceDir, importpath, importcfg, out, trimpath, 
 		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
 	}
 
-	f, err := ioutil.TempFile("", "")
-	if err != nil {
-		return err
-	}
-	p := f.Name()
-	defer os.Remove(f.Name())
-	_, err = f.WriteString(strings.Join(goFiles, "\n"))
+	argf, err := argsFile(goFiles)
 	if err != nil {
 		return err
 	}
 
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-
-	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -o %s @%s", tc.GoTool, importpath, trimpath, embedCfg, importcfg, out, p)
+	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -o %s @%s", tc.GoTool, importpath, trimpath, embedCfg, importcfg, out, argf)
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
