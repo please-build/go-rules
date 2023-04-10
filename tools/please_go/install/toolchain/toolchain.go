@@ -3,6 +3,8 @@ package toolchain
 import (
 	"fmt"
 	"go/build"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -62,7 +64,24 @@ func (tc *Toolchain) GoCompile(sourceDir, importpath, importcfg, out, trimpath, 
 	if embedCfg != "" {
 		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -o %s %s", tc.GoTool, importpath, trimpath, embedCfg, importcfg, out, paths(goFiles))
+
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	p := f.Name()
+	defer os.Remove(f.Name())
+	_, err = f.WriteString(strings.Join(goFiles, "\n"))
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+
+	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -o %s @%s", tc.GoTool, importpath, trimpath, embedCfg, importcfg, out, p)
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
