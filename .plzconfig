@@ -8,6 +8,7 @@ hashcheckers = sha256
 GoTool = //third_party/go:toolchain|go
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
+CoverageRedesign = true
 
 [Plugin "cc"]
 Target = //plugins:cc
@@ -95,6 +96,11 @@ Repeatable = true
 Optional = true
 Inherit = true
 Help = Flags to enable in-development features, or toggle breaking changes
+
+[PluginConfig "coverageredesign"]
+Type = bool
+DefaultValue = false
+Help = Support Go 1.20's coverage redesign. Will break coverage on 1.19, required for 1.20.
 
 [BuildConfig]
 Release = False

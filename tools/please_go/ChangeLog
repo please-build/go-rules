@@ -1,3 +1,7 @@
+Version 1.2.0
+-------------
+    * Support for Go 1.20's coverage redesign
+
 Version 1.1.2
 -------------
     * Misc fixes for generating package info (#63)

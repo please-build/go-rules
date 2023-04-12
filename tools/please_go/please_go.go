@@ -8,6 +8,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 
+	"github.com/please-build/go-rules/tools/please_go/cover"
 	"github.com/please-build/go-rules/tools/please_go/covervars"
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
@@ -55,6 +56,16 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
 	} `command:"covervars" description:"Generates coverage variable config for a set of go src files"`
+	Cover struct {
+		GoTool      string `short:"g" long:"go" default:"go" description:"Go binary to run"`
+		CoverageCfg string `short:"c" long:"covcfg" required:"true" description:"Output coveragecfg file to feed into go tool compile"`
+		Output      string `short:"o" long:"output" required:"true" description:"File that will contain output names of modified files"`
+		Pkg         string `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
+		PkgName     string `short:"p" long:"pkg_name" description:"Name of the package we're compiling"`
+		Args        struct {
+			Sources []string `positional-arg-name:"sources" required:"true" description:"Source files to generate embed config for"`
+		} `positional-args:"true"`
+	} `command:"cover" description:"Generates coverage information for a package."`
 	Filter struct {
 		Tags []string `short:"t" long:"tags" description:"Additional build tags to apply"`
 		Args struct {
@@ -122,6 +133,12 @@ var subCommands = map[string]func() int{
 	},
 	"testmain": func() int {
 		test.PleaseGoTest(opts.Test.GoTool, opts.Test.Dir, opts.Test.TestPackage, opts.Test.Output, opts.Test.Args.Sources, opts.Test.Exclude, opts.Test.Benchmark, opts.Test.External)
+		return 0
+	},
+	"cover": func() int {
+		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.PkgName, opts.Cover.Args.Sources); err != nil {
+			log.Fatalf("failed to write coverage: %s", err)
+		}
 		return 0
 	},
 	"covervars": func() int {

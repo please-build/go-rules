@@ -9,6 +9,7 @@ go_binary(
     visibility = ["PUBLIC"],
     deps = [
         "//third_party/go:flags",
+        "//tools/please_go/cover",
         "//tools/please_go/covervars",
         "//tools/please_go/embed",
         "//tools/please_go/filter",
@@ -35,6 +36,7 @@ genrule(
     tools = [CONFIG.GO.GO_TOOL],
     visibility = ["PUBLIC"],
     deps = [
+        "//tools/please_go/cover:srcs",
         "//tools/please_go/covervars:srcs",
         "//tools/please_go/embed:srcs",
         "//tools/please_go/filter:srcs",
