@@ -193,7 +193,7 @@ func updatePaths() error {
 		return err
 	}
 
-	g := generate.New(reporoot, "third_party/go", []string{"BUILD", "BUILD.plz"}, modules)
+	g := generate.New(reporoot, "third_party/go", []string{"BUILD", "BUILD.plz"}, modules, nil)
 
 	if err := g.Update(importPath, opts.Update.Args.Packages); err != nil {
 		return err
