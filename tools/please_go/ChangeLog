@@ -1,3 +1,10 @@
+Version 1.3.0
+-------------
+    * Add install argument to the generate subcommand. This will be used by `go_get` to
+      produce a filegroup that will be returned from the target to avoid having to
+      specify each package individually with a subrepo build label.
+    * Many fixes to the generate subcommand to better handle cases in the root of go modules
+
 Version 1.2.0
 -------------
     * Support for Go 1.20's coverage redesign
