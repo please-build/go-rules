@@ -1032,8 +1032,8 @@ def go_get(module: str, version:str=None, download:str=None, name:str=None, inst
       download(str): A build rule to download the module, usually a go_mod_download().
       name(str): The name of the returned rule. Defaults to the module name with forward slashes replaced with
                  underscores.
-      install(list): Optional list of packages to return from this rule. This can be useful to avoid cumbersome labels
-                     when depending on this module.
+      install(list): Optional list of package wildcards to return from this rule. This can be useful to avoid cumbersome
+                     labels when depending on this module.
       requirements(list): A list of requirements of this module that are not defined in its go.mod file
       licences(list): The licence of this module to be checked against the allowed licences configured in Please.
       patch(list): Any patch files to apply to the downloaded module.

@@ -15,10 +15,10 @@ type Rule struct {
 	deps          []string
 	embedPatterns []string
 	// TODO(jpoole):  handle external test
-	external      bool
+	external bool
 }
 
-func pupulateRule(r *build.Rule, targetState *Rule) {
+func populateRule(r *build.Rule, targetState *Rule) {
 	if len(targetState.cgoSrcs) > 0 {
 		r.SetAttr("srcs", NewStringList(targetState.cgoSrcs))
 		r.SetAttr("go_srcs", NewStringList(targetState.srcs))

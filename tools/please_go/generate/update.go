@@ -118,7 +118,7 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 				if libDone {
 					return fmt.Errorf("too many go_library rules in %v", path)
 				}
-				pupulateRule(rule, libRule)
+				populateRule(rule, libRule)
 				libDone = true
 			}
 			if rule.Kind() == "go_test" {
@@ -129,7 +129,7 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 				if rule.Attr("external") != nil {
 					continue
 				}
-				pupulateRule(rule, testRule)
+				populateRule(rule, testRule)
 				testDone = true
 			}
 		}
@@ -137,13 +137,13 @@ func (g *Generate) update(done map[string]struct{}, path string) error {
 
 	if !libDone && libRule != nil {
 		r := NewRule("go_library", libRule.name)
-		pupulateRule(r, libRule)
+		populateRule(r, libRule)
 		file.Stmt = append(file.Stmt, r.Call)
 	}
 
 	if !testDone && testRule != nil {
 		r := NewRule("go_test", testRule.name)
-		pupulateRule(r, testRule)
+		populateRule(r, testRule)
 		file.Stmt = append(file.Stmt, r.Call)
 	}
 	return os.WriteFile(file.Path, build.Format(file), 0664)

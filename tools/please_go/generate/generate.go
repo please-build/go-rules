@@ -177,7 +177,7 @@ func (g *Generate) matchesInstall(dir string) bool {
 
 func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
 	r := NewRule(rule.kind, rule.name)
-	pupulateRule(r, rule)
+	populateRule(r, rule)
 	r.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
 
 	return r
