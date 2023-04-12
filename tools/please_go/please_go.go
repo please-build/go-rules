@@ -76,10 +76,11 @@ var opts = struct {
 		Srcs       string `long:"srcs" env:"SRCS" required:"true" description:"Source files of the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 	Generate struct {
-		SrcRoot          string `short:"r" long:"src_root" description:"The src root of the module to inspect"`
-		ImportPath       string `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
-		ThirdPartyFolder string `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
-		ModFile          string `long:"mod_file"`
+		SrcRoot          string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+		ImportPath       string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
+		ThirdPartyFolder string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
+		ModFile          string   `long:"mod_file"`
+		Install          []string `long:"install"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
@@ -138,7 +139,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements)
+		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}

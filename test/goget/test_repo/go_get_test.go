@@ -5,6 +5,6 @@ import (
 	"testing"
 )
 
-func TestAssertImportablt(t testing.T) {
+func TestAssertImportable(t *testing.T) {
 	assert.True(t, true)
 }

@@ -23,9 +23,11 @@ type Generate struct {
 	replace            map[string]string
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 	thirdPartyFolder   string
+	install            []string
+	installTargets     []string
 }
 
-func New(srcRoot, thirdPartyFolder string, buildFileNames, moduleDeps []string) *Generate {
+func New(srcRoot, thirdPartyFolder string, buildFileNames, moduleDeps, install []string) *Generate {
 	return &Generate{
 		srcRoot:            srcRoot,
 		buildContext:       build.Default,
@@ -33,6 +35,7 @@ func New(srcRoot, thirdPartyFolder string, buildFileNames, moduleDeps []string) 
 		moduleDeps:         moduleDeps,
 		knownImportTargets: map[string]string{},
 		thirdPartyFolder:   thirdPartyFolder,
+		install:            install,
 	}
 }
 
@@ -45,7 +48,25 @@ func (g *Generate) Generate() error {
 	if err := g.writeConfig(); err != nil {
 		return err
 	}
-	return g.generateAll(g.srcRoot)
+	if err := g.generateAll(g.srcRoot); err != nil {
+		return err
+	}
+	return g.writeInstallFilegroup()
+}
+
+func (g *Generate) writeInstallFilegroup() error {
+	buildFile, err := parseOrCreateBuildFile(g.srcRoot, g.buildFileNames)
+	if err != nil {
+		return err
+	}
+
+	rule := NewRule("filegroup", "installs")
+	rule.SetAttr("exported_deps", NewStringList(g.installTargets))
+	rule.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
+
+	buildFile.Stmt = append(buildFile.Stmt, rule.Call)
+
+	return saveBuildFile(buildFile)
 }
 
 // readGoMod reads the module dependencies
@@ -133,7 +154,25 @@ func (g *Generate) generate(dir string) error {
 		return nil
 	}
 
+	if g.matchesInstall(dir) {
+		g.installTargets = append(g.installTargets, g.depTarget(filepath.Join(g.moduleName, dir)))
+	}
+
 	return g.createBuildFile(dir, lib)
+}
+
+func (g *Generate) matchesInstall(dir string) bool {
+	for _, i := range g.install {
+		i := filepath.Join(g.srcRoot, i)
+		pkgDir := g.pkgDir(dir)
+
+		if strings.HasSuffix(i, "/...") {
+			i = strings.TrimSuffix(i, "/...")
+			return strings.HasPrefix(pkgDir, i)
+		}
+		return i == pkgDir
+	}
+	return false
 }
 
 func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
@@ -144,33 +183,37 @@ func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
 	return r
 }
 
-// findBuildFileName loops through the available build file names to find one that's available. On linux this does very
-// little but on macos this helps us create a BUILD.plz file when a build directory exists.
-func findBuildFileName(path string, fileNames []string) (string, error) {
+// parseOrCreateBuildFile loops through the available build file names to create a new build file or open the existing
+// one.
+func parseOrCreateBuildFile(path string, fileNames []string) (*bazelbuild.File, error) {
 	for _, name := range fileNames {
 		filePath := filepath.Join(path, name)
 		if f, err := os.Lstat(filePath); os.IsNotExist(err) {
-			return filePath, nil
+			return bazelbuild.ParseBuild(filePath, nil)
 		} else if !f.IsDir() {
-			return "", fmt.Errorf("Found existing build file %v", filePath)
+			bs, err := os.ReadFile(filePath)
+			if err != nil {
+				return nil, err
+			}
+			return bazelbuild.ParseBuild(filePath, bs)
 		}
 	}
-	return "", fmt.Errorf("build file already exists in directory %v %v", path, fileNames)
+	return nil, fmt.Errorf("folders exist with the build file names in directory %v %v", path, fileNames)
 }
 
-func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
-	// Use the first build file name for new files as this will almost always be set to []string{"BUILD", "BUILD.plz"}
-	path, err := findBuildFileName(g.pkgDir(pkg), g.buildFileNames)
-	if err != nil {
-		return err
-	}
-	f, err := os.Create(path)
+func saveBuildFile(buildFile *bazelbuild.File) error {
+	f, err := os.Create(buildFile.Path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	buildFile, err := bazelbuild.Parse(path, nil)
+	_, err = f.Write(bazelbuild.Format(buildFile))
+	return err
+}
+
+func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
+	buildFile, err := parseOrCreateBuildFile(g.pkgDir(pkg), g.buildFileNames)
 	if err != nil {
 		return err
 	}
@@ -190,8 +233,8 @@ func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
 	}
 
 	buildFile.Stmt = append(buildFile.Stmt, g.rule(rule).Call)
-	_, err = f.Write(bazelbuild.Format(buildFile))
-	return err
+
+	return saveBuildFile(buildFile)
 }
 
 func NewRule(kind, name string) *bazelbuild.Rule {

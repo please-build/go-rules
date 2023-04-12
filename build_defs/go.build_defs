@@ -965,21 +965,25 @@ def _add_ld_flags(name:str, stdout:list):
 def _module_rule_name(module):
     return module.replace("/", "_")
 
-def go_get(module: str, version:str=None, download:str=None, requirements:list=[], licences=None, patch=None):
+def go_get(module: str, version:str=None, download:str=None, name:str=None, requirements:list=[], install:list=[],licences=None, patch=None):
     if "go_get" not in CONFIG.GO.FEATURE_FLAGS:
         fail("go_get() is not ready for production use. To use it, add \"go_get\" to plugin.go.featureflags")
-    name = _module_rule_name(module)
+    subrepo_name = _module_rule_name(module)
+    name = name or subrepo_name
 
     if not version and not download:
         fail("must provide either version or download")
+
+    install_args = " ".join([f"--install={i}" for i in install])
 
     download = download or go_mod_download(tag(name, "dl"), module, version, licences=licences, patch=patch)
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
+        tag = "repo",
         srcs = [download],
-        cmd  = f"rm -rf $SRC/.plzconfig && find $SRC -name BUILD -delete && $TOOL generate --src_root=$SRC {requirements} && mv $SRC $OUT",
-        outs = [name],
+        cmd  = f"rm -rf $SRC/.plzconfig && find $SRC -name BUILD -delete && $TOOL generate --src_root=$SRC {install_args} {requirements} && mv $SRC $OUT",
+        outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
             "GOOS": CONFIG.OS,
@@ -990,11 +994,16 @@ def go_get(module: str, version:str=None, download:str=None, requirements:list=[
         labels=["go_module_path:" + module],
     )
     subrepo(
-        name = name,
+        name = subrepo_name,
         dep = repo,
         package_root = f"pkg/{CONFIG.OS}_{CONFIG.ARCH}/{module}",
     )
-    return repo
+    pkg_name = package_name()
+    return filegroup(
+        name = name,
+        visibility=["PUBLIC"],
+        exported_deps=[f"///{pkg_name}/{subrepo_name}//:installs"],
+    )
 
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
