@@ -124,6 +124,8 @@ func (g *getter) goGet(mods []string) error {
 	return nil
 }
 
+// GoGet is used to spit out a new go_get rule. The plan is to build this out into a tool to add new third party
+// modules to the repo.
 func GoGet(mods []string) error {
 	return newGetter().goGet(mods)
 }

@@ -98,8 +98,8 @@ go_module(
     deps = [
         ":go-flags",
         ":humanize",
-        ":xcrypto",
         ":logging",
+        ":xcrypto",
         ":xsys",
     ],
 )
@@ -110,59 +110,6 @@ go_module(
     module = "github.com/cespare/xxhash/v2",
     version = "v2.1.2",
     visibility = ["PUBLIC"],
-)
-
-go_module(
-    name = "buildtools",
-    install = [
-        "api_proto",
-        "build",
-        "build_proto",
-        "edit",
-        "file",
-        "labels",
-        "lang",
-        "tables",
-        "wspace",
-    ],
-    licences = ["Apache-2.0"],
-    module = "github.com/bazelbuild/buildtools",
-    version = "v0.0.0-20210920153738-d6daef01a1a2",
-    visibility = ["PUBLIC"],
-    deps = [
-        ":protobuf",
-        ":google-protobuf",
-    ],
-)
-
-go_module(
-    name = "google-protobuf",
-    install = [
-        "encoding/prototext",
-        "encoding/protowire",
-        "internal/...",
-        "proto",
-        "reflect/protodesc",
-        "reflect/protoreflect",
-        "reflect/protoregistry",
-        "runtime/protoiface",
-        "runtime/protoimpl",
-        "types/descriptorpb",
-    ],
-    licences = ["BSD-3-Clause"],
-    module = "google.golang.org/protobuf",
-    version = "v1.27.1",
-    visibility = ["PUBLIC"],
-)
-
-go_module(
-    name = "protobuf",
-    install = ["proto"],
-    licences = ["BSD-3-Clause"],
-    module = "github.com/golang/protobuf",
-    version = "v1.5.2",
-    visibility = ["PUBLIC"],
-    deps = [":google-protobuf"],
 )
 
 go_module(
@@ -197,25 +144,25 @@ go_module(
 go_module(
     name = "xtools",
     install = [
-        "go/packages",
         "go/gcexportdata",
         "go/internal/packagesdriver",
+        "go/packages",
         "internal/event/...",
-        "internal/pkgbits",
         "internal/gcimporter",
         "internal/gocommand",
         "internal/packagesinternal",
+        "internal/pkgbits",
         "internal/typeparams",
         "internal/typesinternal",
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/tools",
     version = "v0.4.0",
+    visibility = ["PUBLIC"],
     deps = [
         ":mod",
         ":xsys",
     ],
-    visibility = ["PUBLIC"],
 )
 
 go_module(
@@ -260,5 +207,85 @@ go_module(
     install = ["errgroup"],
     module = "golang.org/x/sync",
     download = ":xsync_download",
+    visibility = ["PUBLIC"],
+)
+
+go_mod_download(
+    name = "build_tools_dl",
+    licences = ["Apache-2.0"],
+    module = "github.com/peterebden/buildtools",
+    version = "ce40803f44fb09c5cf60b5554fe5819d02df23fc",
+)
+
+go_module(
+    name = "buildtools",
+    download = ":build_tools_dl",
+    install = [
+        "api_proto",
+        "build",
+        "build_proto",
+        "edit",
+        "file",
+        "labels",
+        "lang",
+        "tables",
+        "wspace",
+    ],
+    module = "github.com/bazelbuild/buildtools",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":google.golang.org.protobuf",
+        ":protobuf",
+    ],
+)
+
+go_module(
+    name = "protobuf",
+    install = [
+        "jsonpb",
+        "proto",
+    ],
+    licences = ["BSD-3"],
+    module = "github.com/golang/protobuf",
+    version = "v1.4.3",
+    visibility = ["PUBLIC"],
+    deps = [":google.golang.org.protobuf"],
+)
+
+go_module(
+    name = "google.golang.org.protobuf",
+    install = [
+        "encoding/protojson",
+        "encoding/prototext",
+        "encoding/protowire",
+        "internal/descfmt",
+        "internal/descopts",
+        "internal/detrand",
+        "internal/encoding/defval",
+        "internal/encoding/json",
+        "internal/encoding/messageset",
+        "internal/encoding/tag",
+        "internal/encoding/text",
+        "internal/errors",
+        "internal/fieldsort",
+        "internal/filedesc",
+        "internal/filetype",
+        "internal/flags",
+        "internal/genid",
+        "internal/impl",
+        "internal/mapsort",
+        "internal/pragma",
+        "internal/set",
+        "internal/strs",
+        "internal/version",
+        "proto",
+        "reflect/protoreflect",
+        "reflect/protoregistry",
+        "runtime/protoiface",
+        "runtime/protoimpl",
+    ],
+    licences = ["BSD-3"],
+    module = "google.golang.org/protobuf",
+    version = "v1.25.0",
     visibility = ["PUBLIC"],
 )

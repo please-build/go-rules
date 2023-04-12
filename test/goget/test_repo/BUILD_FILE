@@ -1,7 +1,7 @@
 subinclude("///go//build_defs:go")
 
-go_library(
+go_test(
     name = "go_get_test",
     srcs = ["go_get_test.go"],
-    deps = ["///third_party/go/github_com_stretchr_testify//assert"],
+    deps = ["//third_party/go:testify"],
 )

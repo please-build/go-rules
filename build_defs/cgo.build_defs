@@ -60,6 +60,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
     # _write_import_config_cmd won't resolve it again
     import_path = _get_import_path(package or name, import_path)
 
+    compiler_flags += CONFIG.GO.C_FLAGS
     compiler_flags_cmd = " ".join(compiler_flags)
     if pkg_config:
         pkg_configs = " ".join(pkg_config)
