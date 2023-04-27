@@ -661,7 +661,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
 
     test_cmd = f'$TEST {flags}'
     if not CONFIG.GO.COVERAGEREDESIGN:
-        test_cmd += ' | tee $TMP_DIR/test.results'
+        test_cmd += ' 2>&1 | tee $TMP_DIR/test.results'
     worker_cmd = f'$(worker {worker})' if worker else ""
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
