@@ -139,17 +139,22 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
       tags: Go build tags (e.g. 'osusergo' or 'netgo' are relevant to the stdlib)
       visibility: Visibility of this rule
     """
-    tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
+    flags = ''
+    if tags:
+        flags = ' -tags ' + ','.join(tags)
+    if CONFIG.GO.BUILDMODE:
+        flags += f' -buildmode {CONFIG.GO.BUILDMODE} -installsuffix {CONFIG.GO.BUILDMODE}'
     # We have to take some care to compile this in our working directory and not try to install
     # it to the existing GOROOT, which might not be writable.
     cmds = [
         'GOROOT="`$TOOL env GOROOT`"',
         'cp -r "$GOROOT/src" "$GOROOT/pkg" .',
-        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOL install{tag_flag} --trimpath std",
+        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOL install{flags} --trimpath std",
         "mkdir $OUT",
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUT",
-        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}/{}.a" | sort -u > $OUTS/std.importconfig',
+        f'SUFFIX="_{CONFIG.GO.BUILDMODE}"' if CONFIG.GO.BUILDMODE else 'SUFFIX=""',
+        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS/std.importconfig',
     ]
     return genrule(
         name = name,
