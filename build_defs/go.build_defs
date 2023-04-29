@@ -1370,6 +1370,9 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
     if len(defs) > 0:
         flags += " " + defs
 
+    if CONFIG.GO.BUILDMODE:
+        flags += f" -buildmode {CONFIG.GO.BUILDMODE}"
+
     if split_debug:
         return f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS && $TOOLS_STRIP -o $OUT -f $OUT.sym $OUT', {
             'go': [CONFIG.GO.GO_TOOL],

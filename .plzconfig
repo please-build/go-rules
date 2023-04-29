@@ -102,6 +102,10 @@ Type = bool
 DefaultValue = false
 Help = Support Go 1.20's coverage redesign. Will break coverage on 1.19, required for 1.20.
 
+[PluginConfig "buildmode"]
+Optional = true
+Help = The Go build mode to target (see `go help buildmode` for info)
+
 [BuildConfig]
 Release = False
 
