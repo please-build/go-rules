@@ -2,19 +2,6 @@ subinclude("//build_defs:go")
 
 go_toolchain(
     name = "toolchain",
-    architectures = [
-        "darwin_amd64",
-        "darwin_arm64",
-        "freebsd_amd64",
-        "linux_amd64",
-        "linux_arm64",
-        # Installing takes a while so only do it when we need it for release
-        # This extra check can be removed once we fix booleans in build config
-    ] if CONFIG.RELEASE and CONFIG.RELEASE != "False" else [],
-    tags = [
-        "netgo",
-        "osusergo",
-    ],
     version = "1.20.3",
     install_std = False,
 )
