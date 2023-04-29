@@ -140,10 +140,18 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
       visibility: Visibility of this rule
     """
     flags = ''
+    suffix = ''
     if tags:
         flags = ' -tags ' + ','.join(tags)
     if CONFIG.GO.BUILDMODE:
-        flags += f' -buildmode {CONFIG.GO.BUILDMODE} -installsuffix {CONFIG.GO.BUILDMODE}'
+        if CONFIG.GO.BUILDMODE in ['plugin', 'shared', 'c-shared']:
+            # We don't actually build the stdlib with -buildmode plugin, we just need -buildmode shared,
+            # but it adds an extra _dynlink on the end automatically.
+            flags += f' -buildmode shared -installsuffix {CONFIG.GO.BUILDMODE}'
+            suffix = f'_{CONFIG.GO.BUILDMODE}_dynlink'
+        else:
+            flags += f' -buildmode {CONFIG.GO.BUILDMODE} -installsuffix {CONFIG.GO.BUILDMODE}'
+            suffix = f'_{CONFIG.GO.BUILDMODE}'
     # We have to take some care to compile this in our working directory and not try to install
     # it to the existing GOROOT, which might not be writable.
     cmds = [
@@ -153,7 +161,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         "mkdir $OUT",
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUT",
-        f'SUFFIX="_{CONFIG.GO.BUILDMODE}"' if CONFIG.GO.BUILDMODE else 'SUFFIX=""',
+        f'SUFFIX="{suffix}"' if CONFIG.GO.BUILDMODE else 'SUFFIX=""',
         'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS/std.importconfig',
     ]
     return genrule(
