@@ -6,7 +6,7 @@ hashcheckers = sha256
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
-GoStdlib = //third_party/go:std
+Stdlib = //third_party/go:std
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
 CoverageRedesign = true
@@ -25,7 +25,7 @@ Name = go
 DefaultValue = go
 Inherit = true
 
-[PluginConfig "go_stdlib"]
+[PluginConfig "stdlib"]
 Optional = true
 Help = Build target for the Go standard library
 
