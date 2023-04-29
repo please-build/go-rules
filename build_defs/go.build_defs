@@ -129,6 +129,36 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
     )
 
 
+def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
+    """Defines compilation of the Go standard library.
+
+    This is idiomatically configured in //third_party/go and set as the gostdlib config value for the Go plugin.
+
+    Args:
+      name: Name of the rule
+      tags: Go build tags (e.g. 'osusergo' or 'netgo' are relevant to the stdlib)
+      visibility: Visibility of this rule
+    """
+    tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
+    # We have to take some care to compile this in our working directory and not try to install
+    # it to the existing GOROOT, which might not be writable.
+    cmds = [
+        'GOROOT="`$TOOL env GOROOT`"',
+        'cp -r "$GOROOT/src" "$GOROOT/pkg" .',
+        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOL install{tag_flag} --trimpath std",
+        "mkdir $OUT",
+        "rm -rf pkg/tool pkg/include",
+        "mv pkg $OUT",
+    ]
+    return genrule(
+        name = name,
+        outs = [name],
+        cmd = cmds,
+        tools = [CONFIG.GO.GO_TOOL],
+        visibility = visibility,
+    )
+
+
 def _pkg_sources(name: str, deps: list, test_only:bool):
     """
     This rule generates a list of go srcs for any rule in the deps list that is local to this package.

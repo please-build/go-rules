@@ -15,8 +15,16 @@ go_toolchain(
         "netgo",
         "osusergo",
     ],
-    version = "1.20.1",
-    install_std = True,
+    version = "1.20.3",
+    install_std = False,
+)
+
+go_stdlib(
+    name = "std",
+    tags = [
+        "netgo",
+        "osusergo",
+    ],
 )
 
 go_module(
