@@ -149,6 +149,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         "mkdir $OUT",
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUT",
+        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/{}.a" | sort -u > $OUTS/std.importconfig',
     ]
     return genrule(
         name = name,
