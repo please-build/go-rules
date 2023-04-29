@@ -111,8 +111,5 @@ Help = Support Go 1.20's coverage redesign. Will break coverage on 1.19, require
 Optional = true
 Help = The Go build mode to target (see `go help buildmode` for info)
 
-[BuildConfig]
-Release = False
-
 [Plugin "shell"]
 Target = //plugins:shell
