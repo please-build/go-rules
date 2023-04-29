@@ -149,7 +149,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         "mkdir $OUT",
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUT",
-        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/{}.a" | sort -u > $OUTS/std.importconfig',
+        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}/{}.a" | sort -u > $OUTS/std.importconfig',
     ]
     return genrule(
         name = name,
@@ -985,7 +985,9 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
 
     cc_tool_flag = "--cc_tool=$TOOLS_CC" if CONFIG.GO.CC_TOOL else ''
     cmd = [_set_go_env()]
-    if not CONFIG.GO.STDLIB:
+    if CONFIG.GO.STDLIB:
+        deps += [CONFIG.GO.STDLIB]
+    else:
         cmd += [_generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')]
     cmd += [
         _aggregate_import_cfg_cmd(),
@@ -1323,16 +1325,19 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     )
 
 def _set_go_env():
-    if CONFIG.HOSTOS == 'freebsd':
-        # FreeBSD has some very strange semantics around hardlinks that lead to it finding
-        # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
-        # the most recent hardlink to the file). We can work around this way although it's
-        # not very nice (we don't do this globally because OSX doesn't have realpath).
-        go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
+    if CONFIG.GO.STDLIB:
+        cmd = 'export GOPATH=$TMP_DIR'
     else:
-        go_root = '$("$TOOLS_GO" env GOROOT)'
+        if CONFIG.HOSTOS == 'freebsd':
+            # FreeBSD has some very strange semantics around hardlinks that lead to it finding
+            # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
+            # the most recent hardlink to the file). We can work around this way although it's
+            # not very nice (we don't do this globally because OSX doesn't have realpath).
+            go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
+        else:
+            go_root = '$("$TOOLS_GO" env GOROOT)'
+        cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
 
-    cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
     if CONFIG.GO.C_FLAGS:
         flags = " ".join(CONFIG.GO.C_FLAGS)
         cmd = f'{cmd} && export CFLAGS="{flags}"'
