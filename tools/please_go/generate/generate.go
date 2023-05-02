@@ -71,6 +71,9 @@ func (g *Generate) installTargets() []string {
 func (g *Generate) targetsInDir(dir string) []string {
 	var ret []string
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		// The assumption here is that if we generated a BUILD file, then we would have generated a go_library() target
+		// for that package. Currently, we don't generate BUILD files for any other reason so this assumption holds
+		// true. We may want to check that the BUILD file contains a go_library() target otherwise.
 		if g.isBuildFile(path) {
 			pleasePkgDir := strings.TrimPrefix(strings.TrimPrefix(filepath.Dir(path), g.srcRoot), "/")
 			ret = append(ret, g.libTargetForPleasePackage(pleasePkgDir))
@@ -401,6 +404,8 @@ func (g *Generate) depTarget(importPath string) string {
 	return target
 }
 
+// libTargetForPleasePackage returns the build label for the go_library() target that would be generated for a package
+// at this path withing the generated Please repo.
 func (g *Generate) libTargetForPleasePackage(pkg string) string {
 	if pkg == "" || pkg == "." {
 		return buildTarget(filepath.Base(g.moduleName), "", "")
