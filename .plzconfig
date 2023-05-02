@@ -28,6 +28,7 @@ Inherit = true
 [PluginConfig "stdlib"]
 Optional = true
 Help = Build target for the Go standard library
+Inherit = true
 
 [PluginConfig "require_licences"]
 DefaultValue = false
