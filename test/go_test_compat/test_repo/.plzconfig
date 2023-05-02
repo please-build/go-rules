@@ -6,6 +6,7 @@ PreloadSubincludes = ///go//build_defs:go
 [Plugin "go"]
 Target = //plugins:go
 TestRootCompat = true
+Stdlib = //third_party/go:std
 
 [FeatureFlags]
 ExcludeGoRules = true
