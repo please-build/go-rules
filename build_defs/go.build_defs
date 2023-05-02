@@ -534,6 +534,8 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
+    if CONFIG.GO.STDLIB:
+        deps += [CONFIG.GO.STDLIB]
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name=name,
