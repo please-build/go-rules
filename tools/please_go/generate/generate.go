@@ -3,6 +3,7 @@ package generate
 import (
 	"fmt"
 	"go/build"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +25,6 @@ type Generate struct {
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 	thirdPartyFolder   string
 	install            []string
-	installTargets     []string
 }
 
 func New(srcRoot, thirdPartyFolder string, buildFileNames, moduleDeps, install []string) *Generate {
@@ -54,6 +54,35 @@ func (g *Generate) Generate() error {
 	return g.writeInstallFilegroup()
 }
 
+func (g *Generate) installTargets() []string {
+	var targets []string
+
+	for _, i := range g.install {
+		dir := filepath.Join(g.srcRoot, i)
+		if strings.HasSuffix(dir, "/...") {
+			targets = append(targets, g.targetsInDir(strings.TrimSuffix(dir, "/..."))...)
+		} else {
+			targets = append(targets, g.libTargetForPleasePackage(i))
+		}
+	}
+	return targets
+}
+
+func (g *Generate) targetsInDir(dir string) []string {
+	var ret []string
+	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if g.isBuildFile(path) {
+			pleasePkgDir := strings.TrimPrefix(strings.TrimPrefix(filepath.Dir(path), g.srcRoot), "/")
+			ret = append(ret, g.libTargetForPleasePackage(pleasePkgDir))
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return ret
+}
+
 func (g *Generate) writeInstallFilegroup() error {
 	buildFile, err := parseOrCreateBuildFile(g.srcRoot, g.buildFileNames)
 	if err != nil {
@@ -61,7 +90,7 @@ func (g *Generate) writeInstallFilegroup() error {
 	}
 
 	rule := NewRule("filegroup", "installs")
-	rule.SetAttr("exported_deps", NewStringList(g.installTargets))
+	rule.SetAttr("exported_deps", NewStringList(g.installTargets()))
 	rule.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
 
 	buildFile.Stmt = append(buildFile.Stmt, rule.Call)
@@ -152,10 +181,6 @@ func (g *Generate) generate(dir string) error {
 	lib := g.libRule(pkg)
 	if lib == nil {
 		return nil
-	}
-
-	if g.matchesInstall(dir) {
-		g.installTargets = append(g.installTargets, g.depTarget(filepath.Join(g.moduleName, dir)))
 	}
 
 	return g.createBuildFile(dir, lib)
@@ -293,7 +318,7 @@ func (g *Generate) libRule(pkg *build.Package) *Rule {
 		name = filepath.Base(g.moduleName)
 	}
 
-	if len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) > 0 {
+	if len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) == 0 {
 		return nil
 	}
 
@@ -374,6 +399,13 @@ func (g *Generate) depTarget(importPath string) string {
 	target := buildTarget(name, packageName, subrepoName)
 	g.knownImportTargets[importPath] = target
 	return target
+}
+
+func (g *Generate) libTargetForPleasePackage(pkg string) string {
+	if pkg == "" || pkg == "." {
+		return buildTarget(filepath.Base(g.moduleName), "", "")
+	}
+	return buildTarget(filepath.Base(pkg), pkg, "")
 }
 
 func (g *Generate) subrepoName(module string) string {
