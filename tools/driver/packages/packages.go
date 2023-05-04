@@ -228,14 +228,9 @@ func loadPackageInfo(files []string, needExportFile bool) ([]*packages.Package, 
 			if err := json.NewDecoder(f).Decode(&lpkgs); err != nil {
 				return fmt.Errorf("failed to decode package info from %s: %s", file, err)
 			}
-			// Update the ExportFile paths which are relative
+			// Update the ExportFile paths to include the generated prefix
 			for _, pkg := range lpkgs {
-				pkg.ExportFile = filepath.Join(filepath.Dir(file), pkg.ExportFile)
-				if needExportFile {
-					// We've got the export file on disk neighbouring the .json file
-					// This 'just knows about' the filenames we define in go.build_defs
-					pkg.ExportFile = filepath.Join(strings.TrimSuffix(file, "_pkg_info.json")+"_gc_exports", pkg.PkgPath+".gc")
-				}
+				pkg.ExportFile = filepath.Join("plz-out/gen", pkg.ExportFile)
 			}
 			lock.Lock()
 			defer lock.Unlock()

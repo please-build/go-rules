@@ -5,12 +5,7 @@ package packageinfo
 import (
 	"encoding/json"
 	"fmt"
-	"go/ast"
 	"go/build"
-	"go/importer"
-	"go/parser"
-	"go/token"
-	"go/types"
 	"io"
 	"io/fs"
 	"os"
@@ -18,12 +13,11 @@ import (
 	"sort"
 	"strings"
 
-	"golang.org/x/tools/go/gcexportdata"
 	"golang.org/x/tools/go/packages"
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src, exportsFile string, complete bool, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, importconfig string, complete bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -39,6 +33,10 @@ func WritePackageInfo(modulePath, strip, src, exportsFile string, complete bool,
 	}); err != nil {
 		return fmt.Errorf("failed to read module dir: %w", err)
 	}
+	importConfig, err := loadImportConfig(importconfig)
+	if err != nil {
+		return fmt.Errorf("failed to read importconfig: %w", err)
+	}
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
@@ -48,12 +46,8 @@ func WritePackageInfo(modulePath, strip, src, exportsFile string, complete bool,
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
+		pkg.ExportFile = importConfig[pkg.PkgPath]
 		pkgs = append(pkgs, pkg)
-	}
-	if exportsFile != "" {
-		if err := writeExports(exportsFile, pkgs, complete); err != nil {
-			return fmt.Errorf("failed to write export data: %w", err)
-		}
 	}
 	// Ensure output is deterministic
 	sort.Slice(pkgs, func(i, j int) bool {
@@ -114,73 +108,22 @@ func mappend(s []string, args ...[]string) []string {
 	return s
 }
 
-// writeExports writes the gc export data, which is needed by the package driver for at least some requests.
-// This may be inefficient - we may be re-parsing files that build.ImportDir has already done, but
-// it doesn't seem to be possible to get the AST info back from build.whatever :(
-func writeExports(filename string, pkgs []*packages.Package, complete bool) error {
-	// We have to build a parallel set of Package objects of a different flavour, because it'd be
-	// too easy if all the different packages we need to use agreed on the same types.
-	// We get to loop over them all several times to ensure we can populate everything fully
-	// (especially imports) before writing anything out to disk.
-	tpkgs := make([]*types.Package, len(pkgs))
-	m := make(map[string]*types.Package, len(pkgs))
-	for i, pkg := range pkgs {
-		p := types.NewPackage(pkg.PkgPath, pkg.Name)
-		if complete {
-			p.MarkComplete()
-		}
-		tpkgs[i] = p
-		m[pkg.PkgPath] = p
+// loadImportConfig reads the given importconfig file and produces a map of package name -> export path
+func loadImportConfig(filename string) (map[string]string, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
 	}
-	for i, pkg := range pkgs {
-		imports := make([]*types.Package, 0, len(pkg.Imports))
-		for name := range pkg.Imports {
-			if imp, present := m[name]; present {
-				imports = append(imports, imp)
-			} else {
-				imports = append(imports, types.NewPackage(name, filepath.Base(name)))
+	lines := strings.Split(string(b), "\n")
+	m := make(map[string]string, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "packagefile ") {
+			pkg, exportFile, found := strings.Cut(strings.TrimPrefix(line, "packagefile "), "=")
+			if !found {
+				return nil, fmt.Errorf("unknown syntax for line: %s", line)
 			}
-		}
-		sort.Slice(imports, func(i, j int) bool { return imports[i].Path() < imports[j].Path() })
-		tpkgs[i].SetImports(imports)
-	}
-	for i, pkg := range pkgs {
-		if err := writeExport(filename, pkg, tpkgs[i]); err != nil {
-			return err
+			m[pkg] = exportFile
 		}
 	}
-	return nil
-}
-
-func writeExport(dirname string, pkg *packages.Package, tpkg *types.Package) error {
-	// Parse all the files
-	fset := token.NewFileSet()
-	files := make([]*ast.File, len(pkg.GoFiles))
-	for i, file := range pkg.GoFiles {
-		f, err := parser.ParseFile(fset, file, nil, 0)
-		if err != nil {
-			return fmt.Errorf("failed to parse %s: %w", file, err)
-		}
-		files[i] = f
-	}
-
-	// Now type-check them
-	conf := types.Config{Importer: importer.ForCompiler(fset, "gc", nil)}
-	info := &types.Info{Defs: make(map[*ast.Ident]types.Object)}
-	typedpkg, err := conf.Check(pkg.PkgPath, fset, files, info)
-	if err != nil {
-		return fmt.Errorf("failed to load type info for %s: %w", pkg.PkgPath, err)
-	}
-
-	filename := filepath.Join(dirname, pkg.PkgPath+".gc")
-	if err := os.MkdirAll(filepath.Dir(filename), 0775); err != nil {
-		return fmt.Errorf("failed to make directory: %w", err)
-	}
-	pkg.ExportFile = filename
-	f, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create output file: %w", err)
-	}
-	defer f.Close()
-	return gcexportdata.Write(f, fset, tpkg)
+	return m, nil
 }
