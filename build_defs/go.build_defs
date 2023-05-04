@@ -387,8 +387,11 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             tag = "pkg_info",
             tools = [CONFIG.GO.PLEASE_GO_TOOL],
             srcs = srcs + resources,
-            outs = [f"_{name}_pkg_info.json"],
-            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' {flag} > $OUT",
+            outs = {
+                "pkg_info": [f"_{name}_pkg_info.json"],
+                "exports": [f"_{name}_gc_exports"],
+            },
+            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' {flag} -e $OUTS_EXPORTS > $OUTS_PKG_INFO",
             labels = ["go_pkg_info"],
             test_only = test_only,
         )]
