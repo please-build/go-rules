@@ -225,7 +225,7 @@ func loadPackageInfo(files []string, needExportFile bool) ([]*packages.Package, 
 				if needExportFile {
 					// We've got the export file on disk neighbouring the .json file
 					// This 'just knows about' the filenames we define in go.build_defs
-					pkg.ExportFile = filepath.Join(strings.TrimSuffix(file, "_pkg_info.json")+"_gc_exports", pkg.Name)
+					pkg.ExportFile = filepath.Join(strings.TrimSuffix(file, "_pkg_info.json")+"_gc_exports", pkg.PkgPath+".gc")
 				}
 			}
 			lock.Lock()

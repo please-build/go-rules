@@ -157,7 +157,7 @@ func writeExport(dirname string, pkg *packages.Package, tpkg *types.Package) err
 			return fmt.Errorf("failed to parse %s: %w", file, err)
 		}
 	}
-	filename := filepath.Join(dirname, pkg.Name)
+	filename := filepath.Join(dirname, pkg.PkgPath+".gc")
 	if err := os.MkdirAll(filepath.Dir(filename), 0775); err != nil {
 		return fmt.Errorf("failed to make directory: %w", err)
 	}
