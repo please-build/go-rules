@@ -124,7 +124,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 			}
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
-		pkg.ExportFile = filepath.Join(rootpath, "plz-out/gen", pkg.ExportFile)
+		pkg.ExportFile = filepath.Join(rootpath, pkg.ExportFile)
 	}
 	// Handle stdlib imports which are not currently done elsewhere.
 	stdlib, err := loadStdlibPackages()

@@ -1351,7 +1351,11 @@ def _go_pkg_info(name:str, srcs:list, strip:bool=False, module:str="", complete:
     sflag = '-s "$SRCS"' if strip else ''
     tools = [CONFIG.GO.PLEASE_GO_TOOL]
     if stdlib:
-        cmd = 'SRC="`$TOOLS_GO env GOROOT`/src" && $TOOLS_PLZGO m --srcs "$SRC" -m "" -s "$SRC"'
+        cmd = ' && '.join([
+            'mkdir -p $PKG_DIR',
+            'cp -r "`$TOOLS_GO env GOROOT`/src" "${PKG_DIR}/src"',
+            '$TOOLS_PLZGO m --srcs "${PKG_DIR}/src" -m "" -s "${PKG_DIR}/src"',
+        ])
         tools = {'plzgo': tools, 'go': [CONFIG.GO.GO_TOOL]}
     elif module:
         cmd = f'$TOOL m -m {module}'

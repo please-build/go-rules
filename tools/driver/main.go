@@ -6,6 +6,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 	"github.com/peterebden/go-cli-init/v5/logging"
+	xpackages "golang.org/x/tools/go/packages"
 
 	"github.com/please-build/go-rules/tools/driver/packages"
 )
@@ -17,6 +18,7 @@ var opts = struct {
 	Verbosity  logging.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 	NoInput    bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
 	WorkingDir string            `short:"w" long:"working_dir" description:"Change to this working directory before running"`
+	OutputFile string            `short:"o" long:"output_file" env:"PLZ_GOPACKAGESDRIVER_OUTPUT_FILE" description:"File to write output to (in addition to stdout)"`
 	Args       struct {
 		Files []string `positional-arg-name:"file"`
 	} `positional-args:"true"`
@@ -42,7 +44,9 @@ func main() {
 	}
 
 	req := &packages.DriverRequest{}
-	if !opts.NoInput {
+	if opts.NoInput {
+		req.Mode = xpackages.NeedExportFile
+	} else {
 		if err := json.NewDecoder(os.Stdin).Decode(req); err != nil {
 			log.Fatalf("Failed to read request: %s", err)
 		}
@@ -52,6 +56,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load packages: %s", err)
 	}
+
+	if opts.OutputFile != "" {
+		b, _ := json.MarshalIndent(resp, "", "    ")
+		if err := os.WriteFile(opts.OutputFile, b, 0644); err != nil {
+			log.Fatalf("Failed to write output file: %s", err)
+		}
+	}
+
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(resp); err != nil {
