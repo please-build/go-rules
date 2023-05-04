@@ -139,11 +139,20 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
       tags: Go build tags (e.g. 'osusergo' or 'netgo' are relevant to the stdlib)
       visibility: Visibility of this rule
     """
-    # Need to write package info for the stdlib as well.
+    # Need to write package info for the stdlib as well. This requires the source to be present.
+    srcs = build_rule(
+        name = name,
+        tag = 'srcs',
+        outs = [name + '/src'],
+        cmd = 'cp -r "`$TOOL env GOROOT`/src" "$OUT"',
+        tools = [CONFIG.GO.GO_TOOL],
+    )
+
     pkg_info = _go_pkg_info(
         name = name,
-        srcs = [],
+        srcs = [srcs],
         stdlib = True,
+        strip = True,
     )
 
     flags = ''
@@ -168,15 +177,17 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         'GOROOT="`$TOOL env GOROOT`"',
         'cp -r "$GOROOT/src" "$GOROOT/pkg" .',
         f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOL install{flags} --trimpath std",
-        "mkdir $OUT",
         "rm -rf pkg/tool pkg/include",
-        "mv pkg $OUT",
+        "mv pkg $OUTS_PKG",
         f'SUFFIX="{suffix}"',
-        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS/std.importconfig',
+        'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS_PKG"/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS_IC',
     ]
     return genrule(
         name = name,
-        outs = [name],
+        outs = {
+            "pkg": [name + "/pkg"],
+            "ic": [f"{name}/{name}.importconfig"],
+        },
         cmd = cmds,
         tools = [CONFIG.GO.GO_TOOL],
         deps = [pkg_info],
@@ -1351,12 +1362,7 @@ def _go_pkg_info(name:str, srcs:list, strip:bool=False, module:str="", complete:
     sflag = '-s "$SRCS"' if strip else ''
     tools = [CONFIG.GO.PLEASE_GO_TOOL]
     if stdlib:
-        cmd = ' && '.join([
-            'mkdir -p $PKG_DIR',
-            'cp -r "`$TOOLS_GO env GOROOT`/src" "${PKG_DIR}/src"',
-            '$TOOLS_PLZGO m --srcs "${PKG_DIR}/src" -m "" -s "${PKG_DIR}/src"',
-        ])
-        tools = {'plzgo': tools, 'go': [CONFIG.GO.GO_TOOL]}
+        cmd = '$TOOL m -m ""'
     elif module:
         cmd = f'$TOOL m -m {module}'
     else:
@@ -1364,7 +1370,7 @@ def _go_pkg_info(name:str, srcs:list, strip:bool=False, module:str="", complete:
     return build_rule(
         name = name,
         tag = "pkg_info",
-        tools = tools,
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
         srcs = srcs,
         outs = {
             "pkg_info": [f"_{name}_pkg_info.json"],
