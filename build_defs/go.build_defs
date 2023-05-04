@@ -381,18 +381,10 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
 
     # Package info rule for the Go packages driver
     if _generate_pkg_info:
-        flag = '-c' if complete else ''
-        deps += [build_rule(
+        deps += [_go_pkg_info(
             name = name,
-            tag = "pkg_info",
-            tools = [CONFIG.GO.PLEASE_GO_TOOL],
             srcs = srcs + resources,
-            outs = {
-                "pkg_info": [f"_{name}_pkg_info.json"],
-                "exports": [f"_{name}_gc_exports"],
-            },
-            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' {flag} -e $OUTS_EXPORTS > $OUTS_PKG_INFO",
-            labels = ["go_pkg_info"],
+            complete = complete,
             test_only = test_only,
         )]
 
@@ -1268,17 +1260,11 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     outs = []
 
     # Package info rule for the Go packages driver
-    pkg_info = build_rule(
+    pkg_info = _go_pkg_info(
         name = name,
-        tag = "pkg_info",
-        tools = [CONFIG.GO.PLEASE_GO_TOOL],
         srcs = [download],
-        outs = {
-            "pkg_info": [f"_{name}_pkg_info.json"],
-            "exports": [f"_{name}_gc_exports"],
-        },
-        cmd = f'$TOOL m -m {module} -s "$SRCS" -e "$OUTS_EXPORTS" > "$OUTS_PKG_INFO"',
-        labels = ["go_pkg_info"],
+        strip = True,
+        module = module,
         test_only = test_only,
     )
 
@@ -1348,6 +1334,28 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         requires = ['go'],
         binary = binary,
     )
+
+
+def _go_pkg_info(name:str, srcs:list, strip:bool=False, module:str="", complete:bool=False,
+                 test_only:bool=False):
+    """Internal-only function for generating the pkg_info files"""
+    cflag = '-c' if complete else ''
+    sflag = '-s "$SRCS"' if strip else ''
+    mflag = f'm -m {module}' if module else f"p -i '{CONFIG.GO.IMPORT_PATH}'"
+    return build_rule(
+        name = name,
+        tag = "pkg_info",
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        srcs = srcs,
+        outs = {
+            "pkg_info": [f"_{name}_pkg_info.json"],
+            "exports": [f"_{name}_gc_exports"],
+        },
+        cmd = f'$TOOL {mflag} {sflag} {cflag} -e "$OUTS_EXPORTS" > "$OUTS_PKG_INFO"',
+        labels = ["go_pkg_info"],
+        test_only = test_only,
+    )
+
 
 def _set_go_env():
     if CONFIG.GO.STDLIB:
