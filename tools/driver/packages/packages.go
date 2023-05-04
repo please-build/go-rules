@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
+	"go/token"
 	"go/types"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/peterebden/go-cli-init/v5/logging"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
+	"golang.org/x/tools/go/gcexportdata"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/please-build/go-rules/tools/please_go/packageinfo"
@@ -93,7 +95,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	for _, file := range relFiles {
 		dirs[filepath.Dir(file)] = struct{}{}
 	}
-	pkgs, err := loadPackageInfo(relFiles)
+	pkgs, err := loadPackageInfo(relFiles, (req.Mode&packages.NeedTypesInfo) != 0)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +148,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 // loadPackageInfo loads all the package information by executing Please.
 // A cooler way of handling this in future would be to do this in-process; for that we'd
 // need to define the SDK we keep talking about as a supported programmatic interface.
-func loadPackageInfo(files []string) ([]*packages.Package, error) {
+func loadPackageInfo(files []string, needTypes bool) ([]*packages.Package, error) {
 	isTerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	plz := func(args ...string) *exec.Cmd {
 		cmd := exec.Command("plz", args...)
@@ -222,6 +224,16 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 			// Update the ExportFile paths which are relative
 			for _, pkg := range lpkgs {
 				pkg.ExportFile = filepath.Join(filepath.Dir(file), pkg.ExportFile)
+				if needTypes {
+					// If we need type info, we need to get it from a neighbouring gc_exports file
+					// This 'just knows about' the filenames we define in go.build_defs
+					filename := filepath.Join(strings.TrimSuffix(file, "_pkg_info.json")+"_gc_exports", pkg.Name)
+					if types, err := loadGCExportData(filename, pkg.PkgPath); err != nil {
+						log.Warning("failed to load GC export data: %s", err)
+					} else {
+						pkg.Types = types
+					}
+				}
 			}
 			lock.Lock()
 			defer lock.Unlock()
@@ -230,6 +242,17 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 		})
 	}
 	return pkgs, g.Wait()
+}
+
+func loadGCExportData(filename, pkgPath string) (*types.Package, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	fset := token.NewFileSet()
+	imports := map[string]*types.Package{}
+	return gcexportdata.Read(f, fset, imports, pkgPath)
 }
 
 // loadStdlibPackages returns all the packages from the Go stdlib.

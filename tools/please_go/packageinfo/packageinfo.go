@@ -49,7 +49,7 @@ func WritePackageInfo(modulePath, strip, src, exportsFile string, complete bool,
 		pkgs = append(pkgs, pkg)
 	}
 	if exportsFile != "" {
-		if err := writeExports(exportsFile, pkgs, strip != "", complete); err != nil {
+		if err := writeExports(exportsFile, pkgs, complete); err != nil {
 			return fmt.Errorf("failed to write export data: %w", err)
 		}
 	}
@@ -115,7 +115,7 @@ func mappend(s []string, args ...[]string) []string {
 // writeExports writes the gc export data, which is needed by the package driver for at least some requests.
 // This may be inefficient - we may be re-parsing files that build.ImportDir has already done, but
 // it doesn't seem to be possible to get the AST info back from build.whatever :(
-func writeExports(filename string, pkgs []*packages.Package, tree, complete bool) error {
+func writeExports(filename string, pkgs []*packages.Package, complete bool) error {
 	// We have to build a parallel set of Package objects of a different flavour, because it'd be
 	// too easy if all the different packages we need to use agreed on the same types.
 	// We get to loop over them all several times to ensure we can populate everything fully
@@ -143,26 +143,23 @@ func writeExports(filename string, pkgs []*packages.Package, tree, complete bool
 		tpkgs[i].SetImports(imports)
 	}
 	for i, pkg := range pkgs {
-		if err := writeExport(filename, pkg, tpkgs[i], tree); err != nil {
+		if err := writeExport(filename, pkg, tpkgs[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func writeExport(filename string, pkg *packages.Package, tpkg *types.Package, tree bool) error {
+func writeExport(dirname string, pkg *packages.Package, tpkg *types.Package) error {
 	fset := token.NewFileSet()
 	for _, file := range pkg.GoFiles {
 		if _, err := parser.ParseFile(fset, file, nil, 0); err != nil {
 			return fmt.Errorf("failed to parse %s: %w", file, err)
 		}
 	}
-	if tree {
-		// Output needs to be a tree of files
-		filename = filepath.Join(filename, pkg.Name)
-		if err := os.MkdirAll(filepath.Dir(filename), 0775); err != nil {
-			return fmt.Errorf("failed to make directory: %w", err)
-		}
+	filename := filepath.Join(dirname, pkg.Name)
+	if err := os.MkdirAll(filepath.Dir(filename), 0775); err != nil {
+		return fmt.Errorf("failed to make directory: %w", err)
 	}
 	pkg.ExportFile = filename
 	f, err := os.Create(filename)
