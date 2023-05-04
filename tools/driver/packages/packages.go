@@ -93,13 +93,14 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	for _, file := range relFiles {
 		dirs[filepath.Dir(file)] = struct{}{}
 	}
-	pkgs, err := loadPackageInfo(relFiles, (req.Mode&packages.NeedExportFile) != 0)
+	pkgs, err := loadPackageInfo(relFiles, req.Mode >= packages.NeedExportFile)
 	if err != nil {
 		return nil, err
 	}
 	// Build the set of root packages
 	seenRoots := map[string]struct{}{}
 	roots := []string{}
+	seenRuntime := false
 	for _, pkg := range pkgs {
 		for _, file := range pkg.GoFiles {
 			if _, present := dirs[filepath.Dir(file)]; present {
@@ -107,6 +108,9 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 					seenRoots[pkg.ID] = struct{}{}
 					roots = append(roots, pkg.ID)
 				}
+			}
+			if pkg.ID == "runtime" {
+				seenRuntime = true
 			}
 		}
 	}
@@ -126,10 +130,15 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		pkg.CompiledGoFiles = pkg.GoFiles
 		pkg.ExportFile = filepath.Join(rootpath, pkg.ExportFile)
 	}
-	// Handle stdlib imports which are not currently done elsewhere.
-	stdlib, err := loadStdlibPackages()
-	if err != nil {
-		return nil, err
+	if !seenRuntime {
+		// Handle stdlib imports if we didn't already find them
+		// TODO(peterebden): Get rid of loading stdlib here once we do v2 and require it to be
+		//                   explicitly defined as a build rule
+		stdlib, err := loadStdlibPackages()
+		if err != nil {
+			return nil, err
+		}
+		pkgs = append(pkgs, stdlib...)
 	}
 	log.Debug("Built package set")
 	return &DriverResponse{
@@ -138,7 +147,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 			WordSize: 8,
 			MaxAlign: 8,
 		},
-		Packages: append(pkgs, stdlib...),
+		Packages: pkgs,
 		Roots:    roots,
 	}, nil
 }
