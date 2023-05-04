@@ -5,7 +5,9 @@ package packageinfo
 import (
 	"encoding/json"
 	"fmt"
+	"go/ast"
 	"go/build"
+	"go/importer"
 	"go/parser"
 	"go/token"
 	"go/types"
@@ -151,12 +153,25 @@ func writeExports(filename string, pkgs []*packages.Package, complete bool) erro
 }
 
 func writeExport(dirname string, pkg *packages.Package, tpkg *types.Package) error {
+	// Parse all the files
 	fset := token.NewFileSet()
-	for _, file := range pkg.GoFiles {
-		if _, err := parser.ParseFile(fset, file, nil, 0); err != nil {
+	files := make([]*ast.File, len(pkg.GoFiles))
+	for i, file := range pkg.GoFiles {
+		f, err := parser.ParseFile(fset, file, nil, 0)
+		if err != nil {
 			return fmt.Errorf("failed to parse %s: %w", file, err)
 		}
+		files[i] = f
 	}
+
+	// Now type-check them
+	conf := types.Config{Importer: importer.ForCompiler(fset, "gc", nil)}
+	info := &types.Info{Defs: make(map[*ast.Ident]types.Object)}
+	typedpkg, err := conf.Check(pkg.PkgPath, fset, files, info)
+	if err != nil {
+		return fmt.Errorf("failed to load type info for %s: %w", pkg.PkgPath, err)
+	}
+
 	filename := filepath.Join(dirname, pkg.PkgPath+".gc")
 	if err := os.MkdirAll(filepath.Dir(filename), 0775); err != nil {
 		return fmt.Errorf("failed to make directory: %w", err)
