@@ -152,6 +152,9 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         else:
             flags += f' -buildmode {CONFIG.GO.BUILDMODE} -installsuffix {CONFIG.GO.BUILDMODE}'
             suffix = f'_{CONFIG.GO.BUILDMODE}'
+    if CONFIG.GO.RACE:
+        suffix += '_race'
+        flags += ' -race'
     # We have to take some care to compile this in our working directory and not try to install
     # it to the existing GOROOT, which might not be writable.
     cmds = [
@@ -161,7 +164,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         "mkdir $OUT",
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUT",
-        f'SUFFIX="{suffix}"' if CONFIG.GO.BUILDMODE else 'SUFFIX=""',
+        f'SUFFIX="{suffix}"',
         'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS/std.importconfig',
     ]
     return genrule(
@@ -1376,6 +1379,8 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
     compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     package_flag = f" -p {import_path}" if import_path else ""
+    if CONFIG.GO.RACE:
+        compile_cmd += ' -race'
 
     gen_import_cfg = _set_go_env()
     if not CONFIG.GO.STDLIB:
@@ -1430,6 +1435,8 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     if CONFIG.GO.BUILDMODE:
         flags += f" -buildmode {CONFIG.GO.BUILDMODE}"
+    if CONFIG.GO.RACE:
+        flags += " -race"
 
     if split_debug:
         return f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS && $TOOLS_STRIP -o $OUT -f $OUT.sym $OUT', {
