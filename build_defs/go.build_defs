@@ -399,11 +399,12 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     )
 
     # Package info rule for the Go packages driver
-    if _generate_pkg_info and _generate_import_config:
+    if _generate_pkg_info:
         deps += [_go_pkg_info(
             name = name,
             srcs = srcs + resources,
-            importconfig = import_cfg,
+            import_path = import_path,
+            package = package,
             complete = complete,
             test_only = test_only,
         )]
@@ -1357,12 +1358,17 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     )
 
 
-def _go_pkg_info(name:str, srcs:list, importconfig:str, strip:bool=False,
-                 module:str="", complete:bool=False, test_only:bool=False):
+def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
+                 strip:bool=False, module:str="", complete:bool=False, test_only:bool=False):
     """Internal-only function for generating the pkg_info files"""
     cflag = '-c' if complete else ''
     sflag = '-s "$SRCS_SRCS"' if strip else ''
-    cmd = f'$TOOL m -m {module}' if module else f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}'"
+
+    if module:
+        cmd = f'$TOOL m -m {module}'
+    else:
+        import_path = _get_import_path(package, import_path)
+        cmd = f'$TOOL p -i "{CONFIG.GO.IMPORT_PATH}" -m "{import_path}:$PKG_DIR/{package}.a"'
     return build_rule(
         name = name,
         tag = "pkg_info",

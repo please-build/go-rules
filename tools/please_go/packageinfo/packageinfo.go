@@ -17,7 +17,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src, importconfig string, complete bool, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, complete bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -33,9 +33,12 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, complete bool
 	}); err != nil {
 		return fmt.Errorf("failed to read module dir: %w", err)
 	}
-	importConfig, err := loadImportConfig(importconfig)
-	if err != nil {
-		return fmt.Errorf("failed to read importconfig: %w", err)
+	if importconfig != "" {
+		m, err := loadImportConfig(importconfig)
+		if err != nil {
+			return fmt.Errorf("failed to read importconfig: %w", err)
+		}
+		imports = m
 	}
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
@@ -46,7 +49,7 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, complete bool
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkg.ExportFile = importConfig[pkg.PkgPath]
+		pkg.ExportFile = imports[pkg.PkgPath]
 		pkgs = append(pkgs, pkg)
 	}
 	// Ensure output is deterministic
