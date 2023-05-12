@@ -93,7 +93,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	for _, file := range relFiles {
 		dirs[filepath.Dir(file)] = struct{}{}
 	}
-	pkgs, err := loadPackageInfo(relFiles, req.Mode >= packages.NeedExportFile)
+	pkgs, err := loadPackageInfo(relFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 // loadPackageInfo loads all the package information by executing Please.
 // A cooler way of handling this in future would be to do this in-process; for that we'd
 // need to define the SDK we keep talking about as a supported programmatic interface.
-func loadPackageInfo(files []string, needExportFile bool) ([]*packages.Package, error) {
+func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	isTerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	plz := func(args ...string) *exec.Cmd {
 		cmd := exec.Command("plz", args...)
