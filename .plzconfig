@@ -112,5 +112,11 @@ Help = Support Go 1.20's coverage redesign. Will break coverage on 1.19, require
 Optional = true
 Help = The Go build mode to target (see `go help buildmode` for info)
 
+[PluginConfig "race"]
+Type = bool
+DefaultValue = false
+Optional = true
+Help = Compile for the Go race detector
+
 [Plugin "shell"]
 Target = //plugins:shell
