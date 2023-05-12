@@ -724,6 +724,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _generate_import_config = False,
         labels = labels,
         import_path = "main",
+        _generate_pkg_info = False,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
