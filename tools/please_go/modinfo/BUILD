@@ -14,4 +14,12 @@ go_library(
     ],
 )
 
-    
+go_test(
+    name = "modinfo_test",
+    srcs = ["modinfo_test.go"],
+    external = True,
+    deps = [
+        ":modinfo",
+        "//third_party/go:testify",
+    ],
+)

@@ -4,8 +4,10 @@ package modinfo
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -28,6 +30,24 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) err
 		Settings: []debug.BuildSetting{
 			{Key: "-buildmode", Value: buildMode},
 		},
+	}
+	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".modinfo") {
+			return err
+		}
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if module, version, found := strings.Cut(strings.TrimSpace(string(contents)), "@"); found {
+			bi.Deps = append(bi.Deps, &debug.Module{
+				Path:    module,
+				Version: version,
+			})
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to walk modinfo files: %w", err)
 	}
 	return os.WriteFile(outputFile, []byte("modinfo "+strconv.Quote(bi.String())), 0644)
 }
