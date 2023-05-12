@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
@@ -109,6 +110,7 @@ var opts = struct {
 		Pkg        string `short:"p" long:"package" env:"PKG_DIR" description:"The package directory within the repo"`
 		BuildMode  string `short:"b" long:"build_mode" default:"exe" description:"The Go build mode being used"`
 		Out        string `short:"o" long:"out" env:"OUT" required:"true" description:"File to write the output to"`
+		Write      bool   `short:"w" long:"write" hidden:"true" description:"Print this binary's own modinfo"`
 	} `command:"modinfo" description:"Generates Go modinfo for the linter"`
 }{
 	Usage: `
@@ -198,6 +200,13 @@ var subCommands = map[string]func() int{
 	},
 	"modinfo": func() int {
 		mi := opts.ModInfo
+		if mi.Write {
+			info, ok := debug.ReadBuildInfo()
+			if !ok {
+				log.Fatalf("build info not available")
+			}
+			os.Stderr.Write([]byte(info.String() + "\n"))
+		}
 		if err := modinfo.WriteModInfo(mi.GoTool, mi.ModulePath, filepath.Join(mi.ModulePath, mi.Pkg), mi.BuildMode, mi.Out); err != nil {
 			log.Fatalf("failed to write modinfo: %s", err)
 		}

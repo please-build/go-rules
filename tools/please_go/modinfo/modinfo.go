@@ -49,5 +49,5 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) err
 	}); err != nil {
 		return fmt.Errorf("failed to walk modinfo files: %w", err)
 	}
-	return os.WriteFile(outputFile, []byte("modinfo "+strconv.Quote(bi.String())), 0644)
+	return os.WriteFile(outputFile, []byte("modinfo "+strconv.Quote(bi.String())+"\n"), 0644)
 }
