@@ -14,7 +14,7 @@ func TestModInfo(t *testing.T) {
 	assert.Equal(t, "github.com/please-build/go-rules/tools/please_go/modinfo", info.Path)
 	assert.Equal(t, debug.Module{Path: "github.com/please-build/go-rules"}, info.Main)
 	assert.Equal(t, []*debug.Module{{
-		Path:    "github.com/stretchr/testify/assert",
+		Path:    "github.com/stretchr/testify",
 		Version: "v1.7.0",
 	}}, info.Deps)
 }
