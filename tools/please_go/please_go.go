@@ -15,6 +15,7 @@ import (
 	"github.com/please-build/go-rules/tools/please_go/generate"
 	"github.com/please-build/go-rules/tools/please_go/goget"
 	"github.com/please-build/go-rules/tools/please_go/install"
+	"github.com/please-build/go-rules/tools/please_go/modinfo"
 	"github.com/please-build/go-rules/tools/please_go/packageinfo"
 	"github.com/please-build/go-rules/tools/please_go/test"
 )
@@ -102,6 +103,13 @@ var opts = struct {
 			Requirements []string `positional-arg-name:"requirements" description:"a set of module@version pairs"`
 		} `positional-args:"true"`
 	} `command:"get" description:"Generate go_get rules"`
+	ModInfo struct {
+		GoTool     string `short:"g" long:"go" env:"TOOLS_GO" required:"true" description:"The Go tool we'll use"`
+		ModulePath string `short:"m" long:"module_path" description:"The path for the module being built"`
+		Pkg        string `short:"p" long:"package" env:"PKG_DIR" description:"The package directory within the repo"`
+		BuildMode  string `short:"b" long:"build_mode" default:"exe" description:"The Go build mode being used"`
+		Out        string `short:"o" long:"out" env:"OUT" required:"true" description:"File to write the output to"`
+	} `command:"modinfo" description:"Generates Go modinfo for the linter"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -185,6 +193,13 @@ var subCommands = map[string]func() int{
 		mi := opts.ModuleInfo
 		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
+		}
+		return 0
+	},
+	"modinfo": func() int {
+		mi := opts.ModInfo
+		if err := modinfo.WriteModInfo(mi.GoTool, mi.ModulePath, filepath.Join(mi.ModulePath, mi.Pkg), mi.BuildMode, mi.Out); err != nil {
+			log.Fatalf("failed to write modinfo: %s", err)
 		}
 		return 0
 	},

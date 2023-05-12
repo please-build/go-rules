@@ -536,6 +536,10 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _generate_import_config=False,
         import_path="main",
     )
+    modinfo = _go_modinfo(
+        name = name,
+        deps = deps,
+    )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
     if CONFIG.GO.STDLIB:
         deps += [CONFIG.GO.STDLIB]
@@ -551,7 +555,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     return build_rule(
         name=name,
         srcs=[lib],
-        deps=deps,
+        deps=deps + [modinfo],
         data=data,
         debug_data=debug_data,
         outs=[out],
@@ -1341,6 +1345,23 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         requires = ['go'],
         binary = binary,
     )
+
+
+def _go_modinfo(name:str, deps:list):
+    """Generates Go modinfo for a binary which is fed into go tool link via the importconfig"""
+    return build_rule(
+        name = name,
+        tag = 'modinfo',
+        needs_transitive_deps = True,
+        outs = [name + ".modinfo.importconfig"],
+        cmd = f'$TOOLS_PLZ modinfo -m "{CONFIG.GO.IMPORT_PATH}" -b "{CONFIG.GO.BUILDMODE}"',
+        tools = {
+            'go': [CONFIG.GO_TOOL],
+            'plz': [CONFIG.GO.PLEASE_GO_TOOL],
+        },
+        requires = ["modinfo"],
+    )
+
 
 def _set_go_env():
     if CONFIG.GO.STDLIB:
