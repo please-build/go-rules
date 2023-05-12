@@ -129,6 +129,50 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
     )
 
 
+def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
+    """Defines compilation of the Go standard library.
+
+    This is idiomatically configured in //third_party/go and set as the gostdlib config value for the Go plugin.
+
+    Args:
+      name: Name of the rule
+      tags: Go build tags (e.g. 'osusergo' or 'netgo' are relevant to the stdlib)
+      visibility: Visibility of this rule
+    """
+    flags = ''
+    suffix = ''
+    if tags:
+        flags = ' -tags ' + ','.join(tags)
+    if CONFIG.GO.BUILDMODE:
+        if CONFIG.GO.BUILDMODE in ['plugin', 'shared', 'c-shared']:
+            # We don't actually build the stdlib with -buildmode plugin, we just need -buildmode shared,
+            # but it adds an extra _dynlink on the end automatically.
+            flags += f' -buildmode shared -installsuffix {CONFIG.GO.BUILDMODE}'
+            suffix = f'_{CONFIG.GO.BUILDMODE}_dynlink'
+        else:
+            flags += f' -buildmode {CONFIG.GO.BUILDMODE} -installsuffix {CONFIG.GO.BUILDMODE}'
+            suffix = f'_{CONFIG.GO.BUILDMODE}'
+    # We have to take some care to compile this in our working directory and not try to install
+    # it to the existing GOROOT, which might not be writable.
+    cmds = [
+        'GOROOT="`$TOOL env GOROOT`"',
+        'cp -r "$GOROOT/src" "$GOROOT/pkg" .',
+        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOL install{flags} --trimpath std",
+        "mkdir $OUT",
+        "rm -rf pkg/tool pkg/include",
+        "mv pkg $OUT",
+        f'SUFFIX="{suffix}"' if CONFIG.GO.BUILDMODE else 'SUFFIX=""',
+        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS/std.importconfig',
+    ]
+    return genrule(
+        name = name,
+        outs = [name],
+        cmd = cmds,
+        tools = [CONFIG.GO.GO_TOOL],
+        visibility = visibility,
+    )
+
+
 def _pkg_sources(name: str, deps: list, test_only:bool):
     """
     This rule generates a list of go srcs for any rule in the deps list that is local to this package.
@@ -188,6 +232,8 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     # package like third party sources which is especially slow on systems with slow syscall performance (macOS)
     if _all_srcs:
         deps += [_pkg_sources(name, deps, test_only)]
+    if CONFIG.GO.STDLIB:
+        deps += [CONFIG.GO.STDLIB]
 
     if _generate_import_config:
         import_cfg = build_rule(
@@ -488,6 +534,8 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
+    if CONFIG.GO.STDLIB:
+        deps += [CONFIG.GO.STDLIB]
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name=name,
@@ -951,9 +999,12 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
 
     cc_tool_flag = "--cc_tool=$TOOLS_CC" if CONFIG.GO.CC_TOOL else ''
-    cmd = [
-        _set_go_env(),
-        _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
+    cmd = [_set_go_env()]
+    if CONFIG.GO.STDLIB:
+        deps += [CONFIG.GO.STDLIB]
+    else:
+        cmd += [_generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')]
+    cmd += [
         _aggregate_import_cfg_cmd(),
         f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO {cc_tool_flag} --out=pkg/{CONFIG.OS}_{CONFIG.ARCH} " + " ".join(install),
         "cat LD_FLAGS",
@@ -1289,16 +1340,19 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     )
 
 def _set_go_env():
-    if CONFIG.HOSTOS == 'freebsd':
-        # FreeBSD has some very strange semantics around hardlinks that lead to it finding
-        # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
-        # the most recent hardlink to the file). We can work around this way although it's
-        # not very nice (we don't do this globally because OSX doesn't have realpath).
-        go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
+    if CONFIG.GO.STDLIB:
+        cmd = 'export GOPATH=$TMP_DIR'
     else:
-        go_root = '$("$TOOLS_GO" env GOROOT)'
+        if CONFIG.HOSTOS == 'freebsd':
+            # FreeBSD has some very strange semantics around hardlinks that lead to it finding
+            # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
+            # the most recent hardlink to the file). We can work around this way although it's
+            # not very nice (we don't do this globally because OSX doesn't have realpath).
+            go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
+        else:
+            go_root = '$("$TOOLS_GO" env GOROOT)'
+        cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
 
-    cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
     if CONFIG.GO.C_FLAGS:
         flags = " ".join(CONFIG.GO.C_FLAGS)
         cmd = f'{cmd} && export CFLAGS="{flags}"'
@@ -1323,7 +1377,9 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     package_flag = f" -p {import_path}" if import_path else ""
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
+    gen_import_cfg = _set_go_env()
+    if not CONFIG.GO.STDLIB:
+        gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
 
@@ -1345,7 +1401,9 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
+    gen_import_cfg = _set_go_env()
+    if not CONFIG.GO.STDLIB:
+        gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
 
     linkerdefs = []
@@ -1369,6 +1427,9 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     if len(defs) > 0:
         flags += " " + defs
+
+    if CONFIG.GO.BUILDMODE:
+        flags += f" -buildmode {CONFIG.GO.BUILDMODE}"
 
     if split_debug:
         return f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS && $TOOLS_STRIP -o $OUT -f $OUT.sym $OUT', {

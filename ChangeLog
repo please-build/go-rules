@@ -1,3 +1,9 @@
+Version 1.5.0
+-------------
+    * Added support for compiling the Go stdlib in-repo independent of `go_toolchain`, via
+      `stdlib` config argument and `go_stdlib` rule (#93).
+    * Added support for Go build modes (which require the use of `go_stdlib` to compile correctly) (#93)
+
 Version 1.4.1
 -------------
     * Fix issue with missing stderr on test output when not using the new coverage redesign feature flag
