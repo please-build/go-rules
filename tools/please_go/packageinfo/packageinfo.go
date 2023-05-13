@@ -8,6 +8,7 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,7 +17,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src string, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, complete bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -32,6 +33,13 @@ func WritePackageInfo(modulePath, strip, src string, w io.Writer) error {
 	}); err != nil {
 		return fmt.Errorf("failed to read module dir: %w", err)
 	}
+	if importconfig != "" {
+		m, err := loadImportConfig(importconfig)
+		if err != nil {
+			return fmt.Errorf("failed to read importconfig: %w", err)
+		}
+		imports = m
+	}
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
@@ -41,6 +49,7 @@ func WritePackageInfo(modulePath, strip, src string, w io.Writer) error {
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
+		pkg.ExportFile = imports[pkg.PkgPath]
 		pkgs = append(pkgs, pkg)
 	}
 	// Ensure output is deterministic
@@ -100,4 +109,24 @@ func mappend(s []string, args ...[]string) []string {
 		s = append(s, arg...)
 	}
 	return s
+}
+
+// loadImportConfig reads the given importconfig file and produces a map of package name -> export path
+func loadImportConfig(filename string) (map[string]string, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(b), "\n")
+	m := make(map[string]string, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "packagefile ") {
+			pkg, exportFile, found := strings.Cut(strings.TrimPrefix(line, "packagefile "), "=")
+			if !found {
+				return nil, fmt.Errorf("unknown syntax for line: %s", line)
+			}
+			m[pkg] = exportFile
+		}
+	}
+	return m, nil
 }

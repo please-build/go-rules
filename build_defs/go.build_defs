@@ -139,6 +139,15 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
       tags: Go build tags (e.g. 'osusergo' or 'netgo' are relevant to the stdlib)
       visibility: Visibility of this rule
     """
+    # Need to write package info for the stdlib as well. This requires the source to be present.
+    srcs = build_rule(
+        name = name,
+        tag = 'srcs',
+        outs = [name + '/src'],
+        cmd = 'cp -r "`$TOOL env GOROOT`/src" "$OUT"',
+        tools = [CONFIG.GO.GO_TOOL],
+    )
+
     flags = ''
     suffix = ''
     if tags:
@@ -158,20 +167,30 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
     # We have to take some care to compile this in our working directory and not try to install
     # it to the existing GOROOT, which might not be writable.
     cmds = [
-        'GOROOT="`$TOOL env GOROOT`"',
+        'GOROOT="`$TOOLS_GO env GOROOT`"',
         'cp -r "$GOROOT/src" "$GOROOT/pkg" .',
-        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOL install{flags} --trimpath std",
-        "mkdir $OUT",
+        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOLS_GO install{flags} --trimpath std",
         "rm -rf pkg/tool pkg/include",
-        "mv pkg $OUT",
+        "mv pkg $OUTS_PKG",
         f'SUFFIX="{suffix}"',
-        'find "$OUTS" -name "*.a" | sed -e "s=^$OUTS/pkg/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS"/pkg/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS/std.importconfig',
+        'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS_PKG"/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS_IC',
+        '$TOOLS_PLZGO m -m "" -s "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
     ]
     return genrule(
         name = name,
-        outs = [name],
+        srcs = {"srcs": [srcs]},
+        outs = {
+            "pkg": [name + "/pkg"],
+            "ic": [f"{name}/{name}.importconfig"],
+            "pkg_info": [name + "/pkg_info.json"],
+        },
         cmd = cmds,
-        tools = [CONFIG.GO.GO_TOOL],
+        tools = {
+            "go": [CONFIG.GO.GO_TOOL],
+            "plzgo": [CONFIG.GO.PLEASE_GO_TOOL],
+        },
+        labels = ["go_pkg_info", "go_stdlib", "go"],
+        output_is_complete = True,
         visibility = visibility,
     )
 
@@ -381,14 +400,12 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
 
     # Package info rule for the Go packages driver
     if _generate_pkg_info:
-        deps += [build_rule(
+        deps += [_go_pkg_info(
             name = name,
-            tag = "pkg_info",
-            tools = [CONFIG.GO.PLEASE_GO_TOOL],
             srcs = srcs + resources,
-            outs = [f"_{name}_pkg_info.json"],
-            cmd = f"$TOOL p -i '{CONFIG.GO.IMPORT_PATH}' > $OUT",
-            labels = ["go_pkg_info"],
+            import_path = import_path,
+            package = package,
+            complete = complete,
             test_only = test_only,
         )]
 
@@ -1263,18 +1280,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         )
     outs = []
 
-    # Package info rule for the Go packages driver
-    pkg_info = build_rule(
-        name = name,
-        tag = "pkg_info",
-        tools = [CONFIG.GO.PLEASE_GO_TOOL],
-        srcs = [download],
-        outs = [f"_{name}_pkg_info.json"],
-        cmd = f'$TOOL m -m {module} -s "$SRCS" > $OUT',
-        labels = ["go_pkg_info"],
-        test_only = test_only,
-    )
-
     # Gets the expected archive name given a target package
     def archive_name(i):
         base = basename(i)
@@ -1300,7 +1305,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         binary = binary,
         src = download,
         outs = outs,
-        deps = deps + exported_deps + [pkg_info],
+        deps = deps + exported_deps,
         test_only = test_only,
         visibility = visibility,
         licences = licences,
@@ -1322,12 +1327,22 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
         outs = [f'{name}.importconfig'],
     )
+
+    # Package info rule for the Go packages driver
+    pkg_info = _go_pkg_info(
+        name = name,
+        srcs = [download],
+        importconfig = import_config,
+        strip = True,
+        module = module,
+        test_only = test_only,
+    )
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 
     return filegroup(
         name = name,
         srcs = [a_rule],
-        deps = deps,
+        deps = deps + [pkg_info],
         exported_deps = exported_deps,
         provides = {
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
@@ -1341,6 +1356,33 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         requires = ['go'],
         binary = binary,
     )
+
+
+def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
+                 strip:bool=False, module:str="", complete:bool=False, test_only:bool=False):
+    """Internal-only function for generating the pkg_info files"""
+    cflag = '-c' if complete else ''
+    sflag = '-s "$SRCS_SRCS"' if strip else ''
+
+    if module:
+        cmd = f'$TOOL m -m {module}'
+    else:
+        import_path = _get_import_path(package, import_path)
+        cmd = f'$TOOL p -i "{CONFIG.GO.IMPORT_PATH}" -m "{import_path}:$PKG_DIR/{package}.a"'
+    return build_rule(
+        name = name,
+        tag = "pkg_info",
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        srcs = {
+            "srcs": srcs,
+            "ic": [importconfig],
+        },
+        outs = [f"_{name}_pkg_info.json"],
+        cmd = f'{cmd} {sflag} {cflag} > "$OUTS"',
+        labels = ["go_pkg_info"],
+        test_only = test_only,
+    )
+
 
 def _set_go_env():
     if CONFIG.GO.STDLIB:
