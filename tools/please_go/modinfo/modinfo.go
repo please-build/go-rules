@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -49,5 +50,6 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) err
 	}); err != nil {
 		return fmt.Errorf("failed to walk modinfo files: %w", err)
 	}
+	sort.Slice(bi.Deps, func(i, j int) bool { return bi.Deps[i].Path < bi.Deps[j].Path })
 	return os.WriteFile(outputFile, []byte("modinfo "+strconv.Quote(bi.String())+"\n"), 0644)
 }
