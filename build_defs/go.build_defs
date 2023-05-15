@@ -255,7 +255,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if _all_srcs:
         deps += [_pkg_sources(name, deps, test_only)]
     if CONFIG.GO.STDLIB:
-        deps += [CONFIG.GO.STDLIB]
+        deps += _stdlib()
 
     if _generate_import_config:
         import_cfg = build_rule(
@@ -555,7 +555,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
     if CONFIG.GO.STDLIB:
-        deps += [CONFIG.GO.STDLIB]
+        deps += _stdlib()
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name=name,
@@ -1015,6 +1015,7 @@ def _remove_redundant_outs(outs):
                 new_outs[r] = False
     return [r for r in new_outs.keys() if new_outs[r]]
 
+
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
                        test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list, labels:list=[]):
     build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
@@ -1022,7 +1023,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     cc_tool_flag = "--cc_tool=$TOOLS_CC" if CONFIG.GO.CC_TOOL else ''
     cmd = [_set_go_env()]
     if CONFIG.GO.STDLIB:
-        deps += [CONFIG.GO.STDLIB]
+        deps += _stdlib()
     else:
         cmd += [_generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')]
     cmd += [
@@ -1569,3 +1570,17 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
         cmd = f"{pre_cmd} && {cmd}"
 
     return cmd, data, tools
+
+
+def _stdlib():
+    """Returns a dependency for the Go stdlib.
+
+    This is a bit fiddly since we need to work around Please making the value in the config
+    absolute (which we don't expect) but also handling `go_get`.
+    """
+    stdlib = CONFIG.GO.STDLIB
+    if CONFIG.OS != CONFIG.HOSTOS or CONFIG.ARCH != CONFIG.HOSTARCH:
+        if stdlib.startswith('/////'):
+            stdlib = stdlib.removeprefix('///')
+        stdlib = f'///{CONFIG.OS}_{CONFIG.ARCH}{stdlib}'
+    return [stdlib]
