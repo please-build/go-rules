@@ -1338,6 +1338,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         strip = True,
         module = module,
         test_only = test_only,
+        install = install,
     )
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 
