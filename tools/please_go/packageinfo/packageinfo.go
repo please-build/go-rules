@@ -17,7 +17,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, complete bool, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, installPkgs map[string]struct{}, complete bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -44,6 +44,9 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
 		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), dir)
+		if _, present := installPkgs[pkgDir]; !present {
+			continue
+		}
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {

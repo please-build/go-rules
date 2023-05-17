@@ -84,10 +84,11 @@ var opts = struct {
 		Complete   bool              `short:"c" long:"complete" description:"Mark package as complete"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
-		ModulePath   string `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
-		Strip        string `short:"s" long:"strip" description:"Prefix to strip off package directories"`
-		Srcs         string `long:"srcs" env:"SRCS_SRCS" required:"true" description:"Source files of the module"`
-		ImportConfig string `long:"importconfig" env:"SRCS_IC" description:"Importconfig file for locating gc export data"`
+		ModulePath   string   `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
+		Strip        string   `short:"s" long:"strip" description:"Prefix to strip off package directories"`
+		Srcs         string   `long:"srcs" env:"SRCS_SRCS" required:"true" description:"Source files of the module"`
+		ImportConfig string   `long:"importconfig" env:"SRCS_IC" description:"Importconfig file for locating gc export data"`
+		Packages     []string `short:"p" long:"packages" description:"Packages to include in the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 	Generate struct {
 		SrcRoot          string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
@@ -179,14 +180,18 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, "", pi.Pkg, "", pi.ImportMap, pi.Complete, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, "", pi.Pkg, "", pi.ImportMap, nil, pi.Complete, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, true, os.Stdout); err != nil {
+		installPkgs := make(map[string]struct{})
+		for _, pkg := range mi.Packages {
+			installPkgs[pkg] = struct{}{}
+		}
+		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, installPkgs, true, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
