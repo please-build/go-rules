@@ -1,11 +1,12 @@
 [Please]
-Version = 17.0.0-beta.1
+Version = >=17.0.0-beta.8
 
 [build]
 hashcheckers = sha256
 
 [Plugin "go"]
 GoTool = //third_party/go:toolchain|go
+Stdlib = //third_party/go:std
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
 CoverageRedesign = true
@@ -22,6 +23,11 @@ Name = go
 
 [PluginConfig "go_tool"]
 DefaultValue = go
+Inherit = true
+
+[PluginConfig "stdlib"]
+Optional = true
+Help = Build target for the Go standard library
 Inherit = true
 
 [PluginConfig "require_licences"]
@@ -102,8 +108,15 @@ Type = bool
 DefaultValue = false
 Help = Support Go 1.20's coverage redesign. Will break coverage on 1.19, required for 1.20.
 
-[BuildConfig]
-Release = False
+[PluginConfig "buildmode"]
+Optional = true
+Help = The Go build mode to target (see `go help buildmode` for info)
+
+[PluginConfig "race"]
+Type = bool
+DefaultValue = false
+Optional = true
+Help = Compile for the Go race detector
 
 [Plugin "shell"]
 Target = //plugins:shell
