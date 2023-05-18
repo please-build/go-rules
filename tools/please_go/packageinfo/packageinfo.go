@@ -32,7 +32,6 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 		}
 		return nil
 	}
-
 	for pkg := range installPkgs {
 		if strings.Contains(pkg, "...") {
 			// walk the directory and add all go files
