@@ -31,18 +31,30 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 	logFile.WriteString("complete=\"" + fmt.Sprint(complete) + "\"\n")
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
-	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		} else if name := d.Name(); name == "testdata" {
-			return filepath.SkipDir // Don't descend into testdata
-		} else if strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
-			dir := filepath.Dir(path)
-			goFiles[dir] = append(goFiles[dir], path)
+	// first just loop through the installPkgs and add the files therein to goFiles
+
+	// if no install packages were specified, or the install list includes "...", then we need to walk the src directory
+	if len(installPkgs) == 0 || complete {
+		logFile.WriteString("installPkgs is empty or complete is true\n")
+		if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			} else if name := d.Name(); name == "testdata" {
+				return filepath.SkipDir // Don't descend into testdata
+			} else if strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+				dir := filepath.Dir(path)
+				goFiles[dir] = append(goFiles[dir], path)
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("failed to read module dir: %w", err)
 		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("failed to read module dir: %w", err)
+	} else {
+		for pkg := range installPkgs {
+			logFile.WriteString("adding " + filepath.Join(src, pkg) + " to goFiles\n")
+			dir := filepath.Join(src, pkg)
+			goFiles[dir] = append(goFiles[dir], filepath.Join(src, pkg))
+		}
 	}
 	if importconfig != "" {
 		m, err := loadImportConfig(importconfig)
