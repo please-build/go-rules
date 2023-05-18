@@ -33,7 +33,7 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 		return nil
 	}
 	// Check install packages first
-	for pkg := range installPkgs {
+	for _, pkg := range installPkgs {
 		if strings.Contains(pkg, "...") {
 			pkg = strings.TrimSuffix(pkg, "...")
 			if err := filepath.WalkDir(filepath.Join(src, pkg), walkDirFunc); err != nil {
