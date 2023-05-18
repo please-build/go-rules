@@ -1368,7 +1368,7 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
     cflag = '-c' if complete else ''
     sflag = '-s "$SRCS_SRCS"' if strip else ''
 
-    install_flags = ' '.join([f'-p {i}' for i in install if i != ""])
+    install_flags = ' '.join([f'-p {i}' for i in install if i])
 
     if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
