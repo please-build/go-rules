@@ -180,7 +180,7 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, "", pi.Pkg, "", pi.ImportMap, nil, pi.Complete, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, "", pi.Pkg, "", pi.ImportMap, nil, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
@@ -191,7 +191,7 @@ var subCommands = map[string]func() int{
 		for _, pkg := range mi.Packages {
 			installPkgs[pkg] = struct{}{}
 		}
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, installPkgs, true, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, installPkgs, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
