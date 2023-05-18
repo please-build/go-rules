@@ -187,11 +187,7 @@ var subCommands = map[string]func() int{
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		installPkgs := make(map[string]struct{})
-		for _, pkg := range mi.Packages {
-			installPkgs[pkg] = struct{}{}
-		}
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, installPkgs, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, mi.Packages, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
