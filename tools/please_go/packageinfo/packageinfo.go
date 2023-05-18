@@ -18,6 +18,11 @@ import (
 
 // WritePackageInfo writes a series of package info files to the given file.
 func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, installPkgs map[string]struct{}, complete bool, w io.Writer) error {
+	logFile, err := os.Create("packageinfo.log")
+	if err != nil {
+		return fmt.Errorf("failed to create log file: %w", err)
+	}
+	defer logFile.Close()
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
@@ -42,11 +47,12 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 	}
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
+		logFile.WriteString("processing " + dir + "\n")
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
+		logFile.WriteString("got pkgDir " + pkgDir + "\n")
+		// modulePath should be third_party/go/xerrors
+		// pkgDir should be internal
 		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), dir)
-		if _, present := installPkgs[pkgDir]; !present {
-			continue
-		}
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
@@ -63,18 +69,27 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 }
 
 func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
+	// open a logfile to append to
+	logFile, err := os.OpenFile("packageinfo.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	logFile.WriteString("in createPackage with " + pkgPath + " and " + pkgDir + "\n")
 	if pkgDir == "" || pkgDir == "." {
 		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
 		path, err := filepath.Abs(pkgDir)
 		if err != nil {
 			return nil, err
 		}
+		logFile.WriteString("got path " + path + "\n")
 		pkgDir = path
 	}
+	logFile.WriteString("calling ImportDir with pkgDir " + pkgDir + "\n")
 	bpkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
 		return nil, err
 	}
+	logFile.WriteString("got bpkg " + bpkg.ImportPath + "\n")
 	bpkg.ImportPath = pkgPath
 	return FromBuildPackage(bpkg), nil
 }
