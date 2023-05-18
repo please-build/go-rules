@@ -53,7 +53,7 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 		// pkgDir should be internal
 		// dir should be third_party/go/xerrors/internal
 		logFile.WriteString("modulePath=" + modulePath + " . it should be golang.org/x/xerrors\n")
-		logFile.WriteString("pkgDir=" + pkgDir + " . it should be internal\n")
+		logFile.WriteString("pkgDir=\"" + pkgDir + "\". it should be \" \"\n")
 		logFile.WriteString("dir=" + dir + " . it should be third_party/go/xerrors/internal\n")
 		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), dir)
 		if _, ok := err.(*build.NoGoError); ok {
