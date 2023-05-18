@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
@@ -129,11 +128,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 			}
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
-		if pkg.ExportFile != "" {
-			pkg.ExportFile = filepath.Join(rootpath, pkg.ExportFile)
-		} else {
-			panic("No export file for " + pkg.ID)
-		}
+		pkg.ExportFile = filepath.Join(rootpath, pkg.ExportFile)
 	}
 	if !seenRuntime {
 		// Handle stdlib imports if we didn't already find them
@@ -145,9 +140,6 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		}
 		pkgs = append(pkgs, stdlib...)
 	}
-
-	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
-
 	log.Debug("Built package set")
 	return &DriverResponse{
 		Sizes: &types.StdSizes{
@@ -221,17 +213,11 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	var lock sync.Mutex
 	var g errgroup.Group
 	g.SetLimit(8) // arbitrary limit since we're doing I/O
-	seenPackages := make(map[string]bool)
-	logFile, err := os.OpenFile("sqladmin.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0664)
-	if err != nil {
-		panic(err)
-	}
 	for _, file := range strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())) {
 		file := file
 		if !strings.HasSuffix(file, ".json") {
 			continue // Ignore all the various Go sources etc.
 		}
-
 		g.Go(func() error {
 			f, err := os.Open(file)
 			if err != nil {
@@ -244,28 +230,11 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 			}
 			// Update the ExportFile paths to include the generated prefix
 			for _, pkg := range lpkgs {
-				// if pkg.ExportFile == "" {
-				// 	panic("no export file")
-				// }
-				if pkg.ID == "google.golang.org/api/sqladmin/v1" {
-					logFile.WriteString(file + "\n")
-					logFile.WriteString("file contents" + "\n")
-					logFile.WriteString(fmt.Sprintf("%+v\n", lpkgs))
-					logFile.WriteString(fmt.Sprintf("%+v\n", pkg.Name))
-					logFile.WriteString(fmt.Sprintf("%+v\n", pkg.GoFiles))
-					logFile.WriteString(fmt.Sprintf("%+v\n", pkg.ExportFile))
-				}
 				pkg.ExportFile = filepath.Join("plz-out/gen", pkg.ExportFile)
-				logFile.WriteString(fmt.Sprintf("prepended exportfile with plz-out: %s for package %s\n", pkg.ExportFile, pkg.Name))
-				lock.Lock()
-				if _, ok := seenPackages[pkg.Name]; ok {
-					lock.Unlock()
-					continue
-				}
-				seenPackages[pkg.Name] = true
-				pkgs = append(pkgs, pkg)
-				lock.Unlock()
 			}
+			lock.Lock()
+			defer lock.Unlock()
+			pkgs = append(pkgs, lpkgs...)
 			return nil
 		})
 	}
