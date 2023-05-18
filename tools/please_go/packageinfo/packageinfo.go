@@ -62,6 +62,10 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
 		pkg.ExportFile = imports[pkg.PkgPath]
+		if pkg.ID == "golang.org/x/xerrors" {
+			logFile.WriteString("pkg.ID is golang.org/x/xerrors\n")
+			logFile.WriteString("pkg.ExportFile is " + pkg.ExportFile + "\n")
+		}
 		pkgs = append(pkgs, pkg)
 	}
 	// Ensure output is deterministic
