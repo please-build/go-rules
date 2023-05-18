@@ -18,16 +18,6 @@ import (
 
 // WritePackageInfo writes a series of package info files to the given file.
 func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, installPkgs map[string]struct{}, w io.Writer) error {
-	logFile, err := os.Create("packageinfo.log")
-	if err != nil {
-		return fmt.Errorf("failed to create log file: %w", err)
-	}
-	defer logFile.Close()
-	logFile.WriteString("input args:\n")
-	logFile.WriteString("modulePath=\"" + modulePath + "\"\n")
-	logFile.WriteString("strip=\"" + strip + "\"\n")
-	logFile.WriteString("src=\"" + src + "\"\n")
-	logFile.WriteString("importconfig=\"" + importconfig + "\"\n")
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 
@@ -46,19 +36,16 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 	for pkg := range installPkgs {
 		if strings.Contains(pkg, "...") {
 			// walk the directory and add all go files
-			logFile.WriteString("adding all go files in " + filepath.Join(src, pkg) + " to goFiles\n")
 			pkg = strings.TrimSuffix(pkg, "...")
 			if err := filepath.WalkDir(filepath.Join(src, pkg), walkDirFunc); err != nil {
 				return fmt.Errorf("failed to read module dir: %w", err)
 			}
 		} else {
-			logFile.WriteString("adding " + filepath.Join(src, pkg) + " to goFiles\n")
 			dir := filepath.Join(src, pkg)
 			goFiles[dir] = append(goFiles[dir], filepath.Join(src, pkg))
 		}
 	}
 	if len(installPkgs) == 0 {
-		logFile.WriteString("installPkgs is empty or complete is true\n")
 		if err := filepath.WalkDir(src, walkDirFunc); err != nil {
 			return fmt.Errorf("failed to read module dir: %w", err)
 		}
@@ -73,13 +60,6 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, strip), "/")
-		// modulePath should be golang.org/x/xerrors
-		// pkgDir should be internal
-		// dir should be third_party/go/xerrors/internal
-		logFile.WriteString("modulePath=\"" + modulePath + "\"\n")
-		logFile.WriteString("pkgDir=\"" + pkgDir + "\"\n")
-		logFile.WriteString("dir=\"" + dir + "\"\n")
-		logFile.WriteString("\n")
 		pkg, err := createPackage(filepath.Join(modulePath, pkgDir), dir)
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
@@ -87,10 +67,6 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
 		pkg.ExportFile = imports[pkg.PkgPath]
-		if pkg.ID == "golang.org/x/xerrors" {
-			logFile.WriteString("pkg.ID is golang.org/x/xerrors\n")
-			logFile.WriteString("pkg.ExportFile is " + pkg.ExportFile + "\n")
-		}
 		pkgs = append(pkgs, pkg)
 	}
 	// Ensure output is deterministic
@@ -101,27 +77,18 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 }
 
 func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
-	// open a logfile to append to
-	logFile, err := os.OpenFile("packageinfo.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-	logFile.WriteString("in createPackage with " + pkgPath + " and " + pkgDir + "\n")
 	if pkgDir == "" || pkgDir == "." {
 		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
 		path, err := filepath.Abs(pkgDir)
 		if err != nil {
 			return nil, err
 		}
-		logFile.WriteString("got path " + path + "\n")
 		pkgDir = path
 	}
-	logFile.WriteString("calling ImportDir with pkgDir " + pkgDir + "\n")
 	bpkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
 		return nil, err
 	}
-	logFile.WriteString("got bpkg " + bpkg.ImportPath + "\n")
 	bpkg.ImportPath = pkgPath
 	return FromBuildPackage(bpkg), nil
 }
