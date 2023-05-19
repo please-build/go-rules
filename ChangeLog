@@ -1,3 +1,7 @@
+Version 1.6.0
+------------
+    * Rename `go_get` to `go_repo` and make it generally available (#102)
+
 Version 1.5.0
 -------------
     * Added support for compiling the Go stdlib in-repo independent of `go_toolchain`, via

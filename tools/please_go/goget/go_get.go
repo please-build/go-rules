@@ -119,7 +119,7 @@ func (g *getter) goGet(mods []string) error {
 	}
 
 	for mod, ver := range deps {
-		fmt.Printf("go_get(module=\"%s\", version=\"%s\")\n", mod, ver)
+		fmt.Printf("go_repo(module=\"%s\", version=\"%s\")\n", mod, ver)
 	}
 	return nil
 }
