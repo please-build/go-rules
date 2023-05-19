@@ -1365,10 +1365,15 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
 def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
                  strip:bool=False, module:str="", complete:bool=False, test_only:bool=False, install:list=[]):
     """Internal-only function for generating the pkg_info files"""
-    cflag = '-c' if complete else ''
     sflag = '-s "$SRCS_SRCS"' if strip else ''
 
-    install_flags = ' '.join([f'-p {i}' for i in install if i])
+    install_flags = ""
+    for i in install:
+        if i == "":
+            install_flags += " -p ."
+        else:
+            install_flags += f" -p {i}"
+
 
     if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
@@ -1384,7 +1389,7 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
             "ic": [importconfig],
         },
         outs = [f"_{name}_pkg_info.json"],
-        cmd = f'{cmd} {sflag} {cflag} > "$OUTS"',
+        cmd = f'{cmd} {sflag} > "$OUTS"',
         labels = ["go_pkg_info"],
         test_only = test_only,
     )
