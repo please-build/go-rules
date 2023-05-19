@@ -17,7 +17,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, installPkgs []string, complete bool, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, installPkgs []string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 
