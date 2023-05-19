@@ -728,6 +728,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _generate_import_config = False,
         labels = labels,
         import_path = "main",
+        _generate_pkg_info = False,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -1281,6 +1282,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     if not download and not version:
         fail("Either version or download should be provided")
 
+    installpkg = install
     install = [f"{module}/{i}" if i != "." and i != "" else module for i in install]
 
     if not download:
@@ -1355,6 +1357,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         strip = True,
         module = module,
         test_only = test_only,
+        install = installpkg,
     )
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 
@@ -1378,13 +1381,16 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
 
 
 def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
-                 strip:bool=False, module:str="", complete:bool=False, test_only:bool=False):
+                 strip:bool=False, module:str="", complete:bool=False, test_only:bool=False, install:list=[]):
     """Internal-only function for generating the pkg_info files"""
-    cflag = '-c' if complete else ''
     sflag = '-s "$SRCS_SRCS"' if strip else ''
 
+    install_flags = ""
+    for i in install:
+        install_flags += f" -p {i}" if i else " -p ."
+
     if module:
-        cmd = f'$TOOL m -m {module}'
+        cmd = f'$TOOL m -m {module} {install_flags}'
     else:
         import_path = _get_import_path(package, import_path)
         cmd = f'$TOOL p -i "{CONFIG.GO.IMPORT_PATH}" -m "{import_path}:$PKG_DIR/{package}.a"'
@@ -1397,7 +1403,7 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
             "ic": [importconfig],
         },
         outs = [f"_{name}_pkg_info.json"],
-        cmd = f'{cmd} {sflag} {cflag} > "$OUTS"',
+        cmd = f'{cmd} {sflag} > "$OUTS"',
         labels = ["go_pkg_info"],
         test_only = test_only,
     )

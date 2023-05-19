@@ -17,10 +17,11 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, complete bool, w io.Writer) error {
+func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[string]string, installPkgs []string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
-	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+
+	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		} else if name := d.Name(); name == "testdata" {
@@ -30,8 +31,23 @@ func WritePackageInfo(modulePath, strip, src, importconfig string, imports map[s
 			goFiles[dir] = append(goFiles[dir], path)
 		}
 		return nil
-	}); err != nil {
-		return fmt.Errorf("failed to read module dir: %w", err)
+	}
+	// Check install packages first
+	for _, pkg := range installPkgs {
+		if strings.Contains(pkg, "...") {
+			pkg = strings.TrimSuffix(pkg, "...")
+			if err := filepath.WalkDir(filepath.Join(src, pkg), walkDirFunc); err != nil {
+				return fmt.Errorf("failed to read module dir: %w", err)
+			}
+		} else {
+			dir := filepath.Join(src, pkg)
+			goFiles[dir] = append(goFiles[dir], filepath.Join(src, pkg))
+		}
+	}
+	if len(installPkgs) == 0 {
+		if err := filepath.WalkDir(src, walkDirFunc); err != nil {
+			return fmt.Errorf("failed to read module dir: %w", err)
+		}
 	}
 	if importconfig != "" {
 		m, err := loadImportConfig(importconfig)
