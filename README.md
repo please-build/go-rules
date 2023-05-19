@@ -55,7 +55,7 @@ go_repo(
     ]
 )
 
-# Indirect modules are referenced internally, so we don't have to name them if we don't want to. These are
+# Indirect modules are referenced internally, so we don't have to name them if we don't want to
 go_repo(module = "github.com/davecgh/go-spew", version="v1.1.1")
 go_repo(module = "github.com/pmezard/go-difflib", version="v1.0.0")
 go_repo(module = "github.com/stretchr/objx", version="v0.5.0")
