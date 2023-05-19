@@ -1369,11 +1369,7 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
 
     install_flags = ""
     for i in install:
-        if i == "":
-            install_flags += " -p ."
-        else:
-            install_flags += f" -p {i}"
-
+        install_flags += f" -p {i}" if i else " -p ."
 
     if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
