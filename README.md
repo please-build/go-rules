@@ -44,7 +44,7 @@ You can define third party code using `go_get`:
 subinclude("///go//build_defs:go")
 
 # We can give direct modules a name, and install list so we can reference them nicely as :testify
-go_get(
+go_repo(
     name = "testify",
     module = "github.com/stretchr/testify",
     version="v1.8.2",
@@ -56,10 +56,10 @@ go_get(
 )
 
 # Indirect modules are referenced internally, so we don't have to name them if we don't want to. These are
-go_get(module = "github.com/davecgh/go-spew", version="v1.1.1")
-go_get(module = "github.com/pmezard/go-difflib", version="v1.0.0")
-go_get(module = "github.com/stretchr/objx", version="v0.5.0")
-go_get(module = "gopkg.in/yaml.v3", version="v3.0.1")
+go_repo(module = "github.com/davecgh/go-spew", version="v1.1.1")
+go_repo(module = "github.com/pmezard/go-difflib", version="v1.0.0")
+go_repo(module = "github.com/stretchr/objx", version="v0.5.0")
+go_repo(module = "gopkg.in/yaml.v3", version="v3.0.1")
 ```
 
 To compile a binary, you can use `go_binary()`:

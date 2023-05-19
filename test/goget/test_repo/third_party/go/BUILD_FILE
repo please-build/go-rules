@@ -4,7 +4,7 @@ go_stdlib(
     name = "std",
 )
 
-go_get(
+go_repo(
     name = "testify",
     licences = ["MIT"],
     module = "github.com/stretchr/testify",
@@ -12,25 +12,25 @@ go_get(
     version = "v1.7.0",
 )
 
-go_get(
+go_repo(
     licences = ["MIT"],
     module = "github.com/stretchr/objx",
     version = "v0.5.0",
 )
 
-go_get(
+go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/pmezard/go-difflib",
     version = "v1.0.0",
 )
 
-go_get(
+go_repo(
     licences = ["ISC"],
     module = "github.com/davecgh/go-spew",
     version = "v1.1.1",
 )
 
-go_get(
+go_repo(
     licences = ["MIT"],
     module = "gopkg.in/yaml.v3",
     version = "v3.0.0-20210107192922-496545a6307b",

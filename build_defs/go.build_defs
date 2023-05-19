@@ -25,8 +25,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                             rule will automatically install the arch provided through --arch. This is only useful if you
                             want to manually cross-compile parts of the repo but not others.
       strip_srcs (bool): Whether to strip sources from the SDK which can reduce the size of the cached artifacts and
-                         improve performance, especially for remote execution. This doesn't work with go_get() however
-                         it is recommended to set this to True if you're using go_module() exclusively.
+                         improve performance, especially for remote execution.
       tags (bool): Build tags to pass when installing the standard library.
       install_std (bool): Whether we should install the standard library. This is required for go 1.20+. If not set,
                           Please will do whatever is appropriate based on the Go version.
@@ -1230,8 +1229,8 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     You will need to add those as separate rules; `go list -f '{{.Deps}}' <package>` can be
     useful to discover what they should be.
 
-    This rule is different to go_get() in that it compiles the whole go module in one build action. This can lead to
-    issues when modules are cyclically dependent on each other. For this reason, go_get is recommended over go_module().
+    This rule is different to go_repo() in that it compiles the whole go module in one build action. This can lead to
+    issues when modules are cyclically dependent on each other. For this reason, go_repo is recommended over go_module().
 
     Args:
       name (str): Name of the rule
