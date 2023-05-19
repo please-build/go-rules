@@ -168,11 +168,10 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
     cmds = [
         'GOROOT="`$TOOLS_GO env GOROOT`"',
         'cp -r "$GOROOT/src" "$GOROOT/pkg" .',
-        f"GODEBUG=installgoroot=all GOROOT=$TMP_DIR $TOOLS_GO install{flags} --trimpath std",
+        f"GOROOT=$TMP_DIR $TOOLS_GO install{flags} --trimpath std",
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUTS_PKG",
-        f'SUFFIX="{suffix}"',
-        'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/${OS}_${ARCH}${SUFFIX}/==" | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$PKG_DIR/$OUTS_PKG"/${OS}_${ARCH}${SUFFIX}/{}.a" | sort -u > $OUTS_IC',
+        f'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/==" | sed -e s="\.a$"== | xargs -I{{}} echo "packagefile {{}}="$PKG_DIR/$OUTS_PKG"/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/{{}}.a" | sort -u > $OUTS_IC',
         '$TOOLS_PLZGO m -m "" -s "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
     ]
     return genrule(
@@ -187,6 +186,11 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         tools = {
             "go": [CONFIG.GO.GO_TOOL],
             "plzgo": [CONFIG.GO.PLEASE_GO_TOOL],
+        },
+        env = {
+            "GOOS": CONFIG.OS,
+            "GOARCH": CONFIG.ARCH,
+            "GODEBUG": "installgoroot=all",
         },
         labels = ["go_pkg_info", "go_stdlib", "go"],
         output_is_complete = True,
