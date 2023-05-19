@@ -1125,11 +1125,19 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
 
     install_args = " ".join([f"--install={i}" for i in install])
 
-    download = download or go_mod_download(tag(name, "dl"), module, version, licences=licences, patch=patch)
+    if not download:
+        download = go_mod_download(
+            name = tag(name, "dl"),
+            module = module,
+            version = version,
+            licences = licences,
+            patch = patch,
+        )
+
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
-        tag = "repo",
+        tag = "repo" if install else None,
         srcs = [download],
         cmd  = f"rm -rf $SRC/.plzconfig && find $SRC -name BUILD -delete && $TOOL generate --src_root=$SRC {install_args} {requirements} && mv $SRC $OUT",
         outs = [subrepo_name],
@@ -1155,6 +1163,8 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
             visibility = visibility,
             exported_deps=[f"///{pkg_name}/{subrepo_name}//:installs"],
         )
+    else:
+        return repo
 
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
