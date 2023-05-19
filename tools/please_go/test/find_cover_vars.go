@@ -26,7 +26,7 @@ func FindCoverVars(dir, testPackage string, external bool, excludedDirs []string
 	}
 	var ret []CoverVar
 
-	err := filepath.Walk(dir, func(name string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(name string, info os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
