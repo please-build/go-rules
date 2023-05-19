@@ -43,12 +43,23 @@ You can define third party code using `go_get`:
 ```python
 subinclude("///go//build_defs:go")
 
-go_get(module = "github.com/stretchr/testify", version="vx.x.x")
+# We can give direct modules a name, and install list so we can reference them nicely as :testify
+go_get(
+    name = "testify",
+    module = "github.com/stretchr/testify",
+    version="v1.8.2",
+    # We add the subset of packages we actually depend on here
+    install = [
+        "assert",
+        "require",
+    ]
+)
 
-# Add testify's dependencies as defined in its go.mod/go.sum
-go_get(module = "github.com/davecgh/go-spew", version="vx.x.x")
-go_get(module = "github.com/pmezard/go-difflib", version="vx.x.x")
-go_get(module = "github.com/stretchr/objx", version="vx.x.x")
+# Indirect modules are referenced internally, so we don't have to name them if we don't want to. These are
+go_get(module = "github.com/davecgh/go-spew", version="v1.1.1")
+go_get(module = "github.com/pmezard/go-difflib", version="v1.0.0")
+go_get(module = "github.com/stretchr/objx", version="v0.5.0")
+go_get(module = "gopkg.in/yaml.v3", version="v3.0.1")
 ```
 
 To compile a binary, you can use `go_binary()`:
