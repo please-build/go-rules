@@ -6,6 +6,7 @@ PreloadSubincludes = ///go//build_defs:go
 [Plugin "go"]
 ImportPath = github.com/please-build/please-rules/root-test
 Target = //plugins:go
+Stdlib = //third_party/go:std
 
 [FeatureFlags]
 ExcludeGoRules = true

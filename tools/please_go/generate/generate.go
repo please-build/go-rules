@@ -172,7 +172,7 @@ func (g *Generate) pkgDir(target string) string {
 
 func (g *Generate) importDir(target string) (*build.Package, error) {
 	dir := filepath.Join(os.Getenv("TMP_DIR"), g.pkgDir(target))
-	return g.buildContext.ImportDir(dir, build.ImportComment)
+	return g.buildContext.ImportDir(dir, 0)
 }
 
 func (g *Generate) generate(dir string) error {
