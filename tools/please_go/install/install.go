@@ -146,7 +146,7 @@ func (install *PleaseGoInstall) linkPackage(target string) error {
 // directories that contain no .go files for the current architecture.
 func (install *PleaseGoInstall) compileAll(dir string) error {
 	pkgRoot := install.pkgDir(dir)
-	return filepath.Walk(pkgRoot, func(path string, info os.FileInfo, err error) error {
+	return filepath.WalkDir(pkgRoot, func(path string, info os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
