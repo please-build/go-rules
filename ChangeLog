@@ -1,3 +1,7 @@
+Version 1.6.1
+------------
+    * Fix docstring on go_repo
+
 Version 1.6.0
 ------------
     * Rename `go_get` to `go_repo` and make it generally available (#102)
