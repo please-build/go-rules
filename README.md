@@ -35,6 +35,8 @@ go_test(
         ":lib",
         # Third party dependencies are added to a subrepo
         "///third_party/go/github.com_stretchr_testify//assert",
+        # If you've passed in the packages you need via the install arg (see below) then you can depend on them like so
+        "//third_party/go:testify",
     ],
 )
 ```
