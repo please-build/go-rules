@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/bazelbuild/buildtools/build"
 	gobuild "go/build"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +18,7 @@ func (g *Generate) Update(moduleName string, paths []string) error {
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
 			path = strings.TrimSuffix(path, "/...")
-			err := filepath.Walk(path, func(path string, info fs.FileInfo, err error) error {
+			err := filepath.WalkDir(path, func(path string, info os.DirEntry, err error) error {
 				if info.IsDir() {
 					return nil
 				}
