@@ -8,7 +8,10 @@ Download the package driver from one of the releases
 the `GOPACKAGESDRIVER` env var to that path.
 
 ## Features
-The package driver provides a bridge between tools like `gopls`, and many of the linter in `golangci-lint`. Anything 
-that uses `github.com/x/tools` under the hood to list packages will also work. Instead of using `go list`, these tools 
-will instead use this package driver. This then presents these packages as Please understands them, including the 
-generated sources which would otherwise be missing from the driver response.  
+The package driver provides a bridge between go tooling and build systems like Please. Tools like `gopls`, and many of 
+the linter in `golangci-lint` respect the package driver. Anything that uses `github.com/x/tools` under the hood will 
+work. 
+
+Instead of using `go list`, these tools will instead use this package driver. The package driver will then use Please to 
+resolve the packages, handling Please's semantics, including the generated sources which would otherwise be missing from 
+the driver response.  
