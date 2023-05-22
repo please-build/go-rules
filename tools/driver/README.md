@@ -9,7 +9,7 @@ the `GOPACKAGESDRIVER` env var to that path.
 
 ## Features
 The package driver provides a bridge between go tooling and build systems like Please. Tools like `gopls`, and many of 
-the linter in `golangci-lint` respect the package driver. Anything that uses `github.com/x/tools` under the hood will 
+the linters in `golangci-lint` respect the package driver. Anything that uses `github.com/x/tools` under the hood will 
 work. 
 
 Instead of using `go list`, these tools will instead use this package driver. The package driver will then use Please to 
