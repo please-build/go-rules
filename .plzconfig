@@ -23,12 +23,12 @@ Name = go
 
 [PluginConfig "go_tool"]
 DefaultValue = go
-Help = A filepath or build lable for the go tool to use
+Help = A file path or build label for the go tool to use
 Inherit = true
 
 [PluginConfig "stdlib"]
 Optional = true
-Help = Build target for the Go standard library
+Help = Build label for a go_stdlib target
 Inherit = true
 
 [PluginConfig "require_licences"]
@@ -38,7 +38,7 @@ Inherit = true
 Help = If set, the licences field on go_module and go_repo will be mandatory
 
 [PluginConfig "import_path"]
-Help = The base import path. Usually matches the module name in go.mod
+Help = The base import path when compiling first party Go code. This usually is set to the module name in go.mod.
 Optional = true
 
 [PluginConfig "cc_tool"]
@@ -49,18 +49,18 @@ Optional = true
 
 [PluginConfig "cgo_enabled"]
 Optional = true
-Help = Sets the CGOENALED environment variable
+Help = If set, the CGO_ENABLED environment variable will be set to 1
 Inherit = true
 
 [PluginConfig "ar_tool"]
 DefaultValue = ar
-Help = The ar archiving tool to use
+Help = Path to the ar archiving tool to use
 Inherit = true
 
 [PluginConfig "please_go_tool"]
 ConfigKey = PleaseGoTool
 DefaultValue = //tools:please_go
-Help = A path or build lable for the please_go tool, an internal tool used to help build Go code
+Help = A path or build label for the please_go tool, an internal tool used to help build Go code
 Inherit = true
 
 [PluginConfig "delve_tool"]
@@ -72,7 +72,7 @@ Help = The path to the delve tool used when debugging Go targets
 DefaultValue = false
 Inherit = true
 Type = bool
-Help = Whether to link binaries statically or not by default
+Help = Whether to link binaries statically by default
 
 [PluginConfig "test_root_compat"]
 DefaultValue = false
@@ -88,18 +88,18 @@ Help = Whether to build C components with coverage
 Inherit = true
 Repeatable = true
 Optional = true
-Help = Any additional C flags to pass to the c compiler when compling cgo rules
+Help = Any additional C flags to pass to the C compiler when compling cgo rules
 
 [PluginConfig "ld_flags"]
 Inherit = true
 Repeatable = true
 Optional = true
-Help = Any additional linker flags to pass to the c linker when linking cgo libraries
+Help = Any additional linker flags to pass to the linker when linking cgo libraries
 
 [PluginConfig "legacy_imports"]
 Type = bool
 DefaultValue = False
-Help = Reverts back to the pre-v17 behavior of Please where packages could be imported as {dirname}/{package} rather than just {dirname}
+Help = Reverts back to the pre-v17 behavior of Please where packages could be imported as "{dirname}/{package}" rather than just "{dirname}"
 
 [PluginConfig "split_debug_info"]
 Type = bool
