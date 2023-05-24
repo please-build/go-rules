@@ -28,7 +28,7 @@ Inherit = true
 
 [PluginConfig "stdlib"]
 Optional = true
-Help = Build label for a go_stdlib target
+Help = The build label for a go_stdlib target used to re-compile the standard library for different architectures and build modes.
 Inherit = true
 
 [PluginConfig "require_licences"]
