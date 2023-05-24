@@ -23,6 +23,7 @@ Name = go
 
 [PluginConfig "go_tool"]
 DefaultValue = go
+Help = A filepath or build lable for the go tool to use
 Inherit = true
 
 [PluginConfig "stdlib"]
@@ -34,58 +35,71 @@ Inherit = true
 DefaultValue = false
 Type = bool
 Inherit = true
+Help = If set, the licences field on go_module and go_repo will be mandatory
 
 [PluginConfig "import_path"]
+Help = The base import path. Usually matches the module name in go.mod
 Optional = true
 
 [PluginConfig "cc_tool"]
 DefaultValue = cc
+Help = The C compiler to use with cgo rules
 Inherit = true
 Optional = true
 
 [PluginConfig "cgo_enabled"]
 Optional = true
+Help = Sets the CGOENALED environment variable
 Inherit = true
 
 [PluginConfig "ar_tool"]
 DefaultValue = ar
+Help = The ar archiving tool to use
 Inherit = true
 
 [PluginConfig "please_go_tool"]
 ConfigKey = PleaseGoTool
 DefaultValue = //tools:please_go
+Help = A path or build lable for the please_go tool, an internal tool used to help build Go code
 Inherit = true
 
 [PluginConfig "delve_tool"]
 DefaultValue = dlv
 Inherit = true
+Help = The path to the delve tool used when debugging Go targets
 
 [PluginConfig "default_static"]
 DefaultValue = false
 Inherit = true
 Type = bool
+Help = Whether to link binaries statically or not by default
 
 [PluginConfig "test_root_compat"]
 DefaultValue = false
 Type = bool
+Help = Changes the test working directory to be the package to be more inline with how "go test" works
 
 [PluginConfig "cpp_coverage"]
 Type = bool
 DefaultValue = false
+Help = Whether to build C components with coverage 
 
 [PluginConfig "c_flags"]
 Inherit = true
 Repeatable = true
 Optional = true
+Help = Any additional C flags to pass to the c compiler when compling cgo rules
 
 [PluginConfig "ld_flags"]
 Inherit = true
 Repeatable = true
 Optional = true
+Help = Any additional linker flags to pass to the c linker when linking cgo libraries
 
 [PluginConfig "legacy_imports"]
 Type = bool
 DefaultValue = False
+Help = Reverts back to the pre-v17 behavior of Please where packages could be imported as {dirname}/{package} rather than just {dirname}
 
 [PluginConfig "split_debug_info"]
 Type = bool
