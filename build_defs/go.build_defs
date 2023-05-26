@@ -557,6 +557,11 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _generate_import_config=False,
         import_path="main",
     )
+    modinfo = _go_modinfo(
+        name = name,
+        deps = deps,
+        test_only = test_only,
+    )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
     if CONFIG.GO.STDLIB:
         deps += _stdlib()
@@ -572,7 +577,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     return build_rule(
         name=name,
         srcs=[lib],
-        deps=deps,
+        deps=deps + [modinfo],
         data=data,
         debug_data=debug_data,
         outs=[out],
@@ -717,6 +722,11 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         test_package = test_package,
         external = external,
     )
+    modinfo = _go_modinfo(
+        name = name,
+        deps = deps,
+        test_only = True,
+    )
 
     deps += [lib_rule, import_config]
     lib_rule = go_library(
@@ -761,7 +771,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         srcs = [lib_rule],
         data = data,
         debug_data = debug_data,
-        deps = deps,
+        deps = deps + [modinfo],
         outs = [name],
         tools = tools,
         debug_tools = debug_tools,
@@ -862,6 +872,11 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         test_package = test_package,
         external = external,
     )
+    modinfo = _go_modinfo(
+        name = name,
+        deps = deps,
+        test_only = test_only,
+    )
     deps += [lib_rule, import_config]
     lib_rule = go_library(
         name='_%s#main_lib' % name,
@@ -878,7 +893,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         name=name,
         srcs=[lib_rule],
         data=data,
-        deps=deps,
+        deps=deps + [modinfo],
         outs=[name],
         tools=tools,
         cmd=cmds,
@@ -1213,6 +1228,12 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         label = canonicalise(f":{name}")
         fail(f"{label} is missing its licence")
 
+    modinfo = build_rule(
+        name = name,
+        tag = "modinfo",
+        outs = [f"_{name}.modinfo"],
+        cmd = f"echo '{module}@{version}' > $OUT",
+    )
     return build_rule(
         name = name,
         srcs = {
@@ -1232,7 +1253,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         sandbox = False,
         licences = licences,
         visibility = visibility,
-        deps = deps,
+        deps = deps + [modinfo],
     )
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
@@ -1300,6 +1321,17 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             patch = patch,
         )
     outs = []
+
+    # Modinfo entry for the linker
+    if not download:
+        modinfo = build_rule(
+            name = name,
+            tag = "modinfo",
+            outs = [f"_{name}.modinfo"],
+            cmd = f"echo '{module}@{version}' > $OUT",
+            test_only = test_only,
+        )
+        deps += [modinfo]
 
     # Gets the expected archive name given a target package
     def archive_name(i):
@@ -1370,6 +1402,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
             "pkg_info": pkg_info,
+            "modinfo": download or modinfo,
         },
         labels = labels + [f"go_package:{i}" for i in install] + ["go_module_path:" + module],
         visibility = visibility,
@@ -1377,6 +1410,24 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         test_only = test_only,
         requires = ['go'],
         binary = binary,
+    )
+
+
+def _go_modinfo(name:str, test_only:bool=False, deps:list):
+    """Generates Go modinfo for a binary which is fed into go tool link via the importconfig"""
+    return build_rule(
+        name = name,
+        tag = 'modinfo',
+        needs_transitive_deps = True,
+        outs = [name + ".modinfo.importconfig"],
+        cmd = f'$TOOLS_PLZ modinfo -m "{CONFIG.GO.IMPORT_PATH}" -b "{CONFIG.GO.BUILDMODE}"',
+        tools = {
+            'go': [CONFIG.GO_TOOL],
+            'plz': [CONFIG.GO.PLEASE_GO_TOOL],
+        },
+        test_only = test_only,
+        deps = deps,
+        requires = ['modinfo'],
     )
 
 
