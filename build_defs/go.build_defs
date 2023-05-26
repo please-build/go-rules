@@ -97,6 +97,7 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
           "CC": [CONFIG.GO.CC_TOOL],
         } if CONFIG.GO.CGO_ENABLED == "1" else {},
         binary = True,
+        env = {'GOAMD64': CONFIG.GO.GOAMD64},
         visibility = visibility,
         building_description = "Installing...",
     )
