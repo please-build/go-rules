@@ -15,7 +15,10 @@ import (
 )
 
 // WriteModInfo writes mod info to the given output file
-func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) error {
+func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goarch, outputFile string) error {
+	if buildMode == "" {
+		buildMode = "exe"
+	}
 	// Nab the Go version from the tool
 	out, err := exec.Command(goTool, "version").CombinedOutput()
 	if err != nil {
@@ -30,6 +33,9 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) err
 		},
 		Settings: []debug.BuildSetting{
 			{Key: "-buildmode", Value: buildMode},
+			{Key: "CGO_ENABLED", Value: cgoEnabled},
+			{Key: "GOARCH", Value: goarch},
+			{Key: "GOOS", Value: goos},
 		},
 	}
 	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
