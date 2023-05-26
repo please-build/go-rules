@@ -3,6 +3,7 @@
 package modinfo
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,12 +11,14 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
-	"strconv"
 	"strings"
 )
 
 // WriteModInfo writes mod info to the given output file
-func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) error {
+func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goarch, outputFile string) error {
+	if buildMode == "" {
+		buildMode = "exe"
+	}
 	// Nab the Go version from the tool
 	out, err := exec.Command(goTool, "version").CombinedOutput()
 	if err != nil {
@@ -30,6 +33,9 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) err
 		},
 		Settings: []debug.BuildSetting{
 			{Key: "-buildmode", Value: buildMode},
+			{Key: "CGO_ENABLED", Value: cgoEnabled},
+			{Key: "GOARCH", Value: goarch},
+			{Key: "GOOS", Value: goos},
 		},
 	}
 	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
@@ -51,5 +57,14 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, outputFile string) err
 		return fmt.Errorf("failed to walk modinfo files: %w", err)
 	}
 	sort.Slice(bi.Deps, func(i, j int) bool { return bi.Deps[i].Path < bi.Deps[j].Path })
-	return os.WriteFile(outputFile, []byte("modinfo "+strconv.Quote(bi.String())+"\n"), 0644)
+	return os.WriteFile(outputFile, []byte(fmt.Sprintf("modinfo %q\n", modInfoData(bi.String()))), 0644)
+}
+
+// modInfoData wraps the given string in Go's modinfo. This mimics what go build does in order
+// for `go version` to be able to find this lot later on.
+func modInfoData(modinfo string) string {
+	// These are not exported from the stdlib (they're in cmd/go/internal/modload) so we must duplicate :(
+	start, _ := hex.DecodeString("3077af0c9274080241e1c107e6d618e6")
+	end, _ := hex.DecodeString("f932433186182072008242104116d8f2")
+	return string(start) + modinfo + string(end)
 }
