@@ -15,7 +15,7 @@ import (
 )
 
 // WriteModInfo writes mod info to the given output file
-func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goarch, outputFile string) error {
+func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goarch, goamd64, outputFile string) error {
 	if buildMode == "" {
 		buildMode = "exe"
 	}
@@ -37,6 +37,10 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goar
 			{Key: "GOARCH", Value: goarch},
 			{Key: "GOOS", Value: goos},
 		},
+	}
+	// Only set GOAMD64 if we are targeting AMD64 #smart
+	if goarch == "amd64" {
+		bi.Settings = append(bi.Settings, debug.BuildSetting{Key: "GOAMD64", Value: goamd64})
 	}
 	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".modinfo") {

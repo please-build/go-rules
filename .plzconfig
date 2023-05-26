@@ -82,7 +82,7 @@ Help = Changes the test working directory to be the package to be more inline wi
 [PluginConfig "cpp_coverage"]
 Type = bool
 DefaultValue = false
-Help = Whether to build C components with coverage 
+Help = Whether to build C components with coverage
 
 [PluginConfig "c_flags"]
 Inherit = true
@@ -131,6 +131,11 @@ Type = bool
 DefaultValue = false
 Optional = true
 Help = Compile for the Go race detector
+
+[PluginConfig "goamd64"]
+DefaultValue = "v1"
+Inherit = true
+Help = Value to set for GOAMD64, determining what era of CPU to target.
 
 [Plugin "shell"]
 Target = //plugins:shell
