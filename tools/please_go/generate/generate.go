@@ -149,6 +149,9 @@ func (g *Generate) generateAll(dir string) error {
 			if info.Name() == "testdata" {
 				return filepath.SkipDir
 			}
+			if path != dir && strings.HasPrefix(info.Name(), "_") {
+				return filepath.SkipDir
+			}
 			if err := g.generate(filepath.Clean(strings.TrimPrefix(path, g.srcRoot))); err != nil {
 				switch err.(type) {
 				case *build.NoGoError:
