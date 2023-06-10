@@ -355,11 +355,11 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             srcs = {
                 'asm': asm_srcs,
                 'hdrs': hdrs,
-                'hdr': [lib_rule + '|h'],
+                'goasm': [lib_rule + '|h'],
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS={CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -p {package_path} -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && mkdir include && mv $SRCS_GOASM include/go_asm.h && "$TOOL" tool asm -trimpath "$TMP_DIR" -I "$TMP_DIR"/include -I ${GOROOT}/pkg/include -D GOOS={CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -p {package_path} -o "$OUT" $SRCS_ASM',
             env= {
                 "GOOS": CONFIG.OS,
                 "GOARCH": CONFIG.ARCH,
