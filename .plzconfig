@@ -132,5 +132,9 @@ DefaultValue = false
 Optional = true
 Help = Compile for the Go race detector
 
+[PluginConfig "mod_file"]
+Optional = true
+Help = A built target for a go.mod, which can help avoid the need to pass modules via requirements to go_repo.
+
 [Plugin "shell"]
 Target = //plugins:shell
