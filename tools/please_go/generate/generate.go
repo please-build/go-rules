@@ -27,7 +27,7 @@ type Generate struct {
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile string, buildFileNames, moduleDeps, install []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, moduleDeps, install []string) *Generate {
 	return &Generate{
 		srcRoot:            srcRoot,
 		buildContext:       build.Default,
@@ -37,6 +37,7 @@ func New(srcRoot, thirdPartyFolder, modFile string, buildFileNames, moduleDeps, 
 		knownImportTargets: map[string]string{},
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
+		moduleName:         module,
 	}
 }
 
@@ -121,7 +122,6 @@ func (g *Generate) readGoMod(path string) error {
 		g.moduleDeps = append(g.moduleDeps, req.Mod.Path)
 	}
 
-	g.moduleName = modFile.Module.Mod.Path
 	g.moduleDeps = append(g.moduleDeps, g.moduleName)
 
 	g.replace = make(map[string]string, len(modFile.Replace))
