@@ -97,6 +97,7 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
           "CC": [CONFIG.GO.CC_TOOL],
         } if CONFIG.GO.CGO_ENABLED == "1" else {},
         binary = True,
+        env = {'GOAMD64': CONFIG.GO.GOAMD64},
         visibility = visibility,
         building_description = "Installing...",
     )
@@ -192,6 +193,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
             "GOARCH": CONFIG.ARCH,
             "GODEBUG": "installgoroot=all",
             "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
+            "GOAMD64": CONFIG.GO.GOAMD64,
         },
         labels = ["go_pkg_info", "go_stdlib", "go"],
         output_is_complete = True,
@@ -446,6 +448,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         requires = ['go'],
         provides = provides,
         labels = labels+link_labels + [f"go_package:{package_path}"] if _generate_import_config else [],
+        env = {"GOAMD64": CONFIG.GO.GOAMD64},
         test_only = test_only,
         tools = tools,
         needs_transitive_deps = _needs_transitive_deps,
@@ -597,6 +600,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         provides={
             'go': lib,
         },
+        env = {'GOAMD64': CONFIG.GO.GOAMD64},
         pre_build=_collect_linker_flags(static, definitions),
         stamp = stamp,
     )
@@ -635,7 +639,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=[],
             labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO.DEFAULT_STATIC,
-            definitions:str|list|dict=None, env:dict=None):
+            definitions:str|list|dict=None, env:dict={}):
     """Defines a Go test rule.
 
     Args:
@@ -792,7 +796,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         needs_transitive_deps = True,
         output_is_complete = True,
         pre_build = _collect_linker_flags(static, definitions),
-        env = env,
+        env = env | {'GOAMD64': CONFIG.GO.GOAMD64},
     )
 
 
@@ -908,6 +912,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         output_is_complete=True,
         test_only=test_only,
         pre_build = _collect_linker_flags(static, definitions),
+        env = {'GOAMD64': CONFIG.GO.GOAMD64},
     )
 
 def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False, external=False,
@@ -1085,7 +1090,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         needs_transitive_deps = True,
         licences = licences,
         post_build = _add_ld_flags,
-        env = env,
+        env = env | {'GOAMD64': CONFIG.GO.GOAMD64},
     )
 
 def _add_ld_flags(name:str, stdout:list):
@@ -1425,7 +1430,10 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
             'go': [CONFIG.GO_TOOL],
             'plz': [CONFIG.GO.PLEASE_GO_TOOL],
         },
-        env = {'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0'},
+        env = {
+            'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0',
+            'GOAMD64': CONFIG.GO.GOAMD64,
+        },
         test_only = test_only,
         deps = deps,
         requires = ['modinfo'],

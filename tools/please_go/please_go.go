@@ -117,6 +117,7 @@ var opts = struct {
 		CgoEnabled string `short:"c" long:"cgo_enabled" env:"CGO_ENABLED" description:"Whether cgo is enabled or not"`
 		GoOS       string `long:"goos" env:"OS" description:"OS we're compiling for"`
 		GoArch     string `long:"goarch" env:"ARCH" description:"Architecture we're compiling for"`
+		GoAMD64    string `long:"goamd64" env:"GOAMD64" description:"GOAMD64 target"`
 	} `command:"modinfo" description:"Generates Go modinfo for the linter"`
 }{
 	Usage: `
@@ -213,7 +214,7 @@ var subCommands = map[string]func() int{
 			}
 			os.Stderr.Write([]byte(info.String() + "\n"))
 		}
-		if err := modinfo.WriteModInfo(mi.GoTool, mi.ModulePath, filepath.Join(mi.ModulePath, mi.Pkg), mi.BuildMode, mi.CgoEnabled, mi.GoOS, mi.GoArch, mi.Out); err != nil {
+		if err := modinfo.WriteModInfo(mi.GoTool, mi.ModulePath, filepath.Join(mi.ModulePath, mi.Pkg), mi.BuildMode, mi.CgoEnabled, mi.GoOS, mi.GoArch, mi.GoAMD64, mi.Out); err != nil {
 			log.Fatalf("failed to write modinfo: %s", err)
 		}
 		return 0
