@@ -1,3 +1,8 @@
+Version 1.3.3
+-------------
+    * please_go generate - skip over generating BUILD files for private directories
+      i.e. directories that start with underscores
+
 Version 1.3.2
 -------------
     * Improve handling of the install arg on `generate` subcommand
