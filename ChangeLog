@@ -1,3 +1,10 @@
+Version 1.7.0
+------------
+    * Add `ModFile` config option which when set will resolve all `go_repo()` targets against the
+      modules in this file. This doesn't do a huge amount but will avoid situations where you had
+      to previously pass in modules through the `requirements` arg to `go_repo()` (#118)
+    * Pass in the generated `go_asm.h` file when compiling asm sources with `go_library()` (#116)
+
 Version 1.6.0
 ------------
     * Rename `go_get` to `go_repo` and make it generally available (#102)
