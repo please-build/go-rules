@@ -17,6 +17,7 @@ type Generate struct {
 	moduleName         string
 	srcRoot            string
 	buildContext       build.Context
+	modFile            string
 	buildFileNames     []string
 	moduleDeps         []string
 	pluginTarget       string
@@ -26,22 +27,24 @@ type Generate struct {
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder string, buildFileNames, moduleDeps, install []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, moduleDeps, install []string) *Generate {
 	return &Generate{
 		srcRoot:            srcRoot,
 		buildContext:       build.Default,
 		buildFileNames:     buildFileNames,
 		moduleDeps:         moduleDeps,
+		modFile:            modFile,
 		knownImportTargets: map[string]string{},
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
+		moduleName:         module,
 	}
 }
 
 // Generate generates a new Please project at the src root. It will walk through the directory tree generating new BUILD
 // files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
-	if err := g.readGoMod(); err != nil {
+	if err := g.readGoMod(g.modFile); err != nil {
 		return err
 	}
 	if err := g.writeConfig(); err != nil {
@@ -101,8 +104,10 @@ func (g *Generate) writeInstallFilegroup() error {
 }
 
 // readGoMod reads the module dependencies
-func (g *Generate) readGoMod() error {
-	path := filepath.Join(g.srcRoot, "go.mod")
+func (g *Generate) readGoMod(path string) error {
+	if path == "" {
+		path = filepath.Join(g.srcRoot, "go.mod")
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -117,7 +122,6 @@ func (g *Generate) readGoMod() error {
 		g.moduleDeps = append(g.moduleDeps, req.Mod.Path)
 	}
 
-	g.moduleName = modFile.Module.Mod.Path
 	g.moduleDeps = append(g.moduleDeps, g.moduleName)
 
 	g.replace = make(map[string]string, len(modFile.Replace))
