@@ -796,7 +796,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     )
 
 
-def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibility:list=None,
+def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:list=[], visibility:list=None,
                  sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True, external:bool=False, timeout:int=0,
                  labels:list&features&tags=None, static:bool=CONFIG.GO.DEFAULT_STATIC, definitions:str|list|dict=None,
                  test_only=True):
@@ -805,6 +805,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
+      resources (list): Files to embed in the library using //go:embed directives.
       data (list): Runtime data files for the test.
       deps (list): Dependencies
       visibility (list): Visibility specification
@@ -833,6 +834,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
     lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
+        resources = resources,
         package = test_package,
         deps = deps,
         _all_srcs=not external,
