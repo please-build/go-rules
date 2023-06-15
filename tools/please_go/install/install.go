@@ -181,12 +181,6 @@ func (install *PleaseGoInstall) pkgDir(target string) string {
 	p := strings.TrimPrefix(target, install.moduleName)
 	p = filepath.Join(install.srcRoot, p)
 
-	// TODO(jpoole): is this really the right thing to do? I think this is a please specific "bug"?
-	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
-	if _, err := os.Lstat(p); os.IsNotExist(err) {
-		p = filepath.Dir(p)
-	}
-
 	return p
 }
 
