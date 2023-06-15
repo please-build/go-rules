@@ -1440,7 +1440,7 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
         env = {'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0'},
         test_only = test_only,
         deps = deps,
-        requires = ['modinfo'],
+        requires = ['modinfo', 'go'],
     )
 
 
