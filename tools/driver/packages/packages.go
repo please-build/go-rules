@@ -97,6 +97,10 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	return packagesToResponse(rootpath, pkgs, dirs)
+}
+
+func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[string]struct{}) (*DriverResponse, error) {
 	// Build the set of root packages
 	seenRoots := map[string]struct{}{}
 	roots := []string{}
@@ -207,13 +211,18 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	if err := build.Wait(); err != nil {
 		return nil, handleSubprocessErr(build, err)
 	}
-	log.Debug("Loading plz package info files...")
 	// Now we can read all the package info files from the build process' stdout.
+	return loadPackageInfoFiles(strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())))
+}
+
+// loadPackageInfoFiles loads the given set of package info files
+func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
+	log.Debug("Loading plz package info files...")
 	pkgs := []*packages.Package{}
 	var lock sync.Mutex
 	var g errgroup.Group
 	g.SetLimit(8) // arbitrary limit since we're doing I/O
-	for _, file := range strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())) {
+	for _, file := range paths {
 		file := file
 		if !strings.HasSuffix(file, ".json") {
 			continue // Ignore all the various Go sources etc.
