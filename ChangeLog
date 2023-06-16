@@ -1,3 +1,8 @@
+Version 1.7.1
+------------
+    * Added missing `resources` option to `go_benchmark` (#121)
+    * Make modinfo require go (#123)
+
 Version 1.7.0
 ------------
     * Add `ModFile` config option which when set will resolve all `go_repo()` targets against the
