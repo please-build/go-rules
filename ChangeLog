@@ -1,5 +1,9 @@
 Version 1.7.1
 ------------
+    * Fix issue with attempting to write `asm.h` to GOROOT which is not always writable (#125)
+
+Version 1.7.1
+------------
     * Added missing `resources` option to `go_benchmark` (#121)
     * Make modinfo require go (#123)
 
