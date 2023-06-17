@@ -1434,7 +1434,7 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
         outs = [name + ".modinfo.importconfig"],
         cmd = f'$TOOLS_PLZ modinfo -m "{CONFIG.GO.IMPORT_PATH}" -b "{CONFIG.GO.BUILDMODE}"',
         tools = {
-            'go': [CONFIG.GO_TOOL],
+            'go': [CONFIG.GO.GO_TOOL],
             'plz': [CONFIG.GO.PLEASE_GO_TOOL],
         },
         env = {'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0'},
