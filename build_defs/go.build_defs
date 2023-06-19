@@ -30,6 +30,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
       install_std (bool): Whether we should install the standard library. This is required for go 1.20+. If not set,
                           Please will do whatever is appropriate based on the Go version.
     """
+    if url and version:
+        fail("Either version or url should be provided but not both")
 
     if version:
         sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.HOSTOS}-{CONFIG.HOSTARCH}.tar.gz'
@@ -1132,8 +1134,6 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
       visibility(list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
     """
     subrepo_name = _module_rule_name(module)
-    if install and not name:
-        fail("must provide `name` when exposing packages with `install = []`")
 
     name = name or subrepo_name
 
