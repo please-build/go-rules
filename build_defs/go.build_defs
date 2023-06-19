@@ -30,8 +30,6 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
       install_std (bool): Whether we should install the standard library. This is required for go 1.20+. If not set,
                           Please will do whatever is appropriate based on the Go version.
     """
-    if url and version:
-        fail("Either version or url should be provided but not both")
 
     if version:
         sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.HOSTOS}-{CONFIG.HOSTARCH}.tar.gz'
