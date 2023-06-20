@@ -406,8 +406,8 @@ func nameForLibInPkg(module, pkg string) string {
 // trimPath is like strings.TrimPrefix but is path aware. It removes base from target if target starts with base,
 // otherwise returns target unmodified.
 func trimPath(target, base string) string {
-	baseParts := strings.Split(filepath.Clean(base), "/")
-	targetParts := strings.Split(filepath.Clean(target), "/")
+	baseParts := filepath.SplitList(base)
+	targetParts := filepath.SplitList(target)
 
 	if len(targetParts) < len(baseParts) {
 		return target
