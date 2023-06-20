@@ -86,6 +86,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             'cd "$TMP_DIR"',
             f'ls {subdir2}*.c {subdir2}*.go',
         ]),
+        deps = deps,
         tools = [CONFIG.GO.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
         requires = ['go', 'cc_hdrs'],
