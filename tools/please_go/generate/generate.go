@@ -139,8 +139,7 @@ func (g *Generate) targetsInDir(dir string) []string {
 		// for that package. Currently, we don't generate BUILD files for any other reason so this assumption holds
 		// true. We may want to check that the BUILD file contains a go_library() target otherwise.
 		if g.isBuildFile(path) {
-			pleasePkgDir := strings.TrimPrefix(strings.TrimPrefix(filepath.Dir(path), g.srcRoot), "/")
-			ret = append(ret, g.libTargetForPleasePackage(pleasePkgDir))
+			ret = append(ret, g.libTargetForPleasePackage(trimPath(filepath.Dir(path), g.srcRoot)))
 		}
 		return nil
 	})
@@ -148,6 +147,16 @@ func (g *Generate) targetsInDir(dir string) []string {
 		panic(err)
 	}
 	return ret
+}
+
+func (g *Generate) isBuildFile(file string) bool {
+	base := filepath.Base(file)
+	for _, file := range g.buildFileNames {
+		if base == file {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Generate) writeInstallFilegroup() error {
@@ -218,7 +227,8 @@ func (g *Generate) generateAll(dir string) error {
 			if path != dir && strings.HasPrefix(info.Name(), "_") {
 				return filepath.SkipDir
 			}
-			if err := g.generate(filepath.Clean(strings.TrimPrefix(path, g.srcRoot))); err != nil {
+
+			if err := g.generate(trimPath(path, g.srcRoot)); err != nil {
 				switch err.(type) {
 				case *build.NoGoError:
 					// We might walk into a dir that has no .go files for the current arch. This shouldn't
@@ -258,31 +268,13 @@ func (g *Generate) importDir(target string) (*build.Package, error) {
 	return pkg, nil
 }
 
-// trimPath is like strings.TrimPrefix but is path aware. It removes base from target if target starts with base,
-// otherwise returns target unmodified.
-func trimPath(target, base string) string {
-	baseParts := strings.Split(filepath.Clean(base), "/")
-	targetParts := strings.Split(filepath.Clean(target), "/")
-
-	if len(targetParts) < len(baseParts) {
-		return target
-	}
-
-	for i := range baseParts {
-		if baseParts[i] != targetParts[i] {
-			return target
-		}
-	}
-	return strings.Join(targetParts[len(baseParts):], "/")
-}
-
 func (g *Generate) generate(dir string) error {
 	pkg, err := g.importDir(dir)
 	if err != nil {
 		return err
 	}
 
-	lib := g.libRule(pkg)
+	lib := g.libRule(pkg, dir)
 	if lib == nil {
 		return nil
 	}
@@ -430,16 +422,12 @@ func (g *Generate) depTargets(imports []string) []string {
 	return deps
 }
 
-func (g *Generate) libRule(pkg *build.Package) *Rule {
-	// The name of the target should match the dir it's in, or the basename of the module if it's in the repo root.
-	name := filepath.Base(pkg.Dir)
-	if strings.HasSuffix(pkg.Dir, g.srcRoot) || name == "" {
-		name = filepath.Base(g.moduleName)
-	}
-
+func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
 	if len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) == 0 {
 		return nil
 	}
+
+	name := nameForLibInPkg(g.moduleName, trimPath(dir, g.srcRoot))
 
 	return &Rule{
 		name:          name,
@@ -548,25 +536,52 @@ func (g *Generate) depTarget(importPath string) string {
 	}
 
 	subrepoName := g.subrepoName(module)
-	packageName := strings.TrimPrefix(importPath, module)
-	packageName = strings.TrimPrefix(packageName, "/")
-	name := filepath.Base(packageName)
-	if packageName == "" {
-		name = filepath.Base(module)
-	}
+	packageName := trimPath(importPath, module)
+	name := nameForLibInPkg(module, packageName)
 
 	target := buildTarget(name, packageName, subrepoName)
 	g.knownImportTargets[importPath] = target
 	return target
 }
 
+// nameForLibInPkg returns the lib target name for a target in pkg. The pkg should be the relative pkg part excluding
+// the module, e.g. pkg would be asset, and module would be github.com/stretchr/testify for
+// github.com/stretchr/testify/assert,
+func nameForLibInPkg(module, pkg string) string {
+	name := filepath.Base(pkg)
+	if pkg == "" || pkg == "." {
+		name = filepath.Base(module)
+	}
+
+	if name == "all" {
+		return "lib"
+	}
+
+	return name
+}
+
+// trimPath is like strings.TrimPrefix but is path aware. It removes base from target if target starts with base,
+// otherwise returns target unmodified.
+func trimPath(target, base string) string {
+	baseParts := filepath.SplitList(base)
+	targetParts := filepath.SplitList(target)
+
+	if len(targetParts) < len(baseParts) {
+		return target
+	}
+
+	for i := range baseParts {
+		if baseParts[i] != targetParts[i] {
+			return target
+		}
+	}
+	return strings.Join(targetParts[len(baseParts):], "/")
+}
+
 // libTargetForPleasePackage returns the build label for the go_library() target that would be generated for a package
 // at this path within the generated Please repo.
 func (g *Generate) libTargetForPleasePackage(pkg string) string {
-	if pkg == "" || pkg == "." {
-		return buildTarget(filepath.Base(g.moduleName), "", "")
-	}
-	return buildTarget(filepath.Base(pkg), pkg, "")
+	return buildTarget(nameForLibInPkg(g.moduleName, pkg), pkg, "")
 }
 
 func (g *Generate) subrepoName(module string) string {
@@ -576,13 +591,29 @@ func (g *Generate) subrepoName(module string) string {
 	return filepath.Join(g.thirdPartyFolder, strings.ReplaceAll(module, "/", "_"))
 }
 
-func buildTarget(name, pkg, subrepo string) string {
-	if name == "" {
-		name = filepath.Base(pkg)
+func buildTarget(name, pkgDir, subrepo string) string {
+	bs := new(strings.Builder)
+	if subrepo != "" {
+		bs.WriteString("///")
+		bs.WriteString(subrepo)
 	}
-	target := fmt.Sprintf("%v:%v", pkg, name)
-	if subrepo == "" {
-		return fmt.Sprintf("//%v", target)
+
+	// Bit of a special case here where we assume all build targets are absolute which is fine for our use case.
+	bs.WriteString("//")
+
+	if pkgDir == "." {
+		pkgDir = ""
 	}
-	return fmt.Sprintf("///%v//%v", subrepo, target)
+
+	if pkgDir != "" {
+		bs.WriteString(pkgDir)
+		if filepath.Base(pkgDir) != name {
+			bs.WriteString(":")
+			bs.WriteString(name)
+		}
+	} else {
+		bs.WriteString(":")
+		bs.WriteString(name)
+	}
+	return bs.String()
 }

@@ -2,7 +2,7 @@ subinclude("///go//build_defs:go")
 
 filegroup(
     name = "srcs",
-    srcs = glob(["*.go"]),
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
     visibility = ["//tools/please_go:bootstrap"],
 )
 
@@ -13,5 +13,14 @@ go_library(
     deps = [
         "//third_party/go:buildtools",
         "//third_party/go:mod",
+    ],
+)
+
+go_test(
+    name = "generate_test",
+    srcs = glob(["*_test.go"]),
+    deps = [
+        "//third_party/go:testify",
+        ":generate",
     ],
 )
