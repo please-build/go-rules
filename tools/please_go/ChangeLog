@@ -1,3 +1,7 @@
+Version 1.4.1
+-------------
+    * Fix issue where we'd compile the parent directory if the package can't be found
+
 Version 1.4.0
 -------------
     * Add support for passing in a path to a modfile instead of using the modfile from the proxy
