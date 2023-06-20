@@ -74,18 +74,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             'c': [subdir2 + src.replace('.go', '.cgo2.c') for src in file_srcs] + [subdir2 + '_cgo_export.c'],
             'h': [subdir2 + '_cgo_export.h'],
         },
-        cmd = ' && '.join([
-            (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
-            'mkdir -p "$OUT_DIR"',
-            'cd $PKG_DIR/' + subdir,
-            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -- {compiler_flags_cmd} *.go',
-            # Remove the .o file which BSD sed gets upset about in the next command
-            'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
-            # cgo leaves absolute paths in these files which we must get rid of :(
-            'find "$OUT_DIR" -type f -maxdepth 1 | xargs sed -i -e "s|"$TMP_DIR"/||g"',
-            'cd "$TMP_DIR"',
-            f'ls {subdir2}*.c {subdir2}*.go',
-        ]),
+        cmd = _cgo_cmd(subdir, subdir2, import_path, compiler_flags_cmd, " ".join([f"'{flag}'" for flag in linker_flags])),
         deps = deps,
         tools = [CONFIG.GO.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
@@ -100,7 +89,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         compiler_flags = compiler_flags + [
             '-Wno-error',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
-        ],
+        ] + linker_flags,
         pkg_config_libs = pkg_config,
         test_only = test_only,
         deps = deps,
@@ -144,3 +133,28 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         deps = deps,
         exported_deps=[import_config],
     )
+
+def _cgo_cmd(subdir, subdir2, import_path, compiler_flags_cmd, linker_flags=None):
+    linker_flags = linker_flags or ""
+    return ' && '.join([
+        f'export CGO_LDFLAGS="{linker_flags}"',
+        f'OUT_DIR="$TMP_DIR/{subdir}"' if subdir else 'OUT_DIR="$TMP_DIR"',
+        'mkdir -p "$OUT_DIR"',
+        'cd $PKG_DIR/' + subdir,
+        f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -- {compiler_flags_cmd} *.go',
+        # Remove the .o file which BSD sed gets upset about in the next command
+        'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
+        # cgo leaves absolute paths in these files which we must get rid of :(
+        'find "$OUT_DIR" -maxdepth 1 -type f | xargs sed -i -e "s|"$TMP_DIR"/||g"',
+        'cd "$TMP_DIR"',
+        f'ls {subdir2}*.c {subdir2}*.go',
+    ])
+
+def _collect_cgo_linker_flags(subdir, subdir2, import_path, compiler_flags_cmd):
+    """Returns a pre-build function to apply transitive linker flags to a go_binary rule."""
+    def collect_linker_flags(name):
+        ldflags, _ = _get_ldflags_and_pkgconfig(name)
+        if ldflags:
+            set_command(name, _cgo_cmd(subdir, subdir2, import_path, compiler_flags_cmd))
+    return collect_linker_flags
+
