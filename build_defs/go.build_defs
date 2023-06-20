@@ -1134,8 +1134,6 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
       visibility(list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
     """
     subrepo_name = _module_rule_name(module)
-    if install and not name:
-        fail("must provide `name` when exposing packages with `install = []`")
 
     name = name or subrepo_name
 
