@@ -325,7 +325,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             },
             outs = [name + '.abi'],
             building_description = 'Creating ABI...',
-            cmd = f'eval `"$TOOL" env` && touch $GOROOT/pkg/include/go_asm.h && "$TOOL" tool asm -trimpath "$TMP_DIR" -I $GOROOT/pkg/include -D GOOS_{CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && mkdir include && touch include/go_asm.h && "$TOOL" tool asm -trimpath "$TMP_DIR" -I include -I $GOROOT/pkg/include -D GOOS_{CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
             env= {
                 "GOOS": CONFIG.OS,
                 "GOARCH": CONFIG.ARCH,
@@ -1134,8 +1134,6 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
       visibility(list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
     """
     subrepo_name = _module_rule_name(module)
-    if install and not name:
-        fail("must provide `name` when exposing packages with `install = []`")
 
     name = name or subrepo_name
 
