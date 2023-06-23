@@ -1,3 +1,8 @@
+Version 1.7.2
+------------
+    * Use correct version of the go tool (#128)
+    * Write `asm.h` to the tmp dir rather than the goroot (#125)
+
 Version 1.7.1
 ------------
     * Added missing `resources` option to `go_benchmark` (#121)
