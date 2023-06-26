@@ -1,4 +1,4 @@
-Version 1.7.2
+Version 1.7.3
 ------------
     * Set the GOROOT when using `go_stdlib()` (#138)
 
