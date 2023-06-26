@@ -8,29 +8,13 @@ hashes = {
     "linux_arm64": "1644712fa35b076b7d4b65e4e250fe9a2c01516561841aa362568f3a26f4f0d2",
 }
 
-binaries = [
+for a, h in hashes.items():
+    native = f"{CONFIG.OS}_{CONFIG.ARCH}" == a
     remote_file(
-        name = tag("please_go", a),
+        name = "please_go" if native else f"please_go_{a}",
         binary = True,
         hashes = [h],
-        labels = ["manual"],  # Needed to avoid picking this up for coverage
+        labels = None if native else ["manual"],  # Needed to avoid picking this up for other architectures for coverage
         url = f"https://github.com/please-build/go-rules/releases/download/please-go-v{VERSION}/please_go-{VERSION}-{a}",
+        visibility = ["PUBLIC"] if native else None,
     )
-    for a, h in hashes.items()
-]
-
-build_rule(
-    name = "please_go",
-    srcs = [":" + tag("please_go", f"{CONFIG.OS}_{CONFIG.ARCH}")],
-    outs = [f"please_go-{VERSION}"],
-    binary = True,
-    cmd = "cp $SRCS $OUTS",
-    labels = ["manual"],  # Needed to avoid picking this up for coverage
-    visibility = ["PUBLIC"],
-)
-
-filegroup(
-    name = "download_test",
-    srcs = binaries,
-    labels = ["manual"],
-)
