@@ -1,5 +1,10 @@
 Version 1.7.2
 ------------
+    * Set the GOROOT when using `go_stdlib()` (#138)
+
+
+Version 1.7.2
+------------
     * Use correct version of the go tool (#128)
     * Write `asm.h` to the tmp dir rather than the goroot (#125)
 

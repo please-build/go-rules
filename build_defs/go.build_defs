@@ -1472,18 +1472,15 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
 
 
 def _set_go_env():
-    if CONFIG.GO.STDLIB:
-        cmd = 'export GOPATH=$TMP_DIR'
+    if CONFIG.HOSTOS == 'freebsd':
+        # FreeBSD has some very strange semantics around hardlinks that lead to it finding
+        # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
+        # the most recent hardlink to the file). We can work around this way although it's
+        # not very nice (we don't do this globally because OSX doesn't have realpath).
+        go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
     else:
-        if CONFIG.HOSTOS == 'freebsd':
-            # FreeBSD has some very strange semantics around hardlinks that lead to it finding
-            # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
-            # the most recent hardlink to the file). We can work around this way although it's
-            # not very nice (we don't do this globally because OSX doesn't have realpath).
-            go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
-        else:
-            go_root = '$("$TOOLS_GO" env GOROOT)'
-        cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
+        go_root = '$("$TOOLS_GO" env GOROOT)'
+    cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
 
     if CONFIG.GO.C_FLAGS:
         flags = " ".join(CONFIG.GO.C_FLAGS)
