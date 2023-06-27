@@ -1,3 +1,9 @@
+Version 1.7.3
+-------------
+    * Refactor `please_go` download test to avoid subrepo references (#136)
+        This fixes fatal errors with `plz query graph` in repos that use go-rules, a regression
+        present since version 1.7.0.
+
 Version 1.7.2
 ------------
     * Use correct version of the go tool (#128)
