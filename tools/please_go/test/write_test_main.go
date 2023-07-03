@@ -268,8 +268,10 @@ func internalMain() int {
 {{end}}
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
-{{end}}
+    return 0
+{{else}}
 	return m.Run()
+{{end}}
 }
 
 func main() {
