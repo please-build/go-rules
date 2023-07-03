@@ -1,8 +1,13 @@
+Version 1.7.34
+-------------
+    * Fix issues with with tests using TestMain in go1.20+ where we would run the tests
+      for them. This is the responsibility of TestMain.
+
 Version 1.7.3
 -------------
     * Refactor `please_go` download test to avoid subrepo references (#136)
-        This fixes fatal errors with `plz query graph` in repos that use go-rules, a regression
-        present since version 1.7.0.
+      This fixes fatal errors with `plz query graph` in repos that use go-rules, a regression
+      present since version 1.7.0.
 
 Version 1.7.2
 ------------
