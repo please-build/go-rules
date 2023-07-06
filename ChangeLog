@@ -1,3 +1,9 @@
+Version 1.7.5
+-------------
+    * Fix issue with missing test results when tests call `os.Exit()` when using go 1.20+. This only
+      caused the report to miss rows, as the test result file wasn't being flushed, but would never
+      cause the test to pass when it should have failed. (#142)
+
 Version 1.7.4
 -------------
     * Fix issues with with tests using TestMain in go1.20+ where we would run the tests
