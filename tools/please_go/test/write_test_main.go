@@ -152,7 +152,6 @@ var testMainTmpl = template.Must(template.New("main").Parse(`
 package main
 
 import (
-	_gostdlib_io "io"
 	_gostdlib_os "os"
 	{{if not .Benchmark}}_gostdlib_strings "strings"{{end}}
 	_gostdlib_testing "testing"
