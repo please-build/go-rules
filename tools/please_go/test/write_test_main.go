@@ -152,7 +152,6 @@ var testMainTmpl = template.Must(template.New("main").Parse(`
 package main
 
 import (
-	_gostdlib_io "io"
 	_gostdlib_os "os"
 	{{if not .Benchmark}}_gostdlib_strings "strings"{{end}}
 	_gostdlib_testing "testing"
@@ -221,31 +220,7 @@ func coverTearDown(coverprofile string, gocoverdir string) (string, error) {
 var testDeps = _gostdlib_testdeps.TestDeps{}
 
 func internalMain() int {
-    if resultsFile := _gostdlib_os.Getenv("RESULTS_FILE"); resultsFile != "" {
-        f, err := _gostdlib_os.Create(resultsFile)
-        if err != nil {
-            panic(err)
-        }
-        old := _gostdlib_os.Stdout
-        mw := _gostdlib_io.MultiWriter(f, old)
-        r, w, err := _gostdlib_os.Pipe()
-        if err != nil {
-            panic(err)
-        }
-        _gostdlib_os.Stdout = w
-        done := make(chan struct{})
-        go func() {
-           _gostdlib_io.Copy(mw, r)
-           done <- struct{}{}
-         }()
-        defer func() {
-            w.Close()
-            <-done
-            r.Close()
-            f.Close()
-            _gostdlib_os.Stdout = old
-        }()
-    }
+
 {{if .Coverage}}
     coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
     args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
