@@ -2,7 +2,6 @@ Version 1.4.3
 -------------
     * Don't try and pipe test output as it doesn't flush when the TestMain calls os.Exit
 
-
 Version 1.4.2
 -------------
     * Don't run the tests if the user has defined a TestMain in 1.20+
