@@ -1,3 +1,7 @@
+Version 1.7.5
+-------------
+    * Use tee to avoid issues with flushing when a test calls os.Exit() (#142)
+
 Version 1.7.4
 -------------
     * Fix issues with with tests using TestMain in go1.20+ where we would run the tests
