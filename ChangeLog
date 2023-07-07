@@ -1,3 +1,7 @@
+Version 1.7.6
+-------------
+    * Honour `flags` argument correctly to `go_test`
+
 Version 1.7.5
 -------------
     * Fix issue with missing test results when tests call `os.Exit()` when using go 1.20+. This only
