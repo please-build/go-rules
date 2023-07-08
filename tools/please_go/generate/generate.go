@@ -14,30 +14,32 @@ import (
 )
 
 type Generate struct {
-	moduleName         string
-	srcRoot            string
-	buildContext       build.Context
-	modFile            string
-	buildFileNames     []string
-	moduleDeps         []string
-	pluginTarget       string
-	replace            map[string]string
-	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
-	thirdPartyFolder   string
-	install            []string
+	moduleName           string
+	srcRoot              string
+	buildContext         build.Context
+	modFile              string
+	buildFileNames       []string
+	moduleDeps           []string
+	pluginTarget         string
+	replace              map[string]string
+	knownImportTargets   map[string]string // cache these so we don't end up looping over all the modules for every import
+	thirdPartyFolder     string
+	structuredThirdParty bool
+	install              []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, moduleDeps, install []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, moduleDeps, install []string, structuredThirdParty bool) *Generate {
 	return &Generate{
-		srcRoot:            srcRoot,
-		buildContext:       build.Default,
-		buildFileNames:     buildFileNames,
-		moduleDeps:         moduleDeps,
-		modFile:            modFile,
-		knownImportTargets: map[string]string{},
-		thirdPartyFolder:   thirdPartyFolder,
-		install:            install,
-		moduleName:         module,
+		srcRoot:              srcRoot,
+		buildContext:         build.Default,
+		buildFileNames:       buildFileNames,
+		moduleDeps:           moduleDeps,
+		modFile:              modFile,
+		knownImportTargets:   map[string]string{},
+		thirdPartyFolder:     thirdPartyFolder,
+		install:              install,
+		moduleName:           module,
+		structuredThirdParty: structuredThirdParty,
 	}
 }
 
@@ -430,6 +432,9 @@ func (g *Generate) libTargetForPleasePackage(pkg string) string {
 func (g *Generate) subrepoName(module string) string {
 	if g.moduleName == module {
 		return ""
+	}
+	if g.structuredThirdParty {
+		return filepath.Join(g.thirdPartyFolder, module)
 	}
 	return filepath.Join(g.thirdPartyFolder, strings.ReplaceAll(module, "/", "_"))
 }

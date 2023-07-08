@@ -1,0 +1,7 @@
+subinclude("///go//build_defs:go")
+
+go_repo(
+    licences = ["MIT"],
+    module = "gopkg.in/yaml.v3",
+    version = "v3.0.0-20210107192922-496545a6307b",
+)

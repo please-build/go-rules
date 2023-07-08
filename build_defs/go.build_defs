@@ -1095,6 +1095,8 @@ def _add_ld_flags(name:str, stdout:list):
 
 
 def _module_rule_name(module):
+    if CONFIG.GO.STRUCTURED_THIRD_PARTY:
+        return basename(module)
     return module.replace("/", "_")
 
 def go_repo(module: str, version:str=None, download:str=None, name:str=None, install:list=[], requirements:list=[],
@@ -1158,12 +1160,13 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
     else:
         modFileArg = ""
 
+    structured_flag = "--structured_third_party" if CONFIG.GO.STRUCTURED_THIRD_PARTY else ""
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --src_root=$SRCS_DOWNLOAD {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} {structured_flag} --module {module}  --src_root=$SRCS_DOWNLOAD {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {

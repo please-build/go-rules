@@ -1,5 +1,5 @@
 [Please]
-Version = >=17.0.0-beta.8
+Version = >=17.0.0
 
 [build]
 hashcheckers = sha256
@@ -135,6 +135,10 @@ Help = Compile for the Go race detector
 [PluginConfig "mod_file"]
 Optional = true
 Help = A built target for a go.mod, which can help avoid the need to pass modules via requirements to go_repo.
+
+[PluginConfig "structured_third_party"]
+Optional = true
+Help = Whether go repo should be structured based on the module path, or use a flattened singular build file.
 
 [Plugin "shell"]
 Target = //plugins:shell

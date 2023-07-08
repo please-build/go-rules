@@ -1,0 +1,7 @@
+subinclude("///go//build_defs:go")
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/pmezard/go-difflib",
+    version = "v1.0.0",
+)
