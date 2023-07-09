@@ -221,7 +221,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
                _generate_import_config:bool=True, _generate_pkg_info:bool=True,
-               import_path:str='', labels:list=[], package:str=None):
+               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -244,6 +244,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
       import_path (str): If set, this will override the import path of the generated go package.
       package (str): The package as it would appear at the top of the go source files. Defaults
                      to name.
+      pgo_file (str): The CPU profile to supply for profile-guided optimisation.
     """
     assert srcs, "Cannot provide an empty srcs list to go_library"
     cover = cover and CONFIG.BUILD_CONFIG == "cover"
@@ -430,6 +431,8 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         }
     else:
         outs = [out]
+    if pgo_file:
+        srcs['pgo'] = [pgo_file]
 
     provides = {'go': ':' + name, 'go_src': src_rule}
     if cover and not CONFIG.GO.COVERAGEREDESIGN:
@@ -440,7 +443,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         deps = deps,
         internal_deps = [src_rule],
         outs = outs,
-        cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
+        cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file),
         visibility = visibility,
         building_description = "Compiling...",
         requires = ['go'],
@@ -1494,7 +1497,7 @@ def _set_go_env():
     return cmd
 
 
-def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
+def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
     """Returns the commands to run for building a Go library."""
     filter_cmd = 'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter ${SRCS_GO})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
@@ -1505,6 +1508,8 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     package_flag = f" -p {import_path}" if import_path else ""
     if CONFIG.GO.RACE:
         compile_cmd += ' -race'
+    if pgo_file:
+        compile_cmd += ' -pgoprofile "$SRCS_PGO"'
 
     gen_import_cfg = _set_go_env()
     if not CONFIG.GO.STDLIB:
