@@ -672,7 +672,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
-        name = '_%s#lib' % name,
+        name = f'_{name}#lib',
         srcs = srcs,
         resources = resources,
         package = test_package,
@@ -729,7 +729,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
 
     deps += [lib_rule, import_config]
     lib_rule = go_library(
-        name='_%s#main_lib' % name,
+        name=f'_{name}#main_lib',
         srcs = [main_rule],
         deps = deps,
         _needs_transitive_deps = CONFIG.BUILD_CONFIG == "cover" and not CONFIG.GO.COVERAGEREDESIGN,
