@@ -92,13 +92,14 @@ var opts = struct {
 		Packages     []string `short:"p" long:"packages" description:"Packages to include in the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 	Generate struct {
-		SrcRoot          string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
-		ImportPath       string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
-		ThirdPartyFolder string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
-		ModFile          string   `long:"mod_file" description:"Path to the mod file to use to resolve dependencies against"`
-		Module           string   `long:"module" description:"The name of the current module"`
-		Install          []string `long:"install" description:"The packages to add to the :install alias"`
-		Args             struct {
+		SrcRoot              string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+		ImportPath           string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
+		ThirdPartyFolder     string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
+		StructuredThirdParty bool     `long:"structured_third_party" description:"Whether to use a directory structure for third party based off the module path, or a singular flat build file."`
+		ModFile              string   `long:"mod_file" description:"Path to the mod file to use to resolve dependencies against"`
+		Module               string   `long:"module" description:"The name of the current module"`
+		Install              []string `long:"install" description:"The packages to add to the :install alias"`
+		Args                 struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
 	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
@@ -173,7 +174,16 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install)
+		g := generate.New(
+			opts.Generate.SrcRoot,
+			opts.Generate.ThirdPartyFolder,
+			opts.Generate.ModFile,
+			opts.Generate.Module,
+			[]string{"BUILD", "BUILD.plz"},
+			opts.Generate.Args.Requirements,
+			opts.Generate.Install,
+			opts.Generate.StructuredThirdParty,
+		)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}

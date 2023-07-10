@@ -1,4 +1,4 @@
-package test_repo
+package unstructured_repo
 
 import (
 	"github.com/stretchr/testify/assert"

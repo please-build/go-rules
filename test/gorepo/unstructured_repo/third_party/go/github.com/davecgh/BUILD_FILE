@@ -1,0 +1,7 @@
+subinclude("///go//build_defs:go")
+
+go_repo(
+    licences = ["ISC"],
+    module = "github.com/davecgh/go-spew",
+    version = "v1.1.1",
+)
