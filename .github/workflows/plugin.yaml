@@ -35,7 +35,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Build with debug configuration
-        run: ./pleasew build -c debug -p -v notice --log_file plz-out/log/test_debug.log
+        run: ./pleasew build -c dbg -p -v notice --log_file plz-out/log/test_debug.log
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v2
