@@ -82,7 +82,7 @@ Help = Changes the test working directory to be the package to be more inline wi
 [PluginConfig "cpp_coverage"]
 Type = bool
 DefaultValue = false
-Help = Whether to build C components with coverage 
+Help = Whether to build C components with coverage
 
 [PluginConfig "c_flags"]
 Inherit = true
