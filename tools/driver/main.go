@@ -37,6 +37,7 @@ This tool is experimental.
 func main() {
 	flags.ParseFlagsOrDie("Please Go package driver", &opts, nil)
 	logging.InitLogging(opts.Verbosity)
+	log.Fatalf("here")
 
 	if opts.WorkingDir != "" {
 		if err := os.Chdir(opts.WorkingDir); err != nil {
@@ -53,7 +54,7 @@ func main() {
 		}
 		log.Debug("Received driver request: %v", req)
 	}
-	resp, err := packages.Load(req, opts.Args.Files)
+	resp, err := load(req)
 	if err != nil {
 		log.Fatalf("Failed to load packages: %s", err)
 	}
@@ -70,4 +71,11 @@ func main() {
 	if err := enc.Encode(resp); err != nil {
 		log.Fatalf("Failed to write packages: %s", err)
 	}
+}
+
+func load(req *packages.DriverRequest) (*packages.DriverResponse, error) {
+	if opts.SearchDir == "" {
+		return packages.Load(req, opts.Args.Files)
+	}
+	return packages.LoadOffline(req, opts.SearchDir, opts.Args.Files)
 }
