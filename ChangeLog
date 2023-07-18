@@ -1,3 +1,7 @@
+Version 1.8.1
+-------------
+    * Add a config option to allow toggling pkg info generation (#150)
+
 Version 1.8.0
 -------------
     * Added `pgo_file` argument to `go_library` which enables profile-guided optimisation.
