@@ -136,5 +136,10 @@ Help = Compile for the Go race detector
 Optional = true
 Help = A built target for a go.mod, which can help avoid the need to pass modules via requirements to go_repo.
 
+[PluginConfig "pkg_info"]
+Type = bool
+DefaultValue = true
+Help = Generate pkg info for Go targets
+
 [Plugin "shell"]
 Target = //plugins:shell
