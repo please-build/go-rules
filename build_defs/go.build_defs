@@ -404,7 +404,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     )
 
     # Package info rule for the Go packages driver
-    if _generate_pkg_info:
+    if _generate_pkg_info and CONFIG.GO.PKG_INFO:
         deps += [_go_pkg_info(
             name = name,
             srcs = srcs + resources,
@@ -1392,29 +1392,33 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         outs = [f'{name}.importconfig'],
     )
 
+    provides = {
+        "go": f":{name}", # provide the filegroup otherwise exported deps don't work
+        "go_src": download,
+        "modinfo": download or modinfo,
+    }
+
     # Package info rule for the Go packages driver
-    pkg_info = _go_pkg_info(
-        name = name,
-        srcs = [download],
-        importconfig = import_config,
-        strip = True,
-        module = module,
-        test_only = test_only,
-        install = installpkg,
-    )
+    if CONFIG.GO.PKG_INFO:
+        pkg_info = _go_pkg_info(
+            name = name,
+            srcs = [download],
+            importconfig = import_config,
+            strip = True,
+            module = module,
+            test_only = test_only,
+            install = installpkg,
+        )
+        provides["pkg_info"] = pkg_info
+
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 
     return filegroup(
         name = name,
         srcs = [a_rule],
-        deps = deps + [pkg_info],
+        deps = deps + [pkg_info] if CONFIG.GO.PKG_INFO else deps,
         exported_deps = exported_deps,
-        provides = {
-            "go": f":{name}", # provide the filegroup otherwise exported deps don't work
-            "go_src": download,
-            "pkg_info": pkg_info,
-            "modinfo": download or modinfo,
-        },
+        provides = provides,
         labels = labels + [f"go_package:{i}" for i in install] + ["go_module_path:" + module],
         visibility = visibility,
         needs_transitive_deps = True,
