@@ -7,6 +7,7 @@ import (
 	"go/build"
 	"go/types"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,6 +99,31 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 		return nil, err
 	}
 	return packagesToResponse(rootpath, pkgs, dirs)
+}
+
+// LoadOffline is like Load but rather than querying plz to find the file to load, it just
+// walks a file tree looking for pkg_info.json files.
+func LoadOffline(req *DriverRequest, searchDir string, files []string) (*DriverResponse, error) {
+	pkgs := []*packages.Package{}
+	if err := filepath.WalkDir(searchDir, func(path string, d fs.DirEntry, err error) error {
+		lpkgs := []*packages.Package{}
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, "pkg_info.json") {
+			return err
+		} else if b, err := os.ReadFile(path); err != nil {
+			return fmt.Errorf("failed to read %s: %w", path, err)
+		} else if err := json.Unmarshal(b, &lpkgs); err != nil {
+			return fmt.Errorf("failed to decode %s: %w", path, err)
+		}
+		pkgs = append(pkgs, lpkgs...)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	dirs := map[string]struct{}{}
+	for _, file := range files {
+		dirs[filepath.Dir(file)] = struct{}{}
+	}
+	return packagesToResponse(searchDir, pkgs, dirs)
 }
 
 func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[string]struct{}) (*DriverResponse, error) {
