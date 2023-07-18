@@ -139,7 +139,6 @@ Help = A built target for a go.mod, which can help avoid the need to pass module
 [PluginConfig "pkg_info"]
 Type = bool
 DefaultValue = true
-Optional = true
 Help = Generate pkg info for Go targets
 
 [Plugin "shell"]

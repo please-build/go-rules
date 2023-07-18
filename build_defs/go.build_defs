@@ -220,7 +220,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
-               _generate_import_config:bool=True, _generate_pkg_info:bool=True,
+               _generate_import_config:bool=True, _generate_pkg_info:bool=CONFIG.GO.PKG_INFO,
                import_path:str='', labels:list=[], package:str=None, pgo_file:str=None):
     """Generates a Go library which can be reused by other rules.
 
@@ -404,7 +404,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     )
 
     # Package info rule for the Go packages driver
-    if _generate_pkg_info and CONFIG.GO.PKG_INFO:
+    if _generate_pkg_info:
         deps += [_go_pkg_info(
             name = name,
             srcs = srcs + resources,
