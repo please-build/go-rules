@@ -45,7 +45,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    if semver_check(version, ">= 1.20.0") and install_std is None:
+    if version != "" and semver_check(version, ">= 1.20.0") and install_std is None:
         install_std = True
 
     return _go_toolchain(
