@@ -1583,7 +1583,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
         'opt': f'{gen_import_cfg} && {_link_cmd} {flags} -s -w $SRCS',
     }
     if gcov and CONFIG.GO.CPP_COVERAGE:
-        cmds['cover'] = f'{gen_import_cfg} && {_link_cmd} {flags} -extldflags="-lgcov" $SRCS'
+        cmds['cover'] = f'{gen_import_cfg} && {_link_cmd} {flags} -extldflags="--coverage" $SRCS'
 
     return cmds, {
         'go': [CONFIG.GO.GO_TOOL],
