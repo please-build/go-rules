@@ -38,7 +38,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
     assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
 
     if CONFIG.BUILD_CONFIG == "cover":
-        linker_flags += ["-lgcov"]
+        linker_flags += ["--coverage"]
 
     if not srcs:
         return go_library(
