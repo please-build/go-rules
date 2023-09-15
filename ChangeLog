@@ -1,3 +1,7 @@
+Version 1.8.2
+-------------
+    * Remove implicit dependency on GCC toolchain when running under coverage profile (#155)
+
 Version 1.8.1
 -------------
     * Add a config option to allow toggling pkg info generation (#150)
