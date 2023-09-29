@@ -1264,6 +1264,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         tag = "modinfo",
         outs = [f"_{name}.modinfo"],
         cmd = f"echo '{module}@{version}' > $OUT",
+        requires = ["modinfo"],
+        test_only = test_only,
+        deps = deps,
     )
     return build_rule(
         name = name,
@@ -1284,8 +1287,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         sandbox = False,
         licences = licences,
         visibility = visibility,
-        deps = deps + [modinfo],
-    )
+        deps = deps,
+    ), modinfo
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], labels:list=[],
@@ -1338,7 +1341,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     install = [f"{module}/{i}" if i != "." and i != "" else module for i in install]
 
     if not download:
-        download = go_mod_download(
+        download, modinfo = go_mod_download(
             name = name,
             _tag = "get",
             module = module,
@@ -1351,18 +1354,9 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             strip = strip,
             patch = patch,
         )
+    else:
+        modinfo = download
     outs = []
-
-    # Modinfo entry for the linker
-    if not download:
-        modinfo = build_rule(
-            name = name,
-            tag = "modinfo",
-            outs = [f"_{name}.modinfo"],
-            cmd = f"echo '{module}@{version}' > $OUT",
-            test_only = test_only,
-        )
-        deps += [modinfo]
 
     # Gets the expected archive name given a target package
     def archive_name(i):
@@ -1415,7 +1409,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     provides = {
         "go": f":{name}", # provide the filegroup otherwise exported deps don't work
         "go_src": download,
-        "modinfo": download or modinfo,
+        "modinfo": modinfo,
     }
 
     # Package info rule for the Go packages driver
@@ -1463,7 +1457,7 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
         env = {'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0'},
         test_only = test_only,
         deps = deps,
-        requires = ['modinfo', 'go'],
+        requires = ['modinfo'],
     )
 
 
