@@ -262,6 +262,9 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             tag = "modinfo",
             outs = [f"_{name}.modinfo"],
             cmd = f"echo '{_module}' > $OUT",
+            requires = ["modinfo"],
+            test_only = test_only,
+            deps = deps,
         )
     else:
         # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
