@@ -388,7 +388,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             labels=labels,
         )
-        provides = {'go': ':' + name, 'go_src': lib_rule}
+        provides = {'go': ':' + name, 'go_src': lib_rule, 'modinfo': modinfo}
         if cover and not CONFIG.GO.COVERAGEREDESIGN:
             provides['cover_vars'] = cover_vars
         return build_rule(
@@ -432,11 +432,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             complete = complete,
             test_only = test_only,
         )]
-    # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
-    modinfo = filegroup(
-        name = name,
-        tag = "modinfo",
-    )
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs or cover:
