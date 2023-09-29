@@ -432,6 +432,11 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             complete = complete,
             test_only = test_only,
         )]
+    # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
+    modinfo = filegroup(
+        name = name,
+        tag = "modinfo",
+    )
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs or cover:
@@ -453,7 +458,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if pgo_file:
         srcs['pgo'] = [pgo_file]
 
-    provides = {'go': ':' + name, 'go_src': src_rule}
+    provides = {'go': ':' + name, 'go_src': src_rule, 'modinfo': modinfo}
     if cover and not CONFIG.GO.COVERAGEREDESIGN:
         provides['cover_vars'] = cover_vars
     return build_rule(
