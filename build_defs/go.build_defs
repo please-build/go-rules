@@ -262,6 +262,9 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             tag = "modinfo",
             outs = [f"_{name}.modinfo"],
             cmd = f"echo '{_module}' > $OUT",
+            requires = ["modinfo"],
+            test_only = test_only,
+            deps = deps,
         )
     else:
         # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
@@ -388,7 +391,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             labels=labels,
         )
-        provides = {'go': ':' + name, 'go_src': lib_rule}
+        provides = {'go': ':' + name, 'go_src': lib_rule, 'modinfo': modinfo}
         if cover and not CONFIG.GO.COVERAGEREDESIGN:
             provides['cover_vars'] = cover_vars
         return build_rule(
@@ -453,7 +456,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if pgo_file:
         srcs['pgo'] = [pgo_file]
 
-    provides = {'go': ':' + name, 'go_src': src_rule}
+    provides = {'go': ':' + name, 'go_src': src_rule, 'modinfo': modinfo}
     if cover and not CONFIG.GO.COVERAGEREDESIGN:
         provides['cover_vars'] = cover_vars
     return build_rule(
@@ -1164,7 +1167,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     install_args = " ".join([f"--install={i}" for i in install])
 
     if not download:
-        download = go_mod_download(
+        download, _ = go_mod_download(
             name = tag(name, "dl"),
             module = module,
             version = version,
@@ -1264,6 +1267,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         tag = "modinfo",
         outs = [f"_{name}.modinfo"],
         cmd = f"echo '{module}@{version}' > $OUT",
+        requires = ["modinfo"],
+        test_only = test_only,
+        deps = deps,
     )
     return build_rule(
         name = name,
@@ -1275,6 +1281,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         tools = {
             "go": [CONFIG.GO.GO_TOOL],
         },
+        provides = {
+            "modinfo": modinfo,
+        },
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
@@ -1285,7 +1294,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         licences = licences,
         visibility = visibility,
         deps = deps + [modinfo],
-    )
+    ), modinfo
+
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], labels:list=[],
@@ -1338,7 +1348,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     install = [f"{module}/{i}" if i != "." and i != "" else module for i in install]
 
     if not download:
-        download = go_mod_download(
+        download, modinfo = go_mod_download(
             name = name,
             _tag = "get",
             module = module,
@@ -1351,18 +1361,15 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             strip = strip,
             patch = patch,
         )
-    outs = []
-
-    # Modinfo entry for the linker
-    if not download:
-        modinfo = build_rule(
+    else:
+        modinfo = filegroup(
             name = name,
             tag = "modinfo",
-            outs = [f"_{name}.modinfo"],
-            cmd = f"echo '{module}@{version}' > $OUT",
+            deps = deps + [download],
+            requires = ["modinfo"],
             test_only = test_only,
         )
-        deps += [modinfo]
+    outs = []
 
     # Gets the expected archive name given a target package
     def archive_name(i):
@@ -1415,7 +1422,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     provides = {
         "go": f":{name}", # provide the filegroup otherwise exported deps don't work
         "go_src": download,
-        "modinfo": download or modinfo,
+        "modinfo": modinfo,
     }
 
     # Package info rule for the Go packages driver
@@ -1463,7 +1470,7 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
         env = {'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0'},
         test_only = test_only,
         deps = deps,
-        requires = ['modinfo', 'go'],
+        requires = ['modinfo'],
     )
 
 
