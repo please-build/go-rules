@@ -1,7 +1,7 @@
 plugin_repo(
     name = "e2e",
     plugin = "plugin-integration-testing",
-    revision="b9b913ed4b13aac4b921e70c716fca6615eb681a"
+    revision="v1.0.2"
 )
 
 plugin_repo(
