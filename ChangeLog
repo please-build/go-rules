@@ -1,3 +1,9 @@
+Version 1.9.0
+-------------
+    * Fix: don't check toolchain version when a version isn't provided (#154)
+    * `go_repo` now provides module info so `go version -m` works as expected (#158)
+    * Go module info build actions are now more efficient with their inputs (#157)
+
 Version 1.8.2
 -------------
     * Remove implicit dependency on GCC toolchain when running under coverage profile (#155)
