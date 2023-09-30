@@ -1281,6 +1281,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         tools = {
             "go": [CONFIG.GO.GO_TOOL],
         },
+        provides = {
+            "modinfo": modinfo,
+        },
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
@@ -1290,7 +1293,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         sandbox = False,
         licences = licences,
         visibility = visibility,
-        deps = deps,
+        deps = deps + [modinfo],
     ), modinfo
 
 
