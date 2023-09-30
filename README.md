@@ -76,3 +76,5 @@ go_binary(
 
 Go is especially well suited to writing command line tools and utilities. Binaries can be ran with `plz run`, or used 
 as a tool for other [custom rules](https://please.build/codelabs/genrule/#0). 
+
+**WARNING: From Go 1.20, Golang no longer ships the precompiled standard library and thus you MUST use `go_toolchain` or `go_system_toolchain`.**
