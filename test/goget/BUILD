@@ -1,4 +1,4 @@
-subinclude("//test/build_defs:e2e")
+subinclude("///shell//build_defs:shell", "//test/build_defs:e2e")
 
 please_repo_e2e_test(
     name = "go_get_test",
