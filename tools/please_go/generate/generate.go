@@ -15,6 +15,7 @@ import (
 
 type Generate struct {
 	moduleName         string
+	moduleArg          string
 	srcRoot            string
 	buildContext       build.Context
 	modFile            string
@@ -27,7 +28,11 @@ type Generate struct {
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, moduleDeps, install []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNames, moduleDeps, install []string) *Generate {
+	moduleArg := module
+	if version != "" {
+		moduleArg += "@" + version
+	}
 	return &Generate{
 		srcRoot:            srcRoot,
 		buildContext:       build.Default,
@@ -38,6 +43,7 @@ func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, modu
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
 		moduleName:         module,
+		moduleArg:          moduleArg,
 	}
 }
 
@@ -341,6 +347,7 @@ func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
 		name:          name,
 		kind:          packageKind(pkg),
 		srcs:          pkg.GoFiles,
+		module:        g.moduleArg,
 		cgoSrcs:       pkg.CgoFiles,
 		compilerFlags: pkg.CgoCFLAGS,
 		linkerFlags:   pkg.CgoLDFLAGS,

@@ -221,7 +221,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
                _generate_import_config:bool=True, _generate_pkg_info:bool=CONFIG.GO.PKG_INFO,
-               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None):
+               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None, _module:str=''):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -254,6 +254,25 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     src_labels = []
     private = out.startswith('_')
     package_path = _get_import_path(package, import_path)
+
+    if _module:
+        # We're in a module, create a modinfo file identifying it
+        modinfo = build_rule(
+            name = name,
+            tag = "modinfo",
+            outs = [f"_{name}.modinfo"],
+            cmd = f"echo '{_module}' > $OUT",
+        )
+    else:
+        # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
+        modinfo = filegroup(
+            name = name,
+            tag = "modinfo",
+            deps = deps,
+            requires = ["modinfo"],
+            test_only = test_only,
+        )
+    deps += [modinfo]
 
     # We could just depend on go_src for all our deps but that would mean bringing in srcs for targets outside this
     # package like third party sources which is especially slow on systems with slow syscall performance (macOS)
@@ -1100,8 +1119,9 @@ def _add_ld_flags(name:str, stdout:list):
 def _module_rule_name(module):
     return module.replace("/", "_")
 
-def go_repo(module: str, version:str=None, download:str=None, name:str=None, install:list=[], requirements:list=[],
-        licences=None, patch=None, visibility=["PUBLIC"]):
+
+def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
+            licences:list=None, patch:list=None, visibility:list=["PUBLIC"]):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1166,7 +1186,7 @@ def go_repo(module: str, version:str=None, download:str=None, name:str=None, ins
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --src_root=$SRCS_DOWNLOAD {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' --src_root=$SRCS_DOWNLOAD {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {

@@ -97,6 +97,7 @@ var opts = struct {
 		ThirdPartyFolder string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
 		ModFile          string   `long:"mod_file" description:"Path to the mod file to use to resolve dependencies against"`
 		Module           string   `long:"module" description:"The name of the current module"`
+		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
@@ -173,7 +174,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install)
+		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, opts.Generate.Version, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}

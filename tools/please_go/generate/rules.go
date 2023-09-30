@@ -5,6 +5,7 @@ import "github.com/bazelbuild/buildtools/build"
 type Rule struct {
 	name          string
 	kind          string
+	module        string
 	srcs          []string
 	cgoSrcs       []string
 	compilerFlags []string
@@ -54,4 +55,5 @@ func populateRule(r *build.Rule, targetState *Rule) {
 			},
 		})
 	}
+	r.SetAttr("_module", NewStringExpr(targetState.module))
 }
