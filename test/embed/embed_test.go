@@ -17,7 +17,7 @@ func TestEmbedDir(t *testing.T) {
 }
 
 func TestEmbedDirAll(t *testing.T) {
-	b, err := subdir.ReadFile("subdir/_test.txt")
+	b, err := subdirAll.ReadFile("subdir/_test.txt")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", strings.TrimSpace(string(b)))
 }
