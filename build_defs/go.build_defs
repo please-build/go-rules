@@ -1443,7 +1443,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     return filegroup(
         name = name,
         srcs = [a_rule],
-        deps = deps + [pkg_info] if CONFIG.GO.PKG_INFO else deps,
+        deps = deps + [pkg_info, modinfo] if CONFIG.GO.PKG_INFO else deps,
         exported_deps = exported_deps,
         provides = provides,
         labels = labels + [f"go_package:{i}" for i in install] + ["go_module_path:" + module],
