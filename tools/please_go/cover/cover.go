@@ -5,6 +5,8 @@ package cover
 import (
 	"bytes"
 	"encoding/json"
+	"go/parser"
+	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,12 +16,16 @@ import (
 )
 
 // WriteCoverage writes the necessary Go coverage information for a set of sources.
-func WriteCoverage(goTool, covercfg, output, pkg, pkgName string, srcs []string) error {
+func WriteCoverage(goTool, covercfg, output, pkg string, srcs []string) error {
+	pkgName, err := packageName(srcs[0])
+	if err != nil {
+		return err
+	}
 	const pkgConfigFile = "pkgcfg"
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
 		PkgPath:     pkg,
-		PkgName:     filepath.Base(pkgName),
+		PkgName:     pkgName,
 		Granularity: "perblock",
 	})
 	if err := os.WriteFile(pkgConfigFile, b, 0644); err != nil {
@@ -50,4 +56,14 @@ type coverConfig struct {
 	PkgName     string
 	Granularity string
 	ModulePath  string
+}
+
+// packageName returns the Go package for a file.
+func packageName(filename string) (string, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filename, nil, parser.PackageClauseOnly)
+	if err != nil {
+		return "", err
+	}
+	return f.Name.Name, nil
 }
