@@ -7,7 +7,10 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+
+	"github.com/please-build/go-rules/tools/please_go/install/toolchain"
 )
 
 // WriteCoverage writes the necessary Go coverage information for a set of sources.
@@ -16,13 +19,18 @@ func WriteCoverage(goTool, covercfg, output, pkg, pkgName string, srcs []string)
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
 		PkgPath:     pkg,
-		PkgName:     pkgName,
+		PkgName:     filepath.Base(pkgName),
 		Granularity: "perblock",
 	})
 	if err := os.WriteFile(pkgConfigFile, b, 0644); err != nil {
 		return err
 	}
 	var buf bytes.Buffer
+	// 1.21 requires a cover vars file to be written into the output file list
+	tc := toolchain.Toolchain{GoTool: goTool}
+	if version, err := tc.GoMinorVersion(); err == nil && version >= 21 {
+		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go\n"))
+	}
 	for _, src := range srcs {
 		buf.WriteString(strings.TrimSuffix(src, ".go") + ".cover.go\n")
 	}
