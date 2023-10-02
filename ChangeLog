@@ -1,5 +1,6 @@
 Version 1.9.1
 -------------
+    * Support :all syntax correctly when embedding (#161)
     * Minor dependency fix to 1.9.0
 
 Version 1.9.0
