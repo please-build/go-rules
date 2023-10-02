@@ -12,5 +12,5 @@ func TestGetVersion(t *testing.T) {
 
 	ver, err := tc.GoMinorVersion()
 	require.NoError(t, err)
-	require.Equal(t, 20, ver)
+	require.GreaterOrEqual(t, ver, 21)
 }
