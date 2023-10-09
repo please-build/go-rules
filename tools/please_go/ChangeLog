@@ -1,3 +1,7 @@
+Version 1.4.4
+-------------
+    * Don't set `_module` on go_binary commands in `go_repo`
+
 Version 1.4.3
 -------------
     * Don't try and pipe test output as it doesn't flush when the TestMain calls os.Exit
