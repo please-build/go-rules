@@ -16,7 +16,7 @@ type Rule struct {
 	deps          []string
 	embedPatterns []string
 	// TODO(jpoole):  handle external test
-	external bool
+	external, isCMD bool
 }
 
 func populateRule(r *build.Rule, targetState *Rule) {
@@ -55,7 +55,7 @@ func populateRule(r *build.Rule, targetState *Rule) {
 			},
 		})
 	}
-	if r.Kind() == "go_library" {
+	if !targetState.isCMD {
 		r.SetAttr("_module", NewStringExpr(targetState.module))
 	}
 }

@@ -203,7 +203,7 @@ func (g *Generate) generate(dir string) error {
 		return err
 	}
 
-	lib := g.libRule(pkg, dir)
+	lib := g.ruleForPackage(pkg, dir)
 	if lib == nil {
 		return nil
 	}
@@ -336,7 +336,7 @@ func (g *Generate) depTargets(imports []string) []string {
 	return deps
 }
 
-func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
+func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 	if len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) == 0 {
 		return nil
 	}
@@ -356,6 +356,7 @@ func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
 		hdrs:          pkg.HFiles,
 		deps:          g.depTargets(pkg.Imports),
 		embedPatterns: pkg.EmbedPatterns,
+		isCMD:         pkg.IsCommand(),
 	}
 }
 
