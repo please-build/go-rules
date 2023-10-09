@@ -55,5 +55,7 @@ func populateRule(r *build.Rule, targetState *Rule) {
 			},
 		})
 	}
-	r.SetAttr("_module", NewStringExpr(targetState.module))
+	if r.Kind() == "go_library" {
+		r.SetAttr("_module", NewStringExpr(targetState.module))
+	}
 }
