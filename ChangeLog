@@ -1,3 +1,8 @@
+Version 1.9.2
+-------------
+    * Fix issue with setting _module on go_binary rules within go_repo
+
+
 Version 1.9.1
 -------------
     * Support :all syntax correctly when embedding (#161)
