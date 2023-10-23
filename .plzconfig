@@ -1,5 +1,5 @@
 [Please]
-Version = >=17.0.0-beta.8
+Version = >=17.2.0
 
 [build]
 hashcheckers = sha256
@@ -82,7 +82,7 @@ Help = Changes the test working directory to be the package to be more inline wi
 [PluginConfig "cpp_coverage"]
 Type = bool
 DefaultValue = false
-Help = Whether to build C components with coverage 
+Help = Whether to build C components with coverage
 
 [PluginConfig "c_flags"]
 Inherit = true
@@ -135,6 +135,11 @@ Help = Compile for the Go race detector
 [PluginConfig "mod_file"]
 Optional = true
 Help = A built target for a go.mod, which can help avoid the need to pass modules via requirements to go_repo.
+
+[PluginConfig "pkg_info"]
+Type = bool
+DefaultValue = true
+Help = Generate pkg info for Go targets
 
 [Plugin "shell"]
 Target = //plugins:shell

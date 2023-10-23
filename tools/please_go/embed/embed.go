@@ -7,6 +7,7 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
+	"log"
 	"path"
 	"path/filepath"
 	"strings"
@@ -54,6 +55,7 @@ func Parse(gofiles []string) (*Cfg, error) {
 // AddPackage parses a go package and adds any embed patterns to the configuration
 func (cfg *Cfg) AddPackage(pkg *build.Package) error {
 	for _, pattern := range append(append(pkg.EmbedPatterns, pkg.TestEmbedPatterns...), pkg.XTestEmbedPatterns...) {
+		log.Printf("here %s", pattern)
 		paths, err := relglob(pkg.Dir, pattern)
 		if err != nil {
 			return err
@@ -79,6 +81,13 @@ func dirs(files []string) []string {
 }
 
 func relglob(dir, pattern string) ([]string, error) {
+	// Go allows prefixing the pattern with all: which picks up files prefixed with . or _ (by default these should be ignored)
+	includeHidden := false
+	if strings.HasPrefix(pattern, "all:") {
+		pattern = strings.TrimPrefix(pattern, "all:")
+		includeHidden = true
+	}
+
 	paths, err := filepath.Glob(path.Join(dir, pattern))
 	if err == nil && len(paths) == 0 {
 		return nil, fmt.Errorf("pattern %s: no matching paths found", pattern)
@@ -89,7 +98,9 @@ func relglob(dir, pattern string) ([]string, error) {
 			if err != nil {
 				return err
 			} else if !d.IsDir() {
-				ret = append(ret, strings.TrimLeft(strings.TrimPrefix(path, dir), string(filepath.Separator)))
+				if hidden := strings.HasPrefix(d.Name(), ".") || strings.HasPrefix(d.Name(), "_"); !hidden || includeHidden {
+					ret = append(ret, strings.TrimLeft(strings.TrimPrefix(path, dir), string(filepath.Separator)))
+				}
 			}
 			return nil
 		}); err != nil {

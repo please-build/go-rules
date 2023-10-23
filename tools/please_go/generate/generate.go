@@ -15,6 +15,7 @@ import (
 
 type Generate struct {
 	moduleName         string
+	moduleArg          string
 	srcRoot            string
 	buildContext       build.Context
 	modFile            string
@@ -29,7 +30,7 @@ type Generate struct {
 	localIncludePaths map[string]struct{}
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, moduleDeps, install []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNames, moduleDeps, install []string) *Generate {
 	// Ensure the srcRoot is absolute otherwise build.Import behaves badly
 	wd, err := os.Getwd()
 	if err != nil {
@@ -37,6 +38,10 @@ func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, modu
 	}
 	srcRoot = filepath.Join(wd, srcRoot)
 
+	moduleArg := module
+	if version != "" {
+		moduleArg += "@" + version
+	}
 	return &Generate{
 		srcRoot:            srcRoot,
 		buildContext:       build.Default,
@@ -47,6 +52,7 @@ func New(srcRoot, thirdPartyFolder, modFile, module string, buildFileNames, modu
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
 		moduleName:         module,
+		moduleArg:          moduleArg,
 		localIncludePaths:  map[string]struct{}{},
 	}
 }
@@ -274,7 +280,7 @@ func (g *Generate) generate(dir string) error {
 		return err
 	}
 
-	lib := g.libRule(pkg, dir)
+	lib := g.ruleForPackage(pkg, dir)
 	if lib == nil {
 		return nil
 	}
@@ -422,7 +428,7 @@ func (g *Generate) depTargets(imports []string) []string {
 	return deps
 }
 
-func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
+func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 	if len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) == 0 {
 		return nil
 	}
@@ -433,6 +439,7 @@ func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
 		name:          name,
 		kind:          packageKind(pkg),
 		srcs:          pkg.GoFiles,
+		module:        g.moduleArg,
 		cgoSrcs:       pkg.CgoFiles,
 		compilerFlags: pkg.CgoCFLAGS,
 		linkerFlags:   pkg.CgoLDFLAGS,
@@ -441,6 +448,7 @@ func (g *Generate) libRule(pkg *build.Package, dir string) *Rule {
 		hdrs:          pkg.HFiles,
 		deps:          append(g.getIncludeDepsFromCFlags(pkg), g.depTargets(pkg.Imports)...),
 		embedPatterns: pkg.EmbedPatterns,
+		isCMD:         pkg.IsCommand(),
 	}
 }
 
@@ -563,8 +571,8 @@ func nameForLibInPkg(module, pkg string) string {
 // trimPath is like strings.TrimPrefix but is path aware. It removes base from target if target starts with base,
 // otherwise returns target unmodified.
 func trimPath(target, base string) string {
-	baseParts := filepath.SplitList(base)
-	targetParts := filepath.SplitList(target)
+	baseParts := strings.Split(filepath.Clean(base), "/")
+	targetParts := strings.Split(filepath.Clean(target), "/")
 
 	if len(targetParts) < len(baseParts) {
 		return target

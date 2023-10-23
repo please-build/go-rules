@@ -2,8 +2,8 @@ subinclude("//build_defs:go")
 
 go_toolchain(
     name = "toolchain",
-    version = "1.20.3",
     install_std = False,
+    version = "1.21.1",
 )
 
 go_stdlib(
@@ -184,24 +184,24 @@ go_module(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/term",
     version = "v0.0.0-20210615171337-6886f2dfbf5b",
-    deps = [":xsys"],
     visibility = ["PUBLIC"],
+    deps = [":xsys"],
 )
 
 # This is not really necessary, it's here to test the case of a separate go_mod_download
 # for the gopackagesdriver.
 go_mod_download(
     name = "xsync_download",
+    licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
     version = "v0.1.0",
-    licences = ["BSD-3-Clause"],
 )
 
 go_module(
     name = "xsync",
+    download = ":xsync_download",
     install = ["errgroup"],
     module = "golang.org/x/sync",
-    download = ":xsync_download",
     visibility = ["PUBLIC"],
 )
 

@@ -5,6 +5,7 @@ import "github.com/bazelbuild/buildtools/build"
 type Rule struct {
 	name          string
 	kind          string
+	module        string
 	srcs          []string
 	cgoSrcs       []string
 	compilerFlags []string
@@ -15,7 +16,7 @@ type Rule struct {
 	deps          []string
 	embedPatterns []string
 	// TODO(jpoole):  handle external test
-	external bool
+	external, isCMD bool
 }
 
 func populateRule(r *build.Rule, targetState *Rule) {
@@ -53,5 +54,8 @@ func populateRule(r *build.Rule, targetState *Rule) {
 				NewStringList(targetState.embedPatterns),
 			},
 		})
+	}
+	if !targetState.isCMD {
+		r.SetAttr("_module", NewStringExpr(targetState.module))
 	}
 }

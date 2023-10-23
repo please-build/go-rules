@@ -5,13 +5,22 @@ package cover
 import (
 	"bytes"
 	"encoding/json"
+	"go/parser"
+	"go/token"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+
+	"github.com/please-build/go-rules/tools/please_go/install/toolchain"
 )
 
 // WriteCoverage writes the necessary Go coverage information for a set of sources.
-func WriteCoverage(goTool, covercfg, output, pkg, pkgName string, srcs []string) error {
+func WriteCoverage(goTool, covercfg, output, pkg string, srcs []string) error {
+	pkgName, err := packageName(srcs[0])
+	if err != nil {
+		return err
+	}
 	const pkgConfigFile = "pkgcfg"
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
@@ -23,6 +32,11 @@ func WriteCoverage(goTool, covercfg, output, pkg, pkgName string, srcs []string)
 		return err
 	}
 	var buf bytes.Buffer
+	// 1.21 requires a cover vars file to be written into the output file list
+	tc := toolchain.Toolchain{GoTool: goTool}
+	if version, err := tc.GoMinorVersion(); err == nil && version >= 21 {
+		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go\n"))
+	}
 	for _, src := range srcs {
 		buf.WriteString(strings.TrimSuffix(src, ".go") + ".cover.go\n")
 	}
@@ -42,4 +56,14 @@ type coverConfig struct {
 	PkgName     string
 	Granularity string
 	ModulePath  string
+}
+
+// packageName returns the Go package for a file.
+func packageName(filename string) (string, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filename, nil, parser.PackageClauseOnly)
+	if err != nil {
+		return "", err
+	}
+	return f.Name.Name, nil
 }

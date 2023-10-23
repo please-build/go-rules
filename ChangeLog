@@ -1,3 +1,58 @@
+Version 1.9.2
+-------------
+    * Fix issue with setting _module on go_binary rules within go_repo
+
+
+Version 1.9.1
+-------------
+    * Support :all syntax correctly when embedding (#161)
+    * Minor dependency fix to 1.9.0
+
+Version 1.9.0
+-------------
+    * Fix: don't check toolchain version when a version isn't provided (#154)
+    * `go_repo` now provides module info so `go version -m` works as expected (#158)
+    * Go module info build actions are now more efficient with their inputs (#157)
+
+Version 1.8.2
+-------------
+    * Remove implicit dependency on GCC toolchain when running under coverage profile (#155)
+
+Version 1.8.1
+-------------
+    * Add a config option to allow toggling pkg info generation (#150)
+
+Version 1.8.0
+-------------
+    * Added `pgo_file` argument to `go_library` which enables profile-guided optimisation.
+
+Version 1.7.6
+-------------
+    * Honour `flags` argument correctly to `go_test`
+
+Version 1.7.5
+-------------
+    * Fix issue with missing test results when tests call `os.Exit()` when using go 1.20+. This only
+      caused the report to miss rows, as the test result file wasn't being flushed, but would never
+      cause the test to pass when it should have failed. (#142)
+
+Version 1.7.4
+-------------
+    * Fix issues with with tests using TestMain in go1.20+ where we would run the tests
+      for them. This is the responsibility of TestMain.
+    * Set GOROOT when compiling stdlib as we need this for setting `pkg/include` for cgo/asm (#138)
+
+Version 1.7.3
+-------------
+    * Refactor `please_go` download test to avoid subrepo references (#136)
+      This fixes fatal errors with `plz query graph` in repos that use go-rules, a regression
+      present since version 1.7.0.
+
+Version 1.7.2
+------------
+    * Use correct version of the go tool (#128)
+    * Write `asm.h` to the tmp dir rather than the goroot (#125)
+
 Version 1.7.1
 ------------
     * Added missing `resources` option to `go_benchmark` (#121)

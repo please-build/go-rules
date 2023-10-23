@@ -38,6 +38,7 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goar
 			{Key: "GOOS", Value: goos},
 		},
 	}
+	seen := map[string]struct{}{}
 	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".modinfo") {
 			return err
@@ -46,11 +47,15 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goar
 		if err != nil {
 			return err
 		}
-		if module, version, found := strings.Cut(strings.TrimSpace(string(contents)), "@"); found {
-			bi.Deps = append(bi.Deps, &debug.Module{
-				Path:    module,
-				Version: version,
-			})
+		mod := strings.TrimSpace(string(contents))
+		if _, present := seen[mod]; !present {
+			seen[mod] = struct{}{}
+			if module, version, found := strings.Cut(mod, "@"); found {
+				bi.Deps = append(bi.Deps, &debug.Module{
+					Path:    module,
+					Version: version,
+				})
+			}
 		}
 		return nil
 	}); err != nil {
