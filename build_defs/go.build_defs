@@ -1184,18 +1184,21 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     else:
         modFileArg = ""
 
+    src_root = f"pkg/{CONFIG.OS}_{CONFIG.ARCH}/{module}"
+
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' --src_root=$SRCS_DOWNLOAD {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && mkdir -p $SRC_ROOT && mv $SRCS_DOWNLOAD/* $SRC_ROOT && $TOOL generate {modFileArg} --module {module} --version '{version}' --src_root=$SRC_ROOT {install_args} {requirements} && mv $SRC_ROOT $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
             "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
+            "SRC_ROOT": src_root,
         },
         deps = [CONFIG.GO.MOD_FILE] if CONFIG.GO.MOD_FILE else None,
         _subrepo = True,

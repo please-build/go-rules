@@ -26,9 +26,18 @@ type Generate struct {
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 	thirdPartyFolder   string
 	install            []string
+	// Any paths included via -I or -L in this module that we should generate filegroups for
+	localIncludePaths map[string]struct{}
 }
 
 func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNames, moduleDeps, install []string) *Generate {
+	// Ensure the srcRoot is absolute otherwise build.Import behaves badly
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	srcRoot = filepath.Join(wd, srcRoot)
+
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -44,6 +53,7 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNa
 		install:            install,
 		moduleName:         module,
 		moduleArg:          moduleArg,
+		localIncludePaths:  map[string]struct{}{},
 	}
 }
 
@@ -59,7 +69,59 @@ func (g *Generate) Generate() error {
 	if err := g.generateAll(g.srcRoot); err != nil {
 		return err
 	}
+	if err := g.generateIncludeFilegroups(); err != nil {
+		return err
+	}
 	return g.writeInstallFilegroup()
+}
+
+func (g *Generate) generateIncludeFilegroups() error {
+	for pkg := range g.localIncludePaths {
+		if err := g.generateIncludeFilegroup(pkg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (g *Generate) generateIncludeFilegroup(pkg string) error {
+	var srcs []string
+	var exportedDeps []string
+
+	entries, err := os.ReadDir(filepath.Join(g.srcRoot, pkg))
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			if g.isBuildFile(entry.Name()) {
+				continue
+			}
+			srcs = append(srcs, entry.Name())
+			continue
+		}
+
+		if err := g.generateIncludeFilegroup(filepath.Join(pkg, entry.Name())); err != nil {
+			return err
+		}
+
+		exportedDeps = append(exportedDeps, buildTarget("inc", filepath.Join(pkg, entry.Name()), ""))
+	}
+
+	file, err := parseOrCreateBuildFile(filepath.Join(g.srcRoot, pkg), g.buildFileNames)
+	if err != nil {
+		return err
+	}
+
+	rule := NewRule("filegroup", "inc")
+	rule.SetAttr("srcs", NewStringList(srcs))
+	rule.SetAttr("exported_deps", NewStringList(exportedDeps))
+	rule.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
+
+	file.Stmt = append(file.Stmt, rule.Call)
+
+	return saveBuildFile(file)
 }
 
 func (g *Generate) installTargets() []string {
@@ -193,8 +255,23 @@ func (g *Generate) pkgDir(target string) string {
 }
 
 func (g *Generate) importDir(target string) (*build.Package, error) {
-	dir := filepath.Join(os.Getenv("TMP_DIR"), g.pkgDir(target))
-	return g.buildContext.ImportDir(dir, 0)
+	i := "./" + trimPath(target, g.moduleName)
+	if i == "./." {
+		i = "."
+	}
+	pkg, err := g.buildContext.Import("./"+i, g.srcRoot, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// We import with an absolute source dir which means some -I and -L args will include the current tmp dir. We should
+	// replace those with an env var that will be expanded correctly at build time.
+	replaceTmpDirWithEnvVar(pkg.CgoCFLAGS)
+	replaceTmpDirWithEnvVar(pkg.CgoCPPFLAGS)
+	replaceTmpDirWithEnvVar(pkg.CgoCXXFLAGS)
+	replaceTmpDirWithEnvVar(pkg.CgoLDFLAGS)
+
+	return pkg, nil
 }
 
 func (g *Generate) generate(dir string) error {
@@ -209,6 +286,21 @@ func (g *Generate) generate(dir string) error {
 	}
 
 	return g.createBuildFile(dir, lib)
+}
+
+func (g *Generate) getIncludeDepsFromCFlags(pkg *build.Package) []string {
+	goRootPath := `"$TMP_DIR"/pkg/` + g.buildContext.GOOS + "_" + g.buildContext.GOARCH + "/"
+
+	var ret []string
+	for _, flag := range append(pkg.CgoCFLAGS, pkg.CgoLDFLAGS...) {
+		if strings.HasPrefix(flag, "-I"+goRootPath) {
+			ret = append(ret, g.includeTarget(strings.TrimPrefix(flag, "-I"+goRootPath)))
+		}
+		if strings.HasPrefix(flag, "-L"+goRootPath) {
+			ret = append(ret, g.includeTarget(strings.TrimPrefix(flag, "-L"+goRootPath)))
+		}
+	}
+	return ret
 }
 
 func (g *Generate) matchesInstall(dir string) bool {
@@ -354,10 +446,75 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		pkgConfigs:    pkg.CgoPkgConfig,
 		asmFiles:      pkg.SFiles,
 		hdrs:          pkg.HFiles,
-		deps:          g.depTargets(pkg.Imports),
+		deps:          append(g.getIncludeDepsFromCFlags(pkg), g.depTargets(pkg.Imports)...),
 		embedPatterns: pkg.EmbedPatterns,
 		isCMD:         pkg.IsCommand(),
 	}
+}
+
+// replaceTmpDirWithEnvVar replaces the current wd with the env var $TMP_DIR. This helps in cases where ${SRC_DIR} has
+// been resolved to the absolute path based on the current build directory. To make this portable, it needs to use the
+// env var which will be expanded at build time.
+func replaceTmpDirWithEnvVar(flags []string) {
+	tmpDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	for i := range flags {
+		flags[i] = strings.ReplaceAll(flags[i], tmpDir, `"$TMP_DIR"`)
+	}
+}
+
+func (g *Generate) testRule(pkg *build.Package, prodRule *Rule) *Rule {
+	// The name of the target should match the dir it's in, or the basename of the module if it's in the repo root.
+	name := filepath.Base(pkg.Dir)
+	if strings.HasSuffix(pkg.Dir, g.srcRoot) || name == "" {
+		name = filepath.Base(g.moduleName)
+	}
+
+	if len(pkg.TestGoFiles) == 0 {
+		return nil
+	}
+	deps := g.depTargets(pkg.TestImports)
+
+	if prodRule != nil {
+		deps = append(deps, ":"+prodRule.name)
+	}
+	// TODO(jpoole): handle external tests
+	return &Rule{
+		name:          name,
+		kind:          "go_test",
+		srcs:          pkg.TestGoFiles,
+		deps:          deps,
+		embedPatterns: pkg.TestEmbedPatterns,
+	}
+}
+
+func (g *Generate) includeTarget(path string) string {
+	module := ""
+	for _, mod := range append(g.moduleDeps, g.moduleName) {
+		if strings.HasPrefix(path, mod) {
+			if len(module) < len(mod) {
+				module = mod
+			}
+		}
+	}
+
+	if module == "" {
+		// If we can't find this import, we can return nothing and the build rule will fail at build time reporting a
+		// sensible error. It may also be an import from the go SDK which is fine.
+		return ""
+	}
+
+	subrepoName := g.subrepoName(module)
+	packageName := strings.TrimPrefix(path, module)
+	packageName = strings.TrimPrefix(packageName, "/")
+
+	target := buildTarget("inc", packageName, subrepoName)
+	if module == g.moduleName {
+		g.localIncludePaths[packageName] = struct{}{}
+	}
+	return target
 }
 
 func (g *Generate) depTarget(importPath string) string {
