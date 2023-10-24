@@ -375,7 +375,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             deps = [transitive_headers],
         )
         lib_rule = go_library(
-            name = f'_{name}#libsss',
+            name = f'_{name}#lib',
             srcs = srcs,
             resources = resources,
             deps = deps,
