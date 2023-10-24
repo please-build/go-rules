@@ -1,8 +1,10 @@
 package generate
 
 import (
+	"bufio"
 	"fmt"
 	"go/build"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,10 +58,60 @@ func (g *Generate) Generate() error {
 	if err := g.writeConfig(); err != nil {
 		return err
 	}
+	if err := g.parseImportConfigs(); err != nil {
+		return err
+	}
+
 	if err := g.generateAll(g.srcRoot); err != nil {
 		return err
 	}
 	return g.writeInstallFilegroup()
+}
+
+// parseImportConfigs walks through the build dir looking for .importconfig files, parsing the # please:target //foo:bar
+// comments to generate the known imports. These are the deps that are passed to the go_repo e.g. for legacy go_module
+// rules.
+func (g *Generate) parseImportConfigs() error {
+	return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+		if filepath.Ext(path) == ".importconfig" {
+			target, pkgs, err := parseImportConfig(path)
+			if err != nil {
+				return err
+			}
+			if target == "" {
+				return nil
+			}
+			for _, p := range pkgs {
+				g.knownImportTargets[p] = target
+			}
+		}
+		return nil
+	})
+}
+
+func parseImportConfig(path string) (string, []string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", nil, err
+	}
+	defer f.Close()
+
+	target := ""
+	var imports []string
+
+	importCfg := bufio.NewScanner(f)
+	for importCfg.Scan() {
+		line := importCfg.Text()
+		if strings.HasPrefix(line, "#") {
+			if strings.HasPrefix(line, "# please:target ") {
+				target = "@" + strings.TrimSpace(strings.TrimPrefix(line, "# please:target "))
+			}
+			continue
+		}
+		parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
+		imports = append(imports, parts[0])
+	}
+	return target, imports, nil
 }
 
 func (g *Generate) installTargets() []string {

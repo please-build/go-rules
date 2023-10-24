@@ -465,7 +465,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         deps = deps,
         internal_deps = [src_rule],
         outs = outs,
-        cmd = _go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file),
+        cmd = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file),
         visibility = visibility,
         building_description = "Compiling...",
         requires = ['go'],
@@ -477,7 +477,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         exported_deps = exported_deps,
     )
 
-def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname=False):
+def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
     """
     Generates a .importconfig file for all .a files within a go pkg directory for use with
     `go tool {compile/link} -importcfg`. This is used to generate a config file for the go SDK and third party
@@ -499,8 +499,14 @@ def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname=F
         ])
     else:
         format_packagefile_directive = 'xargs -I{} echo "packagefile {}=' + pkg_location + '/{}.a"'
+    target = canonicalise(":" + name)
 
-    return f'{find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} | sort -u > {out}'
+    # Provides some metadata around which build target imports come from. This is useful for debugging but is also used
+    # by go_repo to enable go_repo rules to depend on go_module rules.
+    target_comment = f"echo \"# please:target {target}\" > {out}"
+
+    return f'{target_comment} && {find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} | sort -u >> {out}'
+
 def _aggregate_import_cfg_cmd():
     return 'find . -name "*.importconfig" | xargs -I{} cat {} | sort -u >> importconfig'
 
@@ -587,7 +593,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         deps = deps,
         test_only = test_only,
     )
-    cmds, tools = _go_binary_cmds(static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
     if CONFIG.GO.STDLIB:
         deps += _stdlib()
 
@@ -764,7 +770,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         import_path = "main",
         _generate_pkg_info = False,
     )
-    cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo)
 
 
     test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
@@ -912,7 +918,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         test_only = test_only,
         import_path="main",
     )
-    cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo)
 
     return build_rule(
         name=name,
@@ -1069,7 +1075,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     if CONFIG.GO.STDLIB:
         deps += _stdlib()
     else:
-        cmd += [_generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')]
+        cmd += [_generate_pkg_import_cfg_cmd(name, "goroot.importconfig", '"$GOROOT"')]
     cmd += [
         _aggregate_import_cfg_cmd(),
         f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO {cc_tool_flag} --out=pkg/{CONFIG.OS}_{CONFIG.ARCH} " + " ".join(install),
@@ -1124,7 +1130,7 @@ def _module_rule_name(module):
 
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
-            licences:list=None, patch:list=None, visibility:list=["PUBLIC"]):
+            licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[]):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1156,6 +1162,8 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
       licences(list): The licence of this module to be checked against the allowed licences configured in Please.
       patch(list): Any patch files to apply to the downloaded module.
       visibility(list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
+      deps(list): Any deps on other rule kinds that provide packages, for example go_module(). This can be used to
+                  migrate to go_repo incrementally, one module at a time.
     """
     subrepo_name = _module_rule_name(module)
 
@@ -1197,9 +1205,10 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
             "GOARCH": CONFIG.ARCH,
             "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
         },
-        deps = [CONFIG.GO.MOD_FILE] if CONFIG.GO.MOD_FILE else None,
+        deps = deps + [CONFIG.GO.MOD_FILE] if CONFIG.GO.MOD_FILE else deps,
         _subrepo = True,
         labels=["go_module_path:" + module],
+        requires = ["import_config"],
     )
     subrepo(
         name = subrepo_name,
@@ -1415,7 +1424,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         deps = [a_rule],
         visibility = visibility,
         test_only = test_only,
-        cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
+        cmd = _generate_pkg_import_cfg_cmd(name, '"$OUT"', '"$PKG_DIR"', True),
         outs = [f'{name}.importconfig'],
     )
 
@@ -1528,7 +1537,7 @@ def _set_go_env():
     return cmd
 
 
-def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
+def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
     """Returns the commands to run for building a Go library."""
     filter_cmd = 'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter ${SRCS_GO})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
@@ -1544,7 +1553,7 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
 
     gen_import_cfg = _set_go_env()
     if not CONFIG.GO.STDLIB:
-        gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
+        gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd(name, "goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
 
@@ -1561,14 +1570,14 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     return cmds
 
 
-def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False):
+def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False):
     """Returns the commands to run for linking a Go binary."""
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
 
     gen_import_cfg = _set_go_env()
     if not CONFIG.GO.STDLIB:
-        gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
+        gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd(name, "goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
 
     linkerdefs = []
