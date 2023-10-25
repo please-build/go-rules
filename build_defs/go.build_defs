@@ -1644,7 +1644,7 @@ def _collect_linker_flags(static, definitions):
     def collect_linker_flags(name):
         ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
         if ldflags or pkg_config:
-            cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions=definitions)
+            cmds, _ =  _go_binary_cmds(name=name, static=static, ldflags=ldflags, pkg_config=pkg_config, definitions=definitions)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return collect_linker_flags
