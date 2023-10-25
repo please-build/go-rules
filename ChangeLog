@@ -1,3 +1,7 @@
+Version 1.10.0
+-------------
+    * Allow go_repo to depend on go_module rules to enable an incremental migration (#166)
+
 Version 1.9.2
 -------------
     * Fix issue with setting _module on go_binary rules within go_repo
