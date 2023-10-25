@@ -201,6 +201,9 @@ func (install *PleaseGoInstall) parseImportConfig() error {
 		importCfg := bufio.NewScanner(f)
 		for importCfg.Scan() {
 			line := importCfg.Text()
+			if strings.HasPrefix(line, "#") {
+				continue
+			}
 			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
 			install.compiledPackages[parts[0]] = parts[1]
 		}

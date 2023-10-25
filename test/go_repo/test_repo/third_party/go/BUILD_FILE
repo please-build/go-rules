@@ -10,6 +10,7 @@ go_repo(
     module = "github.com/stretchr/testify",
     install = ["..."],
     version = "v1.7.0",
+    deps = [":yaml.v3"], # test we can depend on go_modules
 )
 
 go_repo(
@@ -30,8 +31,10 @@ go_repo(
     version = "v1.1.1",
 )
 
-go_repo(
-    licences = ["MIT"],
+go_module(
+    name = "yaml.v3",
     module = "gopkg.in/yaml.v3",
     version = "v3.0.0-20210107192922-496545a6307b",
+    licences = ["MIT"],
+    visibility = ["PUBLIC"],
 )
