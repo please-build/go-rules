@@ -97,7 +97,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         srcs = [cgo_rule + '|c'] + c_srcs,
         hdrs = [cgo_rule + '|h'] + hdrs,
         compiler_flags = compiler_flags + [
-            '-Wno-error',
+            '-I', '"$PKG_DIR"',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
         ],
         pkg_config_libs = pkg_config,
