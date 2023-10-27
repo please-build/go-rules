@@ -113,6 +113,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         deps = deps,
         _generate_import_config=False,
         import_path=import_path,
+        _module = _module,
     )
 
     output = package if package else name
