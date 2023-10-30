@@ -80,14 +80,13 @@ var opts = struct {
 		} `positional-args:"true"`
 	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
 	PackageInfo struct {
-		ImportPath string            `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
-		Pkg        string            `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
-		ImportMap  map[string]string `short:"m" long:"import_map" description:"Existing map of imports"`
+		ImportPath string `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
+		Pkg        string `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
+		ExportFile string `short:"e" long:"export_file" description:"The export file for this package"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
-		ModulePath   string   `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
-		Strip        string   `short:"s" long:"strip" description:"Prefix to strip off package directories"`
-		Srcs         string   `long:"srcs" env:"SRCS_SRCS" required:"true" description:"Source files of the module"`
+		ModulePath   string   `short:"m" long:"module" required:"true" description:"The module name"`
+		SrcRoot      string   `long:"src_root" required:"true" description:"Source root of the module"`
 		ImportConfig string   `long:"importconfig" env:"SRCS_IC" description:"Importconfig file for locating gc export data"`
 		Packages     []string `short:"p" long:"packages" description:"Packages to include in the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
@@ -194,14 +193,14 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, "", pi.Pkg, "", pi.ImportMap, nil, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.Pkg, pi.ImportPath, pi.ExportFile, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Strip, mi.Srcs, mi.ImportConfig, nil, mi.Packages, os.Stdout); err != nil {
+		if err := packageinfo.WriteModuleInfo(mi.SrcRoot, mi.ModulePath, mi.ImportConfig, mi.Packages, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0

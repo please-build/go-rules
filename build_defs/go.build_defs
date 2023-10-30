@@ -172,7 +172,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUTS_PKG",
         f'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/==" | sed -e s="\.a$"== | xargs -I{{}} echo "packagefile {{}}="$PKG_DIR/$OUTS_PKG"/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/{{}}.a" | sort -u > $OUTS_IC',
-        '$TOOLS_PLZGO m -m "" -s "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
+        '$TOOLS_PLZGO m -m "" --src_root "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
     ]
     return genrule(
         name = name,
@@ -451,7 +451,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             srcs = srcs + resources,
             import_path = import_path,
             package = package,
-            complete = complete,
             test_only = test_only,
         )]
 
@@ -1455,11 +1454,10 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
 
     # Package info rule for the Go packages driver
     if CONFIG.GO.PKG_INFO:
-        pkg_info = _go_pkg_info(
+        pkg_info = _go_module_info(
             name = name,
-            srcs = [download],
+            download = download,
             importconfig = import_config,
-            strip = True,
             module = module,
             test_only = test_only,
             install = installpkg,
@@ -1502,20 +1500,11 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
     )
 
 
-def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
-                 strip:bool=False, module:str="", complete:bool=False, test_only:bool=False, install:list=[]):
-    """Internal-only function for generating the pkg_info files"""
-    sflag = '-s "$SRCS_SRCS"' if strip else ''
+def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="", test_only:bool=False):
+    """Internal-only function for generating the pkg_info files for a single package"""
 
-    install_flags = ""
-    for i in install:
-        install_flags += f" -p {i}" if i else " -p ."
-
-    if module:
-        cmd = f'$TOOL m -m {module} {install_flags}'
-    else:
-        import_path = _get_import_path(package, import_path)
-        cmd = f'$TOOL p -i "{CONFIG.GO.IMPORT_PATH}" -m "{import_path}:$PKG_DIR/{package}.a"'
+    import_path = _get_import_path(package, import_path)
+    cmd = f'$TOOL package_info -i "{import_path}" -e "$PKG_DIR/{package}.a" > $OUT'
     return build_rule(
         name = name,
         tag = "pkg_info",
@@ -1525,7 +1514,30 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
             "ic": [importconfig],
         },
         outs = [f"_{name}_pkg_info.json"],
-        cmd = f'{cmd} {sflag} > "$OUTS"',
+        cmd = cmd,
+        labels = ["go_pkg_info"],
+        test_only = test_only,
+    )
+
+def _go_module_info(name:str, download:str, importconfig:str=None, module:str="", test_only:bool=False, install:list=[]):
+    """Internal-only function for generating the pkg_info files for a module"""
+
+    install_flags = ""
+    for i in install:
+        install_flags += f" -p {i}" if i else " -p ."
+
+    cmd = f'$TOOL module_info --module={module} --src_root=$(location {download}) {install_flags} > $OUT'
+
+    return build_rule(
+        name = name,
+        tag = "pkg_info",
+        tools = [CONFIG.GO.PLEASE_GO_TOOL],
+        srcs = {
+            "srcs": [download],
+            "ic": [importconfig],
+        },
+        outs = [f"_{name}_pkg_info.json"],
+        cmd = cmd,
         labels = ["go_pkg_info"],
         test_only = test_only,
     )
