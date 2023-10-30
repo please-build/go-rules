@@ -70,7 +70,7 @@ go_module(
     install = ["..."],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sys",
-    version = "039c03cc5b867cd7b06a19ff375be5c945c80b10",
+    version = "v0.13.0",
 )
 
 go_module(
@@ -208,8 +208,8 @@ go_module(
 go_mod_download(
     name = "build_tools_dl",
     licences = ["Apache-2.0"],
-    module = "github.com/peterebden/buildtools",
-    version = "ce40803f44fb09c5cf60b5554fe5819d02df23fc",
+    module = "github.com/please-build/buildtools",
+    version = "v0.0.0-20230725091334-24cce64e067d",
 )
 
 go_module(
