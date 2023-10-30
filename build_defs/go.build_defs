@@ -1290,11 +1290,15 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         label = canonicalise(f":{name}")
         fail(f"{label} is missing its licence")
 
+    validate = " --validate" if CONFIG.GO.VALIDATE_MODULE_VERSION else ""
     modinfo = build_rule(
         name = name,
-        tag = "modinfo",
+        tag = "mod_version",
         outs = [f"_{name}.modinfo"],
-        cmd = f"echo '{module}@{version}' > $OUT",
+        cmd = f"$TOOLS_PLZGO generate_module_version{validate} -m {module} --version {version}",
+        tools = {
+            "plzgo": CONFIG.GO.PLEASE_GO_TOOL,
+        },
         requires = ["modinfo"],
         test_only = test_only,
         deps = deps,
