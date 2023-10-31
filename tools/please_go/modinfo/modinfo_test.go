@@ -29,6 +29,14 @@ func TestModInfo(t *testing.T) {
 			Version: "v1.7.0",
 		},
 		{
+			Path:    "golang.org/x/mod",
+			Version: "v0.5.0",
+		},
+		{
+			Path:    "golang.org/x/xerrors",
+			Version: "v0.0.0-20200804184101-5ec99f83aff1",
+		},
+		{
 			Path:    "gopkg.in/yaml.v3",
 			Version: "v3.0.0-20210107192922-496545a6307b",
 		},

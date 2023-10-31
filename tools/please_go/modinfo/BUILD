@@ -9,6 +9,9 @@ filegroup(
 go_library(
     name = "modinfo",
     srcs = ["modinfo.go"],
+    deps = [
+        "//third_party/go:mod",
+    ],
     visibility = [
         "//tools/please_go/...",
     ],

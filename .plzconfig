@@ -9,6 +9,7 @@ GoTool = //third_party/go:toolchain|go
 Stdlib = //third_party/go:std
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
+ValidateModuleVersions = true
 CoverageRedesign = true
 
 [Plugin "cc"]
@@ -36,6 +37,11 @@ DefaultValue = false
 Type = bool
 Inherit = true
 Help = If set, the licences field on go_module and go_repo will be mandatory
+
+[PluginConfig "validate_module_version"]
+DefaultValue = false
+Type = bool
+Help = If set, the values of go_mod_download's module and version parameters will be validated.
 
 [PluginConfig "import_path"]
 Help = The base import path when compiling first party Go code. This usually is set to the module name in go.mod.

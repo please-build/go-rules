@@ -119,6 +119,12 @@ var opts = struct {
 		GoOS       string `long:"goos" env:"OS" description:"OS we're compiling for"`
 		GoArch     string `long:"goarch" env:"ARCH" description:"Architecture we're compiling for"`
 	} `command:"modinfo" description:"Generates Go modinfo for the linter"`
+	GenerateModuleVersion struct {
+		ModulePath string `short:"m" long:"module_path" required:"true" description:"The module's path"`
+		Version    string `long:"version" required:"true" description:"The module's (semantic) version number"`
+		Validate   bool   `long:"validate" description:"Check validity of the given module import path and version number"`
+		Out        string `short:"o" long:"out" env:"OUT" required:"true" description:"File to write the output to"`
+	} `command:"generate_module_version" description:"Generates a module version file for a third-party Go module"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -216,6 +222,13 @@ var subCommands = map[string]func() int{
 		}
 		if err := modinfo.WriteModInfo(mi.GoTool, mi.ModulePath, filepath.Join(mi.ModulePath, mi.Pkg), mi.BuildMode, mi.CgoEnabled, mi.GoOS, mi.GoArch, mi.Out); err != nil {
 			log.Fatalf("failed to write modinfo: %s", err)
+		}
+		return 0
+	},
+	"generate_module_version": func() int {
+		mv := opts.GenerateModuleVersion
+		if err := modinfo.WriteModuleVersion(mv.ModulePath, mv.Version, mv.Validate, mv.Out); err != nil {
+			log.Fatalf("failed to generate module version file: %v", err)
 		}
 		return 0
 	},
