@@ -1458,7 +1458,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             name = name,
             srcs = [download],
             importconfig = import_config,
-            strip = True,
             module = module,
             test_only = test_only,
             install = installpkg,
@@ -1502,8 +1501,10 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 
 def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
-                 strip:bool=False, module:str="",  test_only:bool=False, install:list=[]):
+                 module:str="",  test_only:bool=False, install:list=[]):
     """Internal-only function for generating the pkg_info files"""
+
+
 
     install_flags = ""
     for i in install:
@@ -1512,7 +1513,13 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
     if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
     else:
-        import_path = _get_import_path(package, import_path)
+        # A bit weird but the import path `go tool compile` expects for a binary target doesn't match what we expect in
+        # the driver response. We also don't want to use the default package name as that is something like _{name}#lib,
+        # which will break if we're using legacy imports. Best to just use the default package dir based import path.
+        if import_path == "main":
+            import_path =  _get_import_path("", "")
+        else:
+            import_path = _get_import_path(package, import_path)
         cmd = f'$TOOL p -i "{import_path}" -m "{import_path}:$PKG_DIR/{package}.a"'
     return build_rule(
         name = name,
