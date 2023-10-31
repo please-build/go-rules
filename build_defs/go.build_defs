@@ -1506,8 +1506,10 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
     # `go list`. The internal tools ignore modules etc. for the main package, passing `-p main` even though the package
     # driver response returns the normal package ID. This is a simple fix.
     if import_path == "main":
-        import_path = ""
-    import_path = _get_import_path(package, import_path)
+        import_path = _get_import_path("", "")
+    else:
+        import_path = _get_import_path(package, import_path)
+
     cmd = f'$TOOL package_info -i "{import_path}" -e "$PKG_DIR/{package}.a" > $OUT'
     return build_rule(
         name = name,
