@@ -1,5 +1,13 @@
+Version 1.11.0
+--------------
+    * Add `ValidateModuleVersion` plugin option, which ensures that module
+      paths and versions given to `go_mod_download` comply with Go's module
+      version numbering policy (#171). This option is disabled by default,
+      but will become enabled by default in a future major version of the
+      plugin.
+
 Version 1.10.0
--------------
+--------------
     * Allow go_repo to depend on go_module rules to enable an incremental migration (#166)
 
 Version 1.9.2
