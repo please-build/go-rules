@@ -1513,9 +1513,10 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
     if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
     else:
-        # A bit weird but the import path `go tool compile` expects for a binary target doesn't match what we expect in
-        # the driver response. We also don't want to use the default package name as that is something like _{name}#lib,
-        # which will break if we're using legacy imports. Best to just use the default package dir based import path.
+        # The import path `go tool compile` expects for a binary target (i.e. `-p main`) doesn't match what we expect in
+        # the driver response i.e. the package dir. We also don't want to set the package name, as that is something
+        # like `_{name}#lib`, which will break if we're using legacy imports. Unsetting both will produce the correct
+        # import path based off package_name() and CONFIG.GO.IMPORT_PATH.
         if import_path == "main":
             import_path =  _get_import_path("", "")
         else:
