@@ -9,6 +9,7 @@ GoTool = //third_party/go:toolchain|go
 Stdlib = //third_party/go:std
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
+ValidateModuleVersions = true
 CoverageRedesign = true
 
 [Plugin "cc"]
