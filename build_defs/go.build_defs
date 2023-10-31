@@ -172,7 +172,7 @@ def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
         "rm -rf pkg/tool pkg/include",
         "mv pkg $OUTS_PKG",
         f'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/==" | sed -e s="\.a$"== | xargs -I{{}} echo "packagefile {{}}="$PKG_DIR/$OUTS_PKG"/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/{{}}.a" | sort -u > $OUTS_IC',
-        '$TOOLS_PLZGO m -m "" -s "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
+        '$TOOLS_PLZGO m -m "" --srcs "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
     ]
     return genrule(
         name = name,
@@ -451,7 +451,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             srcs = srcs + resources,
             import_path = import_path,
             package = package,
-            complete = complete,
             test_only = test_only,
         )]
 
@@ -1463,7 +1462,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             name = name,
             srcs = [download],
             importconfig = import_config,
-            strip = True,
             module = module,
             test_only = test_only,
             install = installpkg,
@@ -1507,9 +1505,10 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 
 def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
-                 strip:bool=False, module:str="", complete:bool=False, test_only:bool=False, install:list=[]):
+                 module:str="",  test_only:bool=False, install:list=[]):
     """Internal-only function for generating the pkg_info files"""
-    sflag = '-s "$SRCS_SRCS"' if strip else ''
+
+
 
     install_flags = ""
     for i in install:
@@ -1518,8 +1517,15 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
     if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
     else:
-        import_path = _get_import_path(package, import_path)
-        cmd = f'$TOOL p -i "{CONFIG.GO.IMPORT_PATH}" -m "{import_path}:$PKG_DIR/{package}.a"'
+        # The import path `go tool compile` expects for a binary target (i.e. `-p main`) doesn't match what we expect in
+        # the driver response i.e. the package dir. We also don't want to set the package name, as that is something
+        # like `_{name}#lib`, which will break if we're using legacy imports. Unsetting both will produce the correct
+        # import path based off package_name() and CONFIG.GO.IMPORT_PATH.
+        if import_path == "main":
+            import_path =  _get_import_path("", "")
+        else:
+            import_path = _get_import_path(package, import_path)
+        cmd = f'$TOOL p -i "{import_path}" -m "{import_path}:$PKG_DIR/{package}.a"'
     return build_rule(
         name = name,
         tag = "pkg_info",
@@ -1529,7 +1535,7 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
             "ic": [importconfig],
         },
         outs = [f"_{name}_pkg_info.json"],
-        cmd = f'{cmd} {sflag} > "$OUTS"',
+        cmd = f'{cmd} > "$OUTS"',
         labels = ["go_pkg_info"],
         test_only = test_only,
     )
