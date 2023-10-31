@@ -1,3 +1,7 @@
+Version 1.11.1
+--------------
+    * Fix issue with the go package driver for packages from `go_repo()` targets
+
 Version 1.11.0
 --------------
     * Add `ValidateModuleVersion` plugin option, which ensures that module
