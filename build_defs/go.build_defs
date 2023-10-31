@@ -1502,7 +1502,11 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="", test_only:bool=False):
     """Internal-only function for generating the pkg_info files for a single package"""
-
+    # There's inconsistency between the import path passed to `go tool compile` vs. the package response you get from
+    # `go list`. The internal tools ignore modules etc. for the main package, passing `-p main` even though the package
+    # driver response returns the normal package ID. This is a simple fix.
+    if import_path == "main":
+        import_path = ""
     import_path = _get_import_path(package, import_path)
     cmd = f'$TOOL package_info -i "{import_path}" -e "$PKG_DIR/{package}.a" > $OUT'
     return build_rule(
