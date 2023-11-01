@@ -2,7 +2,7 @@ subinclude("///go//build_defs:go", "///cc//build_defs:c")
 
 def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
-                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
+                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, _module:str='', import_path:str=''):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -97,7 +97,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         srcs = [cgo_rule + '|c'] + c_srcs,
         hdrs = [cgo_rule + '|h'] + hdrs,
         compiler_flags = compiler_flags + [
-            '-Wno-error',
+            '-I', '"$PKG_DIR"',
             '-Wno-unused-parameter',  # Generated code doesn't compile clean
         ],
         pkg_config_libs = pkg_config,
@@ -113,6 +113,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         deps = deps,
         _generate_import_config=False,
         import_path=import_path,
+        _module = _module,
     )
 
     output = package if package else name
