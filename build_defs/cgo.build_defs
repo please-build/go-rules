@@ -2,7 +2,8 @@ subinclude("///go//build_defs:go", "///cc//build_defs:c")
 
 def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
-                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
+                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str='',
+                _module:str=''):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -50,6 +51,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             import_path = import_path,
             visibility = visibility,
             test_only = test_only,
+            _module = _module,
         )
 
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
