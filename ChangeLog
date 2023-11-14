@@ -1,3 +1,7 @@
+Version 1.11.3
+--------------
+    * Add _module argument to cgo_library (#180)
+
 Version 1.11.2
 --------------
     * Use correct version of the please_go tool
