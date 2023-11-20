@@ -126,7 +126,7 @@ func (g *Generate) installTargets() ([]string, error) {
 			}
 			targets = append(targets, ts...)
 		} else {
-			t, err := g.libTargetForBuildFile(i)
+			t, err := g.libTargetForBuildPackage(i)
 			if err != nil {
 				return nil, err
 			}
@@ -520,6 +520,24 @@ func (g *Generate) subrepoName(module string) string {
 		return ""
 	}
 	return filepath.Join(g.thirdPartyFolder, strings.ReplaceAll(module, "/", "_"))
+}
+
+func (g *Generate) libTargetForBuildPackage(i string) (string, error) {
+	entries, err := os.ReadDir(filepath.Join(g.srcRoot, i))
+	if err != nil {
+		return "", err
+	}
+
+	for _, e := range entries {
+		if g.isBuildFile(e.Name()) {
+			t, err := g.libTargetForBuildFile(filepath.Join(i, e.Name()))
+			if err != nil {
+				return "", err
+			}
+			return t, nil
+		}
+	}
+	return "", nil
 }
 
 func buildTarget(name, pkgDir, subrepo string) string {
