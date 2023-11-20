@@ -114,35 +114,46 @@ func parseImportConfig(path string) (string, []string, error) {
 	return target, imports, nil
 }
 
-func (g *Generate) installTargets() []string {
+func (g *Generate) installTargets() ([]string, error) {
 	var targets []string
 
 	for _, i := range g.install {
 		dir := filepath.Join(g.srcRoot, i)
 		if strings.HasSuffix(dir, "/...") {
-			targets = append(targets, g.targetsInDir(strings.TrimSuffix(dir, "/..."))...)
+			ts, err := g.targetsInDir(strings.TrimSuffix(dir, "/..."))
+			if err != nil {
+				return nil, err
+			}
+			targets = append(targets, ts...)
 		} else {
-			targets = append(targets, g.libTargetForPleasePackage(i))
+			t, err := g.libTargetForBuildFile(i)
+			if err != nil {
+				return nil, err
+			}
+			if t == "" {
+				return nil, fmt.Errorf("couldn't find install package %v", i)
+			}
+			targets = append(targets, t)
 		}
 	}
-	return targets
+	return targets, nil
 }
 
-func (g *Generate) targetsInDir(dir string) []string {
+func (g *Generate) targetsInDir(dir string) ([]string, error) {
 	var ret []string
 	err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
-		// The assumption here is that if we generated a BUILD file, then we would have generated a go_library() target
-		// for that package. Currently, we don't generate BUILD files for any other reason so this assumption holds
-		// true. We may want to check that the BUILD file contains a go_library() target otherwise.
 		if g.isBuildFile(path) {
-			ret = append(ret, g.libTargetForPleasePackage(trimPath(filepath.Dir(path), g.srcRoot)))
+			t, err := g.libTargetForBuildFile(trimPath(path, g.srcRoot))
+			if err != nil {
+				return err
+			}
+			if t != "" {
+				ret = append(ret, t)
+			}
 		}
 		return nil
 	})
-	if err != nil {
-		panic(err)
-	}
-	return ret
+	return ret, err
 }
 
 func (g *Generate) isBuildFile(file string) bool {
@@ -162,7 +173,11 @@ func (g *Generate) writeInstallFilegroup() error {
 	}
 
 	rule := NewRule("filegroup", "installs")
-	rule.SetAttr("exported_deps", NewStringList(g.installTargets()))
+	installTargets, err := g.installTargets()
+	if err != nil {
+		return fmt.Errorf("failed to generate install targest: %v", err)
+	}
+	rule.SetAttr("exported_deps", NewStringList(installTargets))
 	rule.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
 
 	buildFile.Stmt = append(buildFile.Stmt, rule.Call)
@@ -483,8 +498,21 @@ func trimPath(target, base string) string {
 
 // libTargetForPleasePackage returns the build label for the go_library() target that would be generated for a package
 // at this path within the generated Please repo.
-func (g *Generate) libTargetForPleasePackage(pkg string) string {
-	return buildTarget(nameForLibInPkg(g.moduleName, pkg), pkg, "")
+func (g *Generate) libTargetForBuildFile(path string) (string, error) {
+	bs, err := os.ReadFile(filepath.Join(g.srcRoot, path))
+	if err != nil {
+		return "", err
+	}
+	file, err := bazelbuild.ParseBuild(path, bs)
+	if err != nil {
+		return "", err
+	}
+
+	libs := append(file.Rules("go_library"), file.Rules("cgo_library")...)
+	if len(libs) == 1 {
+		return buildTarget(libs[0].Name(), filepath.Dir(path), ""), nil
+	}
+	return "", nil
 }
 
 func (g *Generate) subrepoName(module string) string {

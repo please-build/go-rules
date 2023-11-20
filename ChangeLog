@@ -1,3 +1,7 @@
+Version 1.11.4
+--------------
+    * Avoid adding go_binary targets to the install list for go_repo
+
 Version 1.11.3
 --------------
     * Add _module argument to cgo_library (#180)
