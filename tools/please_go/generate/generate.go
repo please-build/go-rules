@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/build"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -496,8 +497,7 @@ func trimPath(target, base string) string {
 	return strings.Join(targetParts[len(baseParts):], "/")
 }
 
-// libTargetForPleasePackage returns the build label for the go_library() target that would be generated for a package
-// at this path within the generated Please repo.
+// libTargetForBuildFile finds the go_library or cgo_library target in the package
 func (g *Generate) libTargetForBuildFile(path string) (string, error) {
 	bs, err := os.ReadFile(filepath.Join(g.srcRoot, path))
 	if err != nil {
@@ -509,7 +509,10 @@ func (g *Generate) libTargetForBuildFile(path string) (string, error) {
 	}
 
 	libs := append(file.Rules("go_library"), file.Rules("cgo_library")...)
-	if len(libs) == 1 {
+	if len(libs) >= 1 {
+		if len(libs) != 1 {
+			log.Fatalf("more than one go library in installed package %v", path)
+		}
 		return buildTarget(libs[0].Name(), filepath.Dir(path), ""), nil
 	}
 	return "", nil
