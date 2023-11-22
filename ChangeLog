@@ -1,3 +1,10 @@
+Version 1.11.4
+--------------
+    * Fixes some issues around cross compiling with `go_repo` where we would
+      generate invalid build labels (#185)
+    * Avoid adding binary targets to the install list of `go_repo` (#184)
+
+
 Version 1.11.3
 --------------
     * Add _module argument to cgo_library (#180)
