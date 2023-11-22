@@ -104,7 +104,10 @@ func parseImportConfig(path string) (string, []string, error) {
 		line := importCfg.Text()
 		if strings.HasPrefix(line, "#") {
 			if strings.HasPrefix(line, "# please:target ") {
-				target = "@" + strings.TrimSpace(strings.TrimPrefix(line, "# please:target "))
+				target = strings.TrimSpace(strings.TrimPrefix(line, "# please:target "))
+				if !strings.HasPrefix(target, "///") {
+					target = "@" + target
+				}
 			}
 			continue
 		}
