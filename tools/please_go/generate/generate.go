@@ -175,7 +175,7 @@ func (g *Generate) writeInstallFilegroup() error {
 	rule := NewRule("filegroup", "installs")
 	installTargets, err := g.installTargets()
 	if err != nil {
-		return fmt.Errorf("failed to generate install targest: %v", err)
+		return fmt.Errorf("failed to generate install targets: %v", err)
 	}
 	rule.SetAttr("exported_deps", NewStringList(installTargets))
 	rule.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
