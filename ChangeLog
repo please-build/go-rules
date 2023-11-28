@@ -1,3 +1,7 @@
+Version 1.11.5
+--------------
+    * go_mod_download directory hash replaced (#187)
+
 Version 1.11.4
 --------------
     * Fixes some issues around cross compiling with `go_repo` where we would

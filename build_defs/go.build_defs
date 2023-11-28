@@ -1268,7 +1268,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
       licences (list): Licences this rule is subject to.
       labels (list): Labels to apply to this rule.
     """
-    out = name
+    out = name.replace('#', '_')
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
         'echo module please_ignore > go.mod', # stops go reading the main go.mod, and downloading all of those too
