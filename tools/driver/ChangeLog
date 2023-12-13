@@ -1,3 +1,8 @@
+Version 0.3.0
+-------------
+    * Add search dir option which walks a current directory rather than querying plz.
+      Allows running within a Please test.
+
 Version 0.2.3
 -------------
     * Allow the caller not to provide any input files at all

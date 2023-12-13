@@ -9,6 +9,8 @@ go_library(
     ],
 )
 
+# This is an integration test proving we can run within a test directory; without the
+# package driver running, gosec will get import errors from the package and fail.
 gentest(
     name = "gosec_test",
     tools = {
