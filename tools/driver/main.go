@@ -19,6 +19,7 @@ var opts = struct {
 	NoInput    bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
 	WorkingDir string            `short:"w" long:"working_dir" description:"Change to this working directory before running"`
 	OutputFile string            `short:"o" long:"output_file" env:"PLZ_GOPACKAGESDRIVER_OUTPUT_FILE" description:"File to write output to (in addition to stdout)"`
+	SearchDir  string            `short:"s" long:"search_dir" env:"PLZ_GOPACKAGESDRIVER_SEARCHDIR" description:"Search this directory for modinfo files, instead of querying plz"`
 	Args       struct {
 		Files []string `positional-arg-name:"file"`
 	} `positional-args:"true"`
@@ -52,7 +53,7 @@ func main() {
 		}
 		log.Debug("Received driver request: %v", req)
 	}
-	resp, err := packages.Load(req, opts.Args.Files)
+	resp, err := load(req)
 	if err != nil {
 		log.Fatalf("Failed to load packages: %s", err)
 	}
@@ -69,4 +70,11 @@ func main() {
 	if err := enc.Encode(resp); err != nil {
 		log.Fatalf("Failed to write packages: %s", err)
 	}
+}
+
+func load(req *packages.DriverRequest) (*packages.DriverResponse, error) {
+	if opts.SearchDir == "" {
+		return packages.Load(req, opts.Args.Files)
+	}
+	return packages.LoadOffline(req, opts.SearchDir, opts.Args.Files)
 }

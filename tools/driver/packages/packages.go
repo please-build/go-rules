@@ -7,6 +7,7 @@ import (
 	"go/build"
 	"go/types"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -97,6 +98,35 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	return packagesToResponse(rootpath, pkgs, dirs)
+}
+
+// LoadOffline is like Load but rather than querying plz to find the file to load, it just
+// walks a file tree looking for pkg_info.json files.
+func LoadOffline(req *DriverRequest, searchDir string, files []string) (*DriverResponse, error) {
+	pkgs := []*packages.Package{}
+	if err := filepath.WalkDir(searchDir, func(path string, d fs.DirEntry, err error) error {
+		lpkgs := []*packages.Package{}
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, "pkg_info.json") {
+			return err
+		} else if b, err := os.ReadFile(path); err != nil {
+			return fmt.Errorf("failed to read %s: %w", path, err)
+		} else if err := json.Unmarshal(b, &lpkgs); err != nil {
+			return fmt.Errorf("failed to decode %s: %w", path, err)
+		}
+		pkgs = append(pkgs, lpkgs...)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	dirs := map[string]struct{}{}
+	for _, file := range files {
+		dirs[filepath.Dir(file)] = struct{}{}
+	}
+	return packagesToResponse(searchDir, pkgs, dirs)
+}
+
+func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[string]struct{}) (*DriverResponse, error) {
 	// Build the set of root packages
 	seenRoots := map[string]struct{}{}
 	roots := []string{}
@@ -207,13 +237,18 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	if err := build.Wait(); err != nil {
 		return nil, handleSubprocessErr(build, err)
 	}
-	log.Debug("Loading plz package info files...")
 	// Now we can read all the package info files from the build process' stdout.
+	return loadPackageInfoFiles(strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())))
+}
+
+// loadPackageInfoFiles loads the given set of package info files
+func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
+	log.Debug("Loading plz package info files...")
 	pkgs := []*packages.Package{}
 	var lock sync.Mutex
 	var g errgroup.Group
 	g.SetLimit(8) // arbitrary limit since we're doing I/O
-	for _, file := range strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())) {
+	for _, file := range paths {
 		file := file
 		if !strings.HasSuffix(file, ".json") {
 			continue // Ignore all the various Go sources etc.
