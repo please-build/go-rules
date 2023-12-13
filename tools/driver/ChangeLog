@@ -1,3 +1,8 @@
+Version 0.3.1
+-------------
+    * Handle some additional cases for third-party packages
+    * Some additional flags for debugging
+
 Version 0.3.0
 -------------
     * Add search dir option which walks a current directory rather than querying plz.
