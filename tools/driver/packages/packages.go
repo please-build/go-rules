@@ -121,8 +121,13 @@ func LoadOffline(req *DriverRequest, searchDir string, files []string) (*DriverR
 	}
 	dirs := map[string]struct{}{}
 	for _, file := range files {
-		dirs[filepath.Dir(file)] = struct{}{}
+		// Inputs that are files need to get turned into their package directory
+		if info, err := os.Stat(file); err == nil && !info.IsDir() {
+			file = filepath.Dir(file)
+		}
+		dirs[file] = struct{}{}
 	}
+	log.Debug("Generating response for %s", dirs)
 	return packagesToResponse(searchDir, pkgs, dirs)
 }
 
@@ -132,6 +137,11 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 	roots := []string{}
 	seenRuntime := false
 	for _, pkg := range pkgs {
+		if _, present := dirs[pkg.PkgPath]; present {
+			seenRoots[pkg.ID] = struct{}{}
+			roots = append(roots, pkg.ID)
+			continue
+		}
 		for _, file := range pkg.GoFiles {
 			if _, present := dirs[filepath.Dir(file)]; present {
 				if _, present := seenRoots[pkg.ID]; !present {
