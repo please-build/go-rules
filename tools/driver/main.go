@@ -19,7 +19,7 @@ var opts = struct {
 	NoInput    bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
 	WorkingDir string            `short:"w" long:"working_dir" description:"Change to this working directory before running"`
 	OutputFile string            `short:"o" long:"output_file" env:"PLZ_GOPACKAGESDRIVER_OUTPUT_FILE" description:"File to write output to (in addition to stdout)"`
-	SearchDir  string            `short:"s" long:"search_dir" description:"Search this directory for modinfo files, instead of querying plz"`
+	SearchDir  string            `short:"s" long:"search_dir" env:"PLZ_GOPACKAGESDRIVER_SEARCHDIR" description:"Search this directory for modinfo files, instead of querying plz"`
 	Args       struct {
 		Files []string `positional-arg-name:"file"`
 	} `positional-args:"true"`
@@ -37,7 +37,6 @@ This tool is experimental.
 func main() {
 	flags.ParseFlagsOrDie("Please Go package driver", &opts, nil)
 	logging.InitLogging(opts.Verbosity)
-	log.Fatalf("here")
 
 	if opts.WorkingDir != "" {
 		if err := os.Chdir(opts.WorkingDir); err != nil {

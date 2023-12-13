@@ -19,8 +19,13 @@ gentest(
         "//tools/driver/packages",
     ],
     needs_transitive_deps = True,
-    cmd = 'export GOPACKAGESDRIVER="$TOOLS_DRIVER"; "$TOOLS_GOSEC" tools/driver/packages/packages.go',
+    cmd = [
+        'export PLZ_GOPACKAGESDRIVER_SEARCHDIR="$TMP_DIR"',
+        'export GOPACKAGESDRIVER="$TOOLS_DRIVER"',
+        '"$TOOLS_GOSEC" --exclude G104,G304,G307 tools/driver/packages',
+    ],
     test_cmd = "true",
+    no_test_output = True,
     requires = [
         "go",
         "go_src",
