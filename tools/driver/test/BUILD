@@ -1,14 +1,5 @@
 subinclude("//build_defs:go")
 
-go_library(
-    name = "test",
-    srcs = ["test.go"],
-    deps = [
-        "//tools/driver/packages",
-        "//third_party/go:testify",
-    ],
-)
-
 # This is an integration test proving we can run within a test directory; without the
 # package driver running, gosec will get import errors from the package and fail.
 gentest(
