@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -110,7 +111,13 @@ func FromBuildPackage(pkg *build.Package, subrepo string) *packages.Package {
 		Imports:       make(map[string]*packages.Package, len(pkg.Imports)),
 	}
 	for i, file := range pkg.GoFiles {
-		p.GoFiles[i] = filepath.Join(subrepo, pkg.Dir, file)
+		if subrepo != "" {
+			// this is fairly nasty... there must be a better way of getting it without the pkg/ prefix
+			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
+			p.GoFiles[i] = filepath.Join(subrepo, dir, file)
+		} else {
+			p.GoFiles[i] = filepath.Join(pkg.Dir, file)
+		}
 	}
 	p.CompiledGoFiles = p.GoFiles // This seems to be important to e.g. gosec
 	for _, imp := range pkg.Imports {
