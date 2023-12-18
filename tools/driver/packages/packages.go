@@ -263,6 +263,7 @@ func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
 		if !strings.HasSuffix(file, ".json") {
 			continue // Ignore all the various Go sources etc.
 		}
+		log.Debug("Package file: %s", file)
 		g.Go(func() error {
 			f, err := os.Open(file)
 			if err != nil {

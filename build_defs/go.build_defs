@@ -221,7 +221,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
                _generate_import_config:bool=True, _generate_pkg_info:bool=CONFIG.GO.PKG_INFO,
-               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None, _module:str=''):
+               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None, _module:str='', _subrepo:str=''):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -386,6 +386,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             _needs_transitive_deps = _needs_transitive_deps,
             _all_srcs = _all_srcs,
             _generate_import_config=False,
+            _subrepo = _subrepo,
             labels=labels + ["foo"],
             import_path=package_path,
         )
@@ -451,6 +452,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             name = name,
             srcs = srcs + resources,
             import_path = import_path,
+            subrepo = _subrepo,
             package = package,
             test_only = test_only,
             visibility = visibility,
@@ -1221,6 +1223,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     labels = ["go_module_path:" + module]
     if version:
         labels += [f"go_module:{module}@{version}"]
+    pkg_name = package_name()
     requirements = " ".join(requirements)
 
     build_tag_args = '--build_tag ' + ' --build_tag '.join(build_tags) if build_tags else ''
@@ -1231,7 +1234,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && mkdir -p $(dirname {pkgRoot}) && mv $SRCS_DOWNLOAD {pkgRoot} && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' {install_args} {requirements} && mv {pkgRoot} $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && mkdir -p $(dirname {pkgRoot}) && mv $SRCS_DOWNLOAD {pkgRoot} && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements} && mv {pkgRoot} $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
@@ -1251,7 +1254,6 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     )
 
     if install:
-        pkg_name = package_name()
         return filegroup(
             name = name,
             visibility = visibility,
@@ -1523,11 +1525,8 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 
 def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, import_path:str="", package:str="",
-                 module:str="", test_only:bool=False, install:list=[]):
+                 module:str="", subrepo:str="", test_only:bool=False, install:list=[]):
     """Internal-only function for generating the pkg_info files"""
-
-
-
     install_flags = ""
     for i in install:
         install_flags += f" -p {i}" if i else " -p ."
@@ -1544,6 +1543,8 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
         else:
             import_path = _get_import_path(package, import_path)
         cmd = f'$TOOL p -i "{import_path}" -m "{import_path}:$PKG_DIR/{package}.a"'
+        if subrepo:
+            cmd = f"{cmd} -s {subrepo}"
     return build_rule(
         name = name,
         tag = "pkg_info",

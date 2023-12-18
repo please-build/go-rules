@@ -6,6 +6,7 @@ type Rule struct {
 	name          string
 	kind          string
 	module        string
+	subrepo       string
 	srcs          []string
 	cgoSrcs       []string
 	cSrcs         []string
@@ -57,5 +58,6 @@ func populateRule(r *build.Rule, targetState *Rule) {
 	}
 	if !targetState.isCMD {
 		r.SetAttr("_module", NewStringExpr(targetState.module))
+		r.SetAttr("_subrepo", NewStringExpr(targetState.subrepo))
 	}
 }

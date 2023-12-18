@@ -17,7 +17,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, w io.Writer) error {
+func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 
@@ -59,7 +59,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, srcRoot), "/")
-		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir)
+		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, subrepo)
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
@@ -75,7 +75,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	return serialise(pkgs, w)
 }
 
-func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
+func createPackage(pkgPath, pkgDir, subrepo string) (*packages.Package, error) {
 	if pkgDir == "" || pkgDir == "." {
 		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
 		path, err := filepath.Abs(pkgDir)
@@ -89,7 +89,7 @@ func createPackage(pkgPath, pkgDir string) (*packages.Package, error) {
 		return nil, err
 	}
 	bpkg.ImportPath = pkgPath
-	return FromBuildPackage(bpkg), nil
+	return FromBuildPackage(bpkg, subrepo), nil
 }
 
 func serialise(pkgs []*packages.Package, w io.Writer) error {
@@ -99,7 +99,7 @@ func serialise(pkgs []*packages.Package, w io.Writer) error {
 }
 
 // FromBuildPackage creates a packages Package from a build Package.
-func FromBuildPackage(pkg *build.Package) *packages.Package {
+func FromBuildPackage(pkg *build.Package, subrepo string) *packages.Package {
 	p := &packages.Package{
 		ID:            pkg.ImportPath,
 		Name:          pkg.Name,
@@ -110,7 +110,7 @@ func FromBuildPackage(pkg *build.Package) *packages.Package {
 		Imports:       make(map[string]*packages.Package, len(pkg.Imports)),
 	}
 	for i, file := range pkg.GoFiles {
-		p.GoFiles[i] = filepath.Join(pkg.Dir, file)
+		p.GoFiles[i] = filepath.Join(subrepo, pkg.Dir, file)
 	}
 	p.CompiledGoFiles = p.GoFiles // This seems to be important to e.g. gosec
 	for _, imp := range pkg.Imports {
