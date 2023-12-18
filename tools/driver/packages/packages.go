@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -40,6 +41,9 @@ type DriverResponse struct {
 	Roots      []string `json:",omitempty"`
 	Packages   []*packages.Package
 }
+
+// mainTag is a tag we apply to (apparently) generated main packages
+const mainTag = "#main"
 
 // Load reads a set of packages and returns information about them.
 // Most of the request structure isn't honoured at the moment.
@@ -137,6 +141,9 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 	roots := []string{}
 	seenRuntime := false
 	for _, pkg := range pkgs {
+		if strings.HasSuffix(pkg.ID, mainTag) {
+			continue
+		}
 		if _, present := dirs[pkg.PkgPath]; present {
 			seenRoots[pkg.ID] = struct{}{}
 			roots = append(roots, pkg.ID)
@@ -283,7 +290,25 @@ func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
 			return nil
 		})
 	}
-	return pkgs, g.Wait()
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	// Deal with e.g. generated main packages
+	slices.SortFunc(pkgs, func(a, b *packages.Package) int {
+		if a.ID > b.ID {
+			return 1
+		} else if a.ID < b.ID {
+			return -1
+		} else if a.Name == "main" && b.Name != "main" {
+			a.ID = a.ID + mainTag
+			return 1
+		} else if b.Name == "main" && a.Name != "main" {
+			b.ID = b.ID + mainTag
+			return -1
+		}
+		return 0
+	})
+	return pkgs, nil
 }
 
 // loadStdlibPackages returns all the packages from the Go stdlib.
