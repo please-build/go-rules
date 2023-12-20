@@ -1211,6 +1211,9 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     else:
         modFileArg = ""
 
+    labels = ["go_module_path:" + module]
+    if version:
+        labels += [f"go_module:{module}@{version}"]
     requirements = " ".join(requirements)
     repo = build_rule(
         name = name,
@@ -1226,7 +1229,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         },
         deps = deps + [CONFIG.GO.MOD_FILE] if CONFIG.GO.MOD_FILE else deps,
         _subrepo = True,
-        labels=["go_module_path:" + module],
+        labels = labels,
         requires = ["import_config"],
     )
     subrepo(
@@ -1241,6 +1244,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
             name = name,
             visibility = visibility,
             exported_deps=[f"///{pkg_name}/{subrepo_name}//:installs"],
+            labels = labels,
         )
     else:
         return repo
