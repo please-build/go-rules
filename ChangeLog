@@ -1,3 +1,7 @@
+Version 1.12.0
+--------------
+    * go_repo now attaches go_module labels for consumers who made use of them on go_module
+
 Version 1.11.5
 --------------
     * go_mod_download directory hash replaced (#187)
