@@ -1,3 +1,7 @@
+Version 1.12.1
+--------------
+    * New version of please_go tool now available
+
 Version 1.12.0
 --------------
     * go_repo now attaches go_module labels for consumers who made use of them on go_module
