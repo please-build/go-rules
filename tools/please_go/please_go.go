@@ -35,7 +35,7 @@ var opts = struct {
 		CCTool            string   `short:"c" long:"cc_tool" description:"The c compiler to use"`
 		Out               string   `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
 		TrimPath          string   `short:"t" long:"trim_path" description:"Removes prefix from recorded source file paths."`
-		PackageConfigTool string   `short:"p" long:"pkg_config_tool" description:"The path to the pkg config" default:"pkg-config"`
+		PackageConfigTool string   `short:"p" long:"pkg_config_tool" env:"PKG_CONFIG_TOOL" description:"The path to the pkg config" default:"pkg-config"`
 		Args              struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 		} `positional-args:"true" required:"true"`
