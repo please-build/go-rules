@@ -1148,7 +1148,8 @@ def _module_rule_name(module):
 
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
-            licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[], third_party_path:str="third_party/go"):
+            licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[],
+            third_party_path:str="third_party/go", strip:list=None):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1183,6 +1184,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
       deps(list): Any deps on other rule kinds that provide packages, for example go_module(). This can be used to
                   migrate to go_repo incrementally, one module at a time.
       third_party_path(str): Optional path of third_party directory.
+      strip(list): A list of directories to strip from the repo
     """
     subrepo_name = _module_rule_name(module)
 
@@ -1200,6 +1202,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
             version = version,
             licences = licences,
             patch = patch,
+            strip = strip,
         )
 
     srcs = {
