@@ -55,7 +55,6 @@ func Parse(gofiles []string) (*Cfg, error) {
 // AddPackage parses a go package and adds any embed patterns to the configuration
 func (cfg *Cfg) AddPackage(pkg *build.Package) error {
 	for _, pattern := range append(append(pkg.EmbedPatterns, pkg.TestEmbedPatterns...), pkg.XTestEmbedPatterns...) {
-		log.Printf("here %s", pattern)
 		paths, err := relglob(pkg.Dir, pattern)
 		if err != nil {
 			return err
