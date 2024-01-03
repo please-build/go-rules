@@ -7,7 +7,6 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
-	"log"
 	"path"
 	"path/filepath"
 	"strings"
