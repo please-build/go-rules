@@ -78,7 +78,7 @@ var opts = struct {
 		Args struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
-	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	} `command:"embed" alias:"e" description:"Generate embed config for a set of Go source files"`
 	PackageInfo struct {
 		ImportPath string            `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
 		Pkg        string            `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
@@ -101,7 +101,7 @@ var opts = struct {
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
-	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	} `command:"generate" alias:"g" description:"Generate build targets for a Go module"`
 	GoGet struct {
 		ModFile string `short:"m" long:"mod_file" description:"A go.mod file to use as a set of reuirementzs"`
 		Args    struct {
