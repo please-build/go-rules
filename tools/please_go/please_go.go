@@ -179,7 +179,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, opts.Generate.Version, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install)
+		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, opts.Generate.Version, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install, opts.Filter.Tags)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}

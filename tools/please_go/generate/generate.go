@@ -31,14 +31,18 @@ type Generate struct {
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNames, moduleDeps, install []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
 	}
+
+	ctxt := build.Default
+	ctxt.BuildTags = buildTags
+
 	return &Generate{
 		srcRoot:            srcRoot,
-		buildContext:       build.Default,
+		buildContext:       ctxt,
 		buildFileNames:     buildFileNames,
 		moduleDeps:         moduleDeps,
 		modFile:            modFile,
@@ -273,6 +277,19 @@ func (g *Generate) generate(dir string) error {
 	if err != nil {
 		return err
 	}
+
+	// filter out pkg.GoFiles based on build tags
+	var goFiles []string
+	for _, f := range pkg.GoFiles {
+		match, err := g.buildContext.MatchFile(dir, f)
+		if err != nil {
+			return err
+		}
+		if match {
+			goFiles = append(goFiles, f)
+		}
+	}
+	pkg.GoFiles = goFiles
 
 	lib := g.ruleForPackage(pkg, dir)
 	if lib == nil {
