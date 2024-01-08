@@ -98,6 +98,7 @@ var opts = struct {
 		Module           string   `long:"module" description:"The name of the current module"`
 		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
+		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`

@@ -1218,11 +1218,15 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     if version:
         labels += [f"go_module:{module}@{version}"]
     requirements = " ".join(requirements)
+
+    if CONFIG.GO.BUILD_TAGS:
+        build_tags = '--build_tag ' + ' --build_tag '.join(CONFIG.GO.BUILD_TAGS)
+
     repo = build_rule(
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' --src_root=$SRCS_DOWNLOAD --third_part_folder='{third_party_path}' {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tags} --src_root=$SRCS_DOWNLOAD --third_part_folder='{third_party_path}' {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
@@ -1580,10 +1584,10 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     if filter_srcs:
         filter_cmd = 'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter'
         if CONFIG.GO.BUILD_TAGS:
-            build_tags = '-t'.join(CONFIG.GO.BUILD_TAGS)
-            filter_cmd += f' -t {build_tags}'
+            build_tags = ' -t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS)
+            filter_cmd += build_tags
 
-        filter_cmd += " $SRCS_GO)\";"
+        filter_cmd += " $SRCS_GO)\"; "
     else:
         filter_cmd = ''
 
