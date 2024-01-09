@@ -58,17 +58,17 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNa
 // files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
 	if err := g.readGoMod(g.modFile); err != nil {
-		return err
+		return fmt.Errorf("failed to read go.mod: %w", err)
 	}
 	if err := g.writeConfig(); err != nil {
-		return err
+		return fmt.Errorf("failed to write config: %w", err)
 	}
 	if err := g.parseImportConfigs(); err != nil {
-		return err
+		return fmt.Errorf("failed to parse import configs: %w", err)
 	}
 
 	if err := g.generateAll(g.srcRoot); err != nil {
-		return err
+		return fmt.Errorf("failed to generate BUILD files: %w", err)
 	}
 	return g.writeInstallFilegroup()
 }
