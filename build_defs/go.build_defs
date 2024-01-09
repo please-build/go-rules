@@ -1595,10 +1595,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     complete_flag = '-complete ' if complete else ''
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    go_cmd = '"$TOOLS_GO"'
-    #if CONFIG.GO.BUILD_TAGS:
-    #    go_cmd += f' -tags "{CONFIG.GO.BUILD_TAGS}"'
-    compile_cmd = f'{go_cmd} tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
+    compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     package_flag = f" -p {import_path}" if import_path else ""
     if CONFIG.GO.RACE:
         compile_cmd += ' -race'
