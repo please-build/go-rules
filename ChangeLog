@@ -1,3 +1,8 @@
+Version 1.13.0
+--------------
+    * Add strip argument to go_repo (#195)
+    * Add config option to set Go build tags (#199)
+
 Version 1.12.1
 --------------
     * New version of please_go tool now available
