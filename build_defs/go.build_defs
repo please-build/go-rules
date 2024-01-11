@@ -1580,12 +1580,8 @@ def _set_go_env():
 def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
     """Returns the commands to run for building a Go library."""
     if filter_srcs:
-        filter_cmd = 'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter'
-        if CONFIG.GO.BUILD_TAGS:
-            build_tags = ' -t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS)
-            filter_cmd += build_tags
-
-        filter_cmd += " $SRCS_GO)\"; "
+        build_tags = '-t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
+        filter_cmd = f'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter {build_tags} $SRCS_GO)"; '
     else:
         filter_cmd = ''
 
