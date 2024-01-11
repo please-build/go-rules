@@ -281,7 +281,7 @@ func (g *Generate) generate(dir string) error {
 	// filter out pkg.GoFiles based on build tags
 	var goFiles []string
 	for _, f := range pkg.GoFiles {
-		match, err := g.buildContext.MatchFile(dir, f)
+		match, err := g.buildContext.MatchFile(pkg.Dir, f)
 		if err != nil {
 			return err
 		}
@@ -289,6 +289,7 @@ func (g *Generate) generate(dir string) error {
 			goFiles = append(goFiles, f)
 		}
 	}
+
 	pkg.GoFiles = goFiles
 
 	lib := g.ruleForPackage(pkg, dir)
