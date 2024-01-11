@@ -1219,8 +1219,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         labels += [f"go_module:{module}@{version}"]
     requirements = " ".join(requirements)
 
-    if CONFIG.GO.BUILD_TAGS:
-        build_tags = '--build_tag ' + ' --build_tag '.join(CONFIG.GO.BUILD_TAGS)
+    build_tags = '--build_tag ' + ' --build_tag '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
 
     repo = build_rule(
         name = name,
