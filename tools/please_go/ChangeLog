@@ -1,7 +1,7 @@
 Version 1.8.0
 -------------
     * Add --build_tag flag to `generate` subcommand to allow specifying a build tag to use when
-	  generating the BUILD files (#199)
+      generating the BUILD files (#199)
 
 Version 1.7.0
 -------------
