@@ -147,5 +147,10 @@ Type = bool
 DefaultValue = true
 Help = Generate pkg info for Go targets
 
+[PluginConfig "build_tags"]
+Repeatable = true
+Optional = true
+Help = Build tags to pass to the Go compiler
+
 [Plugin "shell"]
 Target = //plugins:shell

@@ -98,6 +98,7 @@ var opts = struct {
 		Module           string   `long:"module" description:"The name of the current module"`
 		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
+		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
@@ -179,7 +180,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, opts.Generate.Version, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install)
+		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, opts.Generate.Version, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install, opts.Generate.BuildTags)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
