@@ -1185,7 +1185,8 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
                   migrate to go_repo incrementally, one module at a time.
       third_party_path(str): Optional path of third_party directory.
       strip(list): A list of directories to strip from the repo
-      build_tags(list): A list of build tags to pass to the go compiler
+      build_tags(list): A list of build tags to pass to the go compiler. Will override any build tags set in the
+                        plzconfig.
     """
     subrepo_name = _module_rule_name(module)
 
