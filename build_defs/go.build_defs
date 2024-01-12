@@ -1149,7 +1149,7 @@ def _module_rule_name(module):
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
             licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[],
-            third_party_path:str="third_party/go", strip:list=None):
+            third_party_path:str="third_party/go", strip:list=None, build_tags:list=[]):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1185,6 +1185,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
                   migrate to go_repo incrementally, one module at a time.
       third_party_path(str): Optional path of third_party directory.
       strip(list): A list of directories to strip from the repo
+      build_tags(list): A list of build tags to pass to the go compiler
     """
     subrepo_name = _module_rule_name(module)
 
@@ -1219,13 +1220,17 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         labels += [f"go_module:{module}@{version}"]
     requirements = " ".join(requirements)
 
-    build_tags = '--build_tag ' + ' --build_tag '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
+    build_tags_args = ''
+    if build_tags:
+        build_tags_args = ' '.join([f'--build_tag={tag}' for tag in build_tags])
+    elif CONFIG.GO.BUILD_TAGS:
+        build_tags_args = ' '.join([f'--build_tag={tag}' for tag in CONFIG.GO.BUILD_TAGS])
 
     repo = build_rule(
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tags} --src_root=$SRCS_DOWNLOAD --third_part_folder='{third_party_path}' {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tags_args} --src_root=$SRCS_DOWNLOAD --third_part_folder='{third_party_path}' {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
