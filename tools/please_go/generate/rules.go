@@ -29,7 +29,7 @@ func populateRule(r *build.Rule, targetState *Rule) {
 	if len(targetState.deps) > 0 {
 		r.SetAttr("deps", NewStringList(targetState.deps))
 	}
-	if len(targetState.compilerFlags) > 0 {
+	if len(targetState.pkgConfigs) > 0 {
 		r.SetAttr("pkg_config", NewStringList(targetState.pkgConfigs))
 	}
 	if len(targetState.compilerFlags) > 0 {
@@ -43,9 +43,6 @@ func populateRule(r *build.Rule, targetState *Rule) {
 	}
 	if len(targetState.asmFiles) > 0 {
 		r.SetAttr("asm_srcs", NewStringList(targetState.asmFiles))
-	}
-	if len(targetState.deps) > 0 {
-		r.SetAttr("deps", NewStringList(targetState.deps))
 	}
 	if len(targetState.embedPatterns) > 0 {
 		r.SetAttr("resources", &build.CallExpr{
