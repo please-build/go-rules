@@ -1,3 +1,7 @@
+Version 1.13.1
+--------------
+    * go_repo now sets cover to false (#203)
+
 Version 1.13.0
 --------------
     * Add strip argument to go_repo (#195)
