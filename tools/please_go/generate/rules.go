@@ -55,5 +55,4 @@ func populateRule(r *build.Rule, targetState *Rule) {
 	if !targetState.isCMD {
 		r.SetAttr("_module", NewStringExpr(targetState.module))
 	}
-	r.SetAttr("cover", &build.Ident{Name: "False"})
 }

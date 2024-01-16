@@ -1,3 +1,7 @@
+Version 1.8.3
+--------------
+    * only set cover false on go_library rules
+
 Version 1.8.2
 --------------
     * go_repo generated rules have coverage false
