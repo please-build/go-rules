@@ -1,3 +1,7 @@
+Version 1.13.2
+--------------
+    * go_repo now sets cover to false only on go_library (#205)
+
 Version 1.13.1
 --------------
     * go_repo now sets cover to false (#203)
