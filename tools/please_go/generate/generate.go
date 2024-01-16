@@ -318,6 +318,9 @@ func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
 	r := NewRule(rule.kind, rule.name)
 	populateRule(r, rule)
 	r.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
+	if rule.kind == "go_library" {
+		r.SetAttr("cover", &bazelbuild.Ident{Name: "False"})
+	}
 
 	return r
 }
