@@ -1,3 +1,9 @@
+Version 1.14.0
+--------------
+    * please_go upgraded to write build tags to subrepo plz config (#207)
+    * go_toolchain, go_system_toolchain, go_stdlib and go_repo all take
+    build_tags argument but default to the go config values. (#207)
+
 Version 1.13.2
 --------------
     * go_repo now sets cover to false only on go_library (#205)
