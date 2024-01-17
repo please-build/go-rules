@@ -1,3 +1,7 @@
+Version 1.8.4
+--------------
+    * in go_repo's subrepo write build tags to the plz config
+
 Version 1.8.3
 --------------
     * only set cover false on go_library rules
