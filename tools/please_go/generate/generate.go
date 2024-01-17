@@ -231,6 +231,9 @@ func (g *Generate) writeConfig() error {
 	fmt.Fprintln(file, "[Plugin \"go\"]")
 	fmt.Fprintln(file, "Target=@//plugins:go")
 	fmt.Fprintf(file, "ImportPath=%s\n", g.moduleName)
+	for _, t := range g.buildContext.BuildTags {
+		fmt.Fprintf(file, "BuildTags=%s\n", t)
+	}
 	return nil
 }
 

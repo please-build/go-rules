@@ -1148,7 +1148,7 @@ def _module_rule_name(module):
 
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
-            licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[],
+            licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[], build_tags:list=CONFIG.GO.BUILD_TAGS,
             third_party_path:str="third_party/go", strip:list=None):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
@@ -1183,6 +1183,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
       visibility(list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
       deps(list): Any deps on other rule kinds that provide packages, for example go_module(). This can be used to
                   migrate to go_repo incrementally, one module at a time.
+      build_tags(list): Build tags to pass to the Go compiler.
       third_party_path(str): Optional path of third_party directory.
       strip(list): A list of directories to strip from the repo
     """
@@ -1219,13 +1220,13 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         labels += [f"go_module:{module}@{version}"]
     requirements = " ".join(requirements)
 
-    build_tags = '--build_tag ' + ' --build_tag '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
+    build_tag_args = '--build_tag ' + ' --build_tag '.join(build_tags) if build_tags else ''
 
     repo = build_rule(
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tags} --src_root=$SRCS_DOWNLOAD --third_part_folder='{third_party_path}' {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
+        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} --src_root=$SRCS_DOWNLOAD --third_part_folder='{third_party_path}' {install_args} {requirements} && mv $SRCS_DOWNLOAD $OUT",
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
@@ -1342,7 +1343,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], labels:list=[],
               hashes:list=None, licences:list=None, linker_flags:list=[], strip:list=[], env:dict={},
-              patch:list|str=[], build_tags:list=[]):
+              patch:list|str=[], build_tags:list=CONFIG.GO.BUILD_TAGS):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
