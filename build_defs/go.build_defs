@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[], strip_srcs:bool=False, tags:list=None, install_std=None):
+                 architectures:list=[], strip_srcs:bool=False, tags:list=CONFIG.GO.BUILD_TAGS, install_std=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -102,7 +102,7 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
     )
 
 
-def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=None, install_std:bool=True, visibility:list = ["PUBLIC"]):
+def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=CONFIG.GO.BUILD_TAGS, install_std:bool=True, visibility:list = ["PUBLIC"]):
     """Defines a Go toolchain that's installed on the local system.
 
     This is similar to using simply `go` as your gotool, but from 1.20 onwards it's necessary in order to
@@ -128,7 +128,7 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
     )
 
 
-def go_stdlib(name:str, tags:list=[], visibility:list=["PUBLIC"]):
+def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, visibility:list=["PUBLIC"]):
     """Defines compilation of the Go standard library.
 
     This is idiomatically configured in //third_party/go and set as the gostdlib config value for the Go plugin.
