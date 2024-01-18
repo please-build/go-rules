@@ -443,16 +443,20 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         labels = labels + src_labels,
         test_only=test_only,
     )
+    provides = {'go': ':' + name, 'go_src': src_rule, 'modinfo': modinfo, 'hdrs': hdrs_rule}
 
     # Package info rule for the Go packages driver
     if _generate_pkg_info:
-        deps += [_go_pkg_info(
+        pkg_info = _go_pkg_info(
             name = name,
             srcs = srcs + resources,
             import_path = import_path,
             package = package,
             test_only = test_only,
-        )]
+            visibility = visibility,
+        )
+        deps += [pkg_info]
+        provides["pkg_info"] = pkg_info
 
     tools = { 'go': [CONFIG.GO.GO_TOOL] }
     if filter_srcs or cover:
@@ -474,7 +478,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if pgo_file:
         srcs['pgo'] = [pgo_file]
 
-    provides = {'go': ':' + name, 'go_src': src_rule, 'modinfo': modinfo, 'hdrs': hdrs_rule}
     if cover and not CONFIG.GO.COVERAGEREDESIGN:
         provides['cover_vars'] = cover_vars
     return build_rule(
@@ -1477,6 +1480,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             module = module,
             test_only = test_only,
             install = installpkg,
+            visibility=visibility,
         )
         provides["pkg_info"] = pkg_info
 
@@ -1516,8 +1520,8 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
     )
 
 
-def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="", package:str="",
-                 module:str="",  test_only:bool=False, install:list=[]):
+def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, import_path:str="", package:str="",
+                 module:str="", test_only:bool=False, install:list=[]):
     """Internal-only function for generating the pkg_info files"""
 
 
@@ -1550,6 +1554,7 @@ def _go_pkg_info(name:str, srcs:list, importconfig:str=None, import_path:str="",
         cmd = f'{cmd} > "$OUTS"',
         labels = ["go_pkg_info"],
         test_only = test_only,
+        visibility=visibility,
     )
 
 
