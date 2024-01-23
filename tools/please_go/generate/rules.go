@@ -8,6 +8,7 @@ type Rule struct {
 	module        string
 	srcs          []string
 	cgoSrcs       []string
+	cSrcs         []string
 	compilerFlags []string
 	linkerFlags   []string
 	pkgConfigs    []string
@@ -15,8 +16,7 @@ type Rule struct {
 	hdrs          []string
 	deps          []string
 	embedPatterns []string
-	// TODO(jpoole):  handle external test
-	external, isCMD bool
+	isCMD         bool
 }
 
 func populateRule(r *build.Rule, targetState *Rule) {
@@ -25,6 +25,9 @@ func populateRule(r *build.Rule, targetState *Rule) {
 		r.SetAttr("go_srcs", NewStringList(targetState.srcs))
 	} else {
 		r.SetAttr("srcs", NewStringList(targetState.srcs))
+	}
+	if len(targetState.cSrcs) > 0 {
+		r.SetAttr("c_srcs", NewStringList(targetState.cSrcs))
 	}
 	if len(targetState.deps) > 0 {
 		r.SetAttr("deps", NewStringList(targetState.deps))

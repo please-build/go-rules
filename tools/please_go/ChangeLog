@@ -1,3 +1,7 @@
+Version 1.8.5
+--------------
+    * in go_repo, add c source to the generated cgo_library (#213)
+
 Version 1.8.4
 --------------
     * in go_repo's subrepo write build tags to the plz config
