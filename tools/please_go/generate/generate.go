@@ -444,6 +444,7 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		srcs:          pkg.GoFiles,
 		module:        g.moduleArg,
 		cgoSrcs:       pkg.CgoFiles,
+		cSrcs:         pkg.CFiles,
 		compilerFlags: pkg.CgoCFLAGS,
 		linkerFlags:   pkg.CgoLDFLAGS,
 		pkgConfigs:    pkg.CgoPkgConfig,
