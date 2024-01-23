@@ -1,3 +1,8 @@
+Version 1.14.2
+--------------
+    * go_repo: fix issues with compiling cgo where symbols defined in C files
+      would be missing during linking (#213)
+
 Version 1.14.1
 --------------
     * Provide the package info from `go_library()` the same way we do for
