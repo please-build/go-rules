@@ -1,3 +1,7 @@
+Version 1.15.1
+--------------
+    * Fix cgo_library for package driver info generation
+
 Version 1.15.0
 --------------
     * Generate correct subrepo info for package driver (#191)
