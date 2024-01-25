@@ -66,7 +66,15 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkg.ExportFile = imports[pkg.PkgPath]
+		if subrepo != "" {
+			_, pkgPath, ok := strings.Cut(imports[pkg.PkgPath], pkg.PkgPath)
+			if !ok {
+				return fmt.Errorf("Cannot determine export file path for package %s from %s", pkg.PkgPath, imports[pkg.PkgPath])
+			}
+			pkg.ExportFile = filepath.Join(subrepo, pkgPath)
+		} else {
+			pkg.ExportFile = imports[pkg.PkgPath]
+		}
 		pkgs = append(pkgs, pkg)
 	}
 	// Ensure output is deterministic
