@@ -79,22 +79,12 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err := os.Chdir(rootpath); err != nil {
 		return nil, err
 	}
-	// Now we have to make the filepaths relative, so plz understands them
-	// When https://github.com/thought-machine/please/issues/2618 is resolved, we won't need to do this.
-	relFiles := make([]string, len(files))
-	for i, file := range files {
-		file, err = filepath.Rel(rootpath, file)
-		if err != nil {
-			return nil, err
-		}
-		relFiles[i] = file
-	}
 	// Now turn these back into the set of original directories; we use these to determine roots later
 	dirs := map[string]struct{}{}
-	for _, file := range relFiles {
+	for _, file := range files {
 		dirs[filepath.Dir(file)] = struct{}{}
 	}
-	pkgs, err := loadPackageInfo(relFiles, req.Mode)
+	pkgs, err := loadPackageInfo(files, req.Mode)
 	if err != nil {
 		return nil, err
 	}
