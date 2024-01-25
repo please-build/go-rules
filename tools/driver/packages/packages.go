@@ -327,7 +327,20 @@ func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 func directoriesToFiles(in []string, includeTests bool) ([]string, error) {
 	files := make([]string, 0, len(in))
 	for _, x := range in {
-		if info, err := os.Stat(x); err != nil {
+		if strings.HasSuffix(x, "/...") {
+			// We could turn this into a `/...` style thing for plz but we also need to know the
+			// directories later to populate the roots correctly.
+			if err := filepath.WalkDir(strings.TrimSuffix(x, "/..."), func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				} else if strings.HasSuffix(path, ".go") && (d.Type()&fs.ModeSymlink) == 0 {
+					files = append(files, path)
+				}
+				return nil
+			}); err != nil {
+				return nil, err
+			}
+		} else if info, err := os.Stat(x); err != nil {
 			return nil, err
 		} else if info.IsDir() {
 			for _, f := range allGoFilesInDir(x, includeTests) {
