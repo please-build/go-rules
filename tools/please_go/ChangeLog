@@ -1,3 +1,7 @@
+Version 1.9.0
+-------------
+    * Generate correct subrepo info for package driver (#191)
+
 Version 1.8.5
 --------------
     * in go_repo, add c source to the generated cgo_library (#213)
