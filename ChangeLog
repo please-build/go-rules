@@ -1,3 +1,7 @@
+Version 1.15.0
+--------------
+    * Generate correct subrepo info for package driver (#191)
+
 Version 1.14.2
 --------------
     * go_repo: fix issues with compiling cgo where symbols defined in C files
