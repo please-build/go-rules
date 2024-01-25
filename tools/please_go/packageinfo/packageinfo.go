@@ -60,7 +60,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, srcRoot), "/")
-		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, subrepo)
+		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, subrepo, importPath)
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
@@ -76,7 +76,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	return serialise(pkgs, w)
 }
 
-func createPackage(pkgPath, pkgDir, subrepo string) (*packages.Package, error) {
+func createPackage(pkgPath, pkgDir, subrepo, importPath string) (*packages.Package, error) {
 	if pkgDir == "" || pkgDir == "." {
 		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
 		path, err := filepath.Abs(pkgDir)
@@ -90,7 +90,7 @@ func createPackage(pkgPath, pkgDir, subrepo string) (*packages.Package, error) {
 		return nil, err
 	}
 	bpkg.ImportPath = pkgPath
-	return FromBuildPackage(bpkg, subrepo), nil
+	return FromBuildPackage(bpkg, subrepo, importPath), nil
 }
 
 func serialise(pkgs []*packages.Package, w io.Writer) error {
@@ -100,7 +100,7 @@ func serialise(pkgs []*packages.Package, w io.Writer) error {
 }
 
 // FromBuildPackage creates a packages Package from a build Package.
-func FromBuildPackage(pkg *build.Package, subrepo string) *packages.Package {
+func FromBuildPackage(pkg *build.Package, subrepo, importPath string) *packages.Package {
 	p := &packages.Package{
 		ID:            pkg.ImportPath,
 		Name:          pkg.Name,
@@ -114,6 +114,7 @@ func FromBuildPackage(pkg *build.Package, subrepo string) *packages.Package {
 		if subrepo != "" {
 			// this is fairly nasty... there must be a better way of getting it without the pkg/ prefix
 			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
+			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), importPath)
 			p.GoFiles[i] = filepath.Join(subrepo, dir, file)
 		} else {
 			p.GoFiles[i] = filepath.Join(pkg.Dir, file)

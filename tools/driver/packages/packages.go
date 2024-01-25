@@ -161,10 +161,12 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		for i, file := range pkg.GoFiles {
 			// This is pretty awkward; we need to try to figure out where these files exist now,
 			// which isn't particularly clear to the build actions that generated them.
-			if _, err := os.Lstat(file); err == nil { // file exists
-				pkg.GoFiles[i] = filepath.Join(rootpath, file)
+			if path := filepath.Join(rootpath, "plz-out/subrepos", file); pathExists(path) {
+				pkg.GoFiles[i] = path
+			} else if path := filepath.Join(rootpath, "plz-out/gen", file); pathExists(path) {
+				pkg.GoFiles[i] = path
 			} else {
-				pkg.GoFiles[i] = filepath.Join(rootpath, "plz-out/gen", file)
+				pkg.GoFiles[i] = filepath.Join(rootpath, file)
 			}
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
@@ -314,7 +316,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		pkgs = append(pkgs, packageinfo.FromBuildPackage(pkg, ""))
+		pkgs = append(pkgs, packageinfo.FromBuildPackage(pkg, "", ""))
 	}
 	return pkgs, nil
 }
@@ -358,4 +360,9 @@ func allGoFilesInDir(dirname string, includeTests bool) []string {
 		}
 	}
 	return files
+}
+
+func pathExists(filename string) bool {
+	_, err := os.Lstat(filename)
+	return err == nil
 }
