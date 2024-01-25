@@ -94,7 +94,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	for _, file := range relFiles {
 		dirs[filepath.Dir(file)] = struct{}{}
 	}
-	pkgs, err := loadPackageInfo(relFiles)
+	pkgs, err := loadPackageInfo(relFiles, req.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -161,10 +161,12 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		for i, file := range pkg.GoFiles {
 			// This is pretty awkward; we need to try to figure out where these files exist now,
 			// which isn't particularly clear to the build actions that generated them.
-			if _, err := os.Lstat(file); err == nil { // file exists
-				pkg.GoFiles[i] = filepath.Join(rootpath, file)
+			if path := filepath.Join(rootpath, "plz-out/subrepos", file); pathExists(path) {
+				pkg.GoFiles[i] = path
+			} else if path := filepath.Join(rootpath, "plz-out/gen", file); pathExists(path) {
+				pkg.GoFiles[i] = path
 			} else {
-				pkg.GoFiles[i] = filepath.Join(rootpath, "plz-out/gen", file)
+				pkg.GoFiles[i] = filepath.Join(rootpath, file)
 			}
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
@@ -195,7 +197,7 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 // loadPackageInfo loads all the package information by executing Please.
 // A cooler way of handling this in future would be to do this in-process; for that we'd
 // need to define the SDK we keep talking about as a supported programmatic interface.
-func loadPackageInfo(files []string) ([]*packages.Package, error) {
+func loadPackageInfo(files []string, mode packages.LoadMode) ([]*packages.Package, error) {
 	isTerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	plz := func(args ...string) *exec.Cmd {
 		cmd := exec.Command("plz", args...)
@@ -218,7 +220,11 @@ func loadPackageInfo(files []string) ([]*packages.Package, error) {
 	// N.B. deliberate not to close these here, they happen exactly when needed.
 	whatinputs := plz(append([]string{"query", "whatinputs"}, files...)...)
 	whatinputs.Stdout = w1
-	deps := plz("query", "deps", "-", "--hidden", "--include", "go_pkg_info", "--include", "go_src")
+	args := []string{"query", "deps", "-", "--hidden", "-i", "go_pkg_info", "-i", "go_src"}
+	if (mode & packages.NeedExportFile) != 0 {
+		args = append(args, "-i", "go")
+	}
+	deps := plz(args...)
 	deps.Stdin = r1
 	deps.Stdout = w2
 	build := plz("build", "-")
@@ -263,6 +269,7 @@ func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
 		if !strings.HasSuffix(file, ".json") {
 			continue // Ignore all the various Go sources etc.
 		}
+		log.Debug("Package file: %s", file)
 		g.Go(func() error {
 			f, err := os.Open(file)
 			if err != nil {
@@ -313,7 +320,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		pkgs = append(pkgs, packageinfo.FromBuildPackage(pkg))
+		pkgs = append(pkgs, packageinfo.FromBuildPackage(pkg, "", ""))
 	}
 	return pkgs, nil
 }
@@ -357,4 +364,9 @@ func allGoFilesInDir(dirname string, includeTests bool) []string {
 		}
 	}
 	return files
+}
+
+func pathExists(filename string) bool {
+	_, err := os.Lstat(filename)
+	return err == nil
 }

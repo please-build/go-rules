@@ -83,6 +83,7 @@ var opts = struct {
 		ImportPath string            `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
 		Pkg        string            `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
 		ImportMap  map[string]string `short:"m" long:"import_map" description:"Existing map of imports"`
+		Subrepo    string            `short:"s" long:"subrepo" description:"Subrepo root that this package is within"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
 		ModulePath   string   `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
@@ -99,6 +100,7 @@ var opts = struct {
 		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
 		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
+		Subrepo          string   `long:"subrepo" description:"The subrepo root to output into"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
@@ -180,7 +182,8 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"generate": func() int {
-		g := generate.New(opts.Generate.SrcRoot, opts.Generate.ThirdPartyFolder, opts.Generate.ModFile, opts.Generate.Module, opts.Generate.Version, []string{"BUILD", "BUILD.plz"}, opts.Generate.Args.Requirements, opts.Generate.Install, opts.Generate.BuildTags)
+		gen := opts.Generate
+		g := generate.New(gen.SrcRoot, gen.ThirdPartyFolder, gen.ModFile, gen.Module, gen.Version, gen.Subrepo, []string{"BUILD", "BUILD.plz"}, gen.Args.Requirements, gen.Install, gen.BuildTags)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
@@ -200,14 +203,14 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, "", pi.ImportMap, nil, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, "", pi.ImportMap, nil, pi.Subrepo, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, "", os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0

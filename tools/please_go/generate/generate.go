@@ -20,6 +20,7 @@ type Generate struct {
 	moduleName         string
 	moduleArg          string
 	srcRoot            string
+	subrepo            string
 	buildContext       build.Context
 	modFile            string
 	buildFileNames     []string
@@ -31,7 +32,7 @@ type Generate struct {
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
+func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -51,6 +52,7 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version string, buildFileNa
 		install:            install,
 		moduleName:         module,
 		moduleArg:          moduleArg,
+		subrepo:            subrepo,
 	}
 }
 
@@ -443,6 +445,7 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		kind:          packageKind(pkg),
 		srcs:          pkg.GoFiles,
 		module:        g.moduleArg,
+		subrepo:       g.subrepo,
 		cgoSrcs:       pkg.CgoFiles,
 		cSrcs:         pkg.CFiles,
 		compilerFlags: pkg.CgoCFLAGS,
