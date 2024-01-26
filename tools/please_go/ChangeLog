@@ -1,3 +1,7 @@
+Version 1.9.1
+-------------
+    * Generate information allowing the package driver to work for go_repo within a test
+
 Version 1.9.0
 -------------
     * Generate correct subrepo info for package driver (#191)
