@@ -1,3 +1,7 @@
+Version 1.15.2
+--------------
+    * Package driver now works when running within a test for `go_repo` (#219)
+
 Version 1.15.1
 --------------
     * Fix cgo_library for package driver info generation
