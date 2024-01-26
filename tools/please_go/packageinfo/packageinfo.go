@@ -71,7 +71,8 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 			if !ok {
 				return fmt.Errorf("Cannot determine export file path for package %s from %s", pkg.PkgPath, imports[pkg.PkgPath])
 			}
-			pkg.ExportFile = filepath.Join(subrepo, pkgPath)
+			// This is a really gross hack to sneak both paths through the one field.
+			pkg.ExportFile = filepath.Join(subrepo, pkgPath) + "|" + imports[pkg.PkgPath]
 		} else {
 			pkg.ExportFile = imports[pkg.PkgPath]
 		}
@@ -81,7 +82,9 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	sort.Slice(pkgs, func(i, j int) bool {
 		return pkgs[i].ID < pkgs[j].ID
 	})
-	return serialise(pkgs, w)
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(pkgs)
 }
 
 func createPackage(pkgPath, pkgDir, subrepo, importPath string) (*packages.Package, error) {
@@ -101,22 +104,17 @@ func createPackage(pkgPath, pkgDir, subrepo, importPath string) (*packages.Packa
 	return FromBuildPackage(bpkg, subrepo, importPath), nil
 }
 
-func serialise(pkgs []*packages.Package, w io.Writer) error {
-	e := json.NewEncoder(w)
-	e.SetIndent("", "  ")
-	return e.Encode(pkgs)
-}
-
 // FromBuildPackage creates a packages Package from a build Package.
 func FromBuildPackage(pkg *build.Package, subrepo, importPath string) *packages.Package {
 	p := &packages.Package{
-		ID:            pkg.ImportPath,
-		Name:          pkg.Name,
-		PkgPath:       pkg.ImportPath,
-		GoFiles:       make([]string, len(pkg.GoFiles)),
-		OtherFiles:    mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
-		EmbedPatterns: pkg.EmbedPatterns,
-		Imports:       make(map[string]*packages.Package, len(pkg.Imports)),
+		ID:              pkg.ImportPath,
+		Name:            pkg.Name,
+		PkgPath:         pkg.ImportPath,
+		GoFiles:         make([]string, len(pkg.GoFiles)),
+		CompiledGoFiles: make([]string, len(pkg.GoFiles)),
+		OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
+		EmbedPatterns:   pkg.EmbedPatterns,
+		Imports:         make(map[string]*packages.Package, len(pkg.Imports)),
 	}
 	for i, file := range pkg.GoFiles {
 		if subrepo != "" {
@@ -124,11 +122,12 @@ func FromBuildPackage(pkg *build.Package, subrepo, importPath string) *packages.
 			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
 			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), importPath)
 			p.GoFiles[i] = filepath.Join(subrepo, dir, file)
+			p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file) // Stash this here for later
 		} else {
 			p.GoFiles[i] = filepath.Join(pkg.Dir, file)
+			p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file)
 		}
 	}
-	p.CompiledGoFiles = p.GoFiles // This seems to be important to e.g. gosec
 	for _, imp := range pkg.Imports {
 		p.Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
 	}

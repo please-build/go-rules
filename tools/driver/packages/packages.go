@@ -114,6 +114,12 @@ func LoadOffline(req *DriverRequest, searchDir string, files []string) (*DriverR
 		} else if err := json.Unmarshal(b, &lpkgs); err != nil {
 			return fmt.Errorf("failed to decode %s: %w", path, err)
 		}
+		for _, pkg := range lpkgs {
+			if _, after, found := strings.Cut(pkg.ExportFile, "|"); found {
+				pkg.ExportFile = after
+			}
+			pkg.GoFiles = pkg.CompiledGoFiles
+		}
 		pkgs = append(pkgs, lpkgs...)
 		return nil
 	}); err != nil {
@@ -282,7 +288,10 @@ func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
 			}
 			// Update the ExportFile paths to include the generated prefix
 			for _, pkg := range lpkgs {
-				pkg.ExportFile = filepath.Join("plz-out/gen", pkg.ExportFile)
+				// Undo the hack from packageinfo.go
+				before, _, _ := strings.Cut(pkg.ExportFile, "|")
+				pkg.ExportFile = filepath.Join("plz-out/gen", before)
+				pkg.CompiledGoFiles = pkg.GoFiles
 			}
 			lock.Lock()
 			defer lock.Unlock()
