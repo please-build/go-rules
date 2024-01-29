@@ -1,3 +1,7 @@
+Version 1.15.3
+--------------
+	* Pass module coordinates into package info (#221)
+
 Version 1.15.2
 --------------
     * Package driver now works when running within a test for `go_repo` (#219)
