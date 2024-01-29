@@ -1,3 +1,7 @@
+Version 1.9.2
+-------------
+    * Generate correct paths for subdir imports within a module.
+
 Version 1.9.1
 -------------
     * Generate information allowing the package driver to work for go_repo within a test
