@@ -447,6 +447,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     provides = {'go': ':' + name, 'go_src': src_rule, 'modinfo': modinfo, 'hdrs': hdrs_rule}
 
     # Package info rule for the Go packages driver
+    log.warning('here %s %s', name, _module)
     if _generate_pkg_info:
         pkg_info = _go_pkg_info(
             name = name,
