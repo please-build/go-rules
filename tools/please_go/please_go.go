@@ -84,6 +84,7 @@ var opts = struct {
 		Pkg        string            `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
 		ImportMap  map[string]string `short:"m" long:"import_map" description:"Existing map of imports"`
 		Subrepo    string            `short:"s" long:"subrepo" description:"Subrepo root that this package is within"`
+		Module     string            `long:"mod" description:"The module this is within, if present"`
 	} `command:"package_info" alias:"p" description:"Creates an info file about a Go package"`
 	ModuleInfo struct {
 		ModulePath   string   `short:"m" long:"module_path" required:"true" description:"Import path of the module in question"`
@@ -203,14 +204,14 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, "", pi.ImportMap, nil, pi.Subrepo, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, "", pi.ImportMap, nil, pi.Subrepo, pi.Module, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, "", os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, "", "", os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0

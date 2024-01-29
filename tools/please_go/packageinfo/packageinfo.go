@@ -8,6 +8,7 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,9 +19,12 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo string, w io.Writer) error {
+func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo, module string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
+	if module == "" {
+		module = importPath
+	}
 
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -60,7 +64,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, srcRoot), "/")
-		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, subrepo, importPath)
+		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, subrepo, module)
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
@@ -87,7 +91,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 	return e.Encode(pkgs)
 }
 
-func createPackage(pkgPath, pkgDir, subrepo, importPath string) (*packages.Package, error) {
+func createPackage(pkgPath, pkgDir, subrepo, module string) (*packages.Package, error) {
 	if pkgDir == "" || pkgDir == "." {
 		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
 		path, err := filepath.Abs(pkgDir)
@@ -101,11 +105,11 @@ func createPackage(pkgPath, pkgDir, subrepo, importPath string) (*packages.Packa
 		return nil, err
 	}
 	bpkg.ImportPath = pkgPath
-	return FromBuildPackage(bpkg, subrepo, importPath), nil
+	return FromBuildPackage(bpkg, subrepo, module), nil
 }
 
 // FromBuildPackage creates a packages Package from a build Package.
-func FromBuildPackage(pkg *build.Package, subrepo, importPath string) *packages.Package {
+func FromBuildPackage(pkg *build.Package, subrepo, module string) *packages.Package {
 	p := &packages.Package{
 		ID:              pkg.ImportPath,
 		Name:            pkg.Name,
@@ -119,8 +123,9 @@ func FromBuildPackage(pkg *build.Package, subrepo, importPath string) *packages.
 	for i, file := range pkg.GoFiles {
 		if subrepo != "" {
 			// this is fairly nasty... there must be a better way of getting it without the pkg/ prefix
+			log.Printf("here %s | %s | %s | %s", subrepo, pkg.Dir, file, module)
 			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
-			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), importPath)
+			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), module)
 			p.GoFiles[i] = filepath.Join(subrepo, dir, file)
 			p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file) // Stash this here for later
 		} else {
