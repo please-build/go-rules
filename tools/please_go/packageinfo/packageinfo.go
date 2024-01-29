@@ -22,9 +22,7 @@ import (
 func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo, module string, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
-	if module == "" {
-		module = importPath
-	}
+	module = modulePath(module, importPath)
 
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -165,4 +163,13 @@ func loadImportConfig(filename string) (map[string]string, error) {
 		}
 	}
 	return m, nil
+}
+
+// modulePath returns the import path for a module, or the given one if the module isn't set.
+func modulePath(module, importPath string) string {
+	if module == "" {
+		return importPath
+	}
+	before, _, _ := strings.Cut(module, "@")
+	return before
 }
