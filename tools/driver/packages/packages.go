@@ -79,22 +79,12 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	if err := os.Chdir(rootpath); err != nil {
 		return nil, err
 	}
-	// Now we have to make the filepaths relative, so plz understands them
-	// When https://github.com/thought-machine/please/issues/2618 is resolved, we won't need to do this.
-	relFiles := make([]string, len(files))
-	for i, file := range files {
-		file, err = filepath.Rel(rootpath, file)
-		if err != nil {
-			return nil, err
-		}
-		relFiles[i] = file
-	}
 	// Now turn these back into the set of original directories; we use these to determine roots later
 	dirs := map[string]struct{}{}
-	for _, file := range relFiles {
+	for _, file := range files {
 		dirs[filepath.Dir(file)] = struct{}{}
 	}
-	pkgs, err := loadPackageInfo(relFiles, req.Mode)
+	pkgs, err := loadPackageInfo(files, req.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +336,20 @@ func handleSubprocessErr(cmd *exec.Cmd, err error) error {
 func directoriesToFiles(in []string, includeTests bool) ([]string, error) {
 	files := make([]string, 0, len(in))
 	for _, x := range in {
-		if info, err := os.Stat(x); err != nil {
+		if strings.HasSuffix(x, "/...") {
+			// We could turn this into a `/...` style thing for plz but we also need to know the
+			// directories later to populate the roots correctly.
+			if err := filepath.WalkDir(strings.TrimSuffix(x, "/..."), func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				} else if strings.HasSuffix(path, ".go") && (d.Type()&fs.ModeSymlink) == 0 {
+					files = append(files, path)
+				}
+				return nil
+			}); err != nil {
+				return nil, err
+			}
+		} else if info, err := os.Stat(x); err != nil {
 			return nil, err
 		} else if info.IsDir() {
 			for _, f := range allGoFilesInDir(x, includeTests) {
