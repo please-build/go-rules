@@ -387,7 +387,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             _all_srcs = _all_srcs,
             _generate_import_config=False,
             _subrepo = _subrepo,
-            _module = _module,
             labels=labels + ["foo"],
             import_path=package_path,
         )
@@ -454,7 +453,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             srcs = srcs + resources,
             import_path = import_path,
             subrepo = _subrepo,
-            module = _module,
             package = package,
             test_only = test_only,
             visibility = visibility,
@@ -1533,7 +1531,7 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
     for i in install:
         install_flags += f" -p {i}" if i else " -p ."
 
-    if module and not subrepo:
+    if module:
         cmd = f'$TOOL m -m {module} {install_flags}'
     else:
         # The import path `go tool compile` expects for a binary target (i.e. `-p main`) doesn't match what we expect in
@@ -1547,8 +1545,6 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
         cmd = f'$TOOL p -i "{import_path}" -m "{import_path}:$PKG_DIR/{package}.a"'
         if subrepo:
             cmd = f"{cmd} -s {subrepo}"
-        if module:
-            cmd = f"{cmd} --mod {module}"
     return build_rule(
         name = name,
         tag = "pkg_info",
