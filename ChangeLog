@@ -1,3 +1,7 @@
+Version 1.16.1
+--------------
+    * strip argument to go_binary now behaves as expected in cover profile (#224)
+
 Version 1.16.0
 --------------
     * go_binary now takes a strip argument to control symbol stripping (#223)
