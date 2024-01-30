@@ -570,7 +570,7 @@ def _get_import_path(package="", import_path=""):
 
 def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO.DEFAULT_STATIC,
-              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
+              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False, strip:bool=None):
     """Compiles a Go binary.
 
     Args:
@@ -597,6 +597,8 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
                      used to contruct the list of definitions passed to the linker.
       stamp (bool): Allows this rule to gain access to information about SCM revision etc
                     via env vars. These can be useful to pass into `definitions`.
+      strip (bool): Determines whether the binary will be stripped of debug symbols or not.
+                    By default it depends on the build mode.
     """
     _srcs = srcs or [name + '.go']
     lib = go_library(
@@ -618,7 +620,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         deps = deps,
         test_only = test_only,
     )
-    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, split_debug=CONFIG.GO.SPLIT_DEBUG_INFO, strip=strip)
     if CONFIG.GO.STDLIB:
         deps += _stdlib()
 
@@ -1628,7 +1630,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     return cmds
 
 
-def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False):
+def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False, strip=None):
     """Returns the commands to run for linking a Go binary."""
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
@@ -1657,6 +1659,12 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
     else:
         flags = ''
 
+    opt_strip = ''
+    if strip:
+        flags += ' -s -w'
+    elif strip is None:
+        opt_strip = '-s -w'
+
     if len(defs) > 0:
         flags += " " + defs
 
@@ -1674,7 +1682,7 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
 
     cmds = {
         'dbg': f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS',
-        'opt': f'{gen_import_cfg} && {_link_cmd} {flags} -s -w $SRCS',
+        'opt': f'{gen_import_cfg} && {_link_cmd} {flags} {opt_strip} $SRCS',
     }
     if gcov and CONFIG.GO.CPP_COVERAGE:
         cmds['cover'] = f'{gen_import_cfg} && {_link_cmd} {flags} -extldflags="--coverage" $SRCS'
