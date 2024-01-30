@@ -1,6 +1,10 @@
+Version 1.16.0
+--------------
+    * go_binary now takes a strip argument to control symbol stripping (#223)
+
 Version 1.15.3
 --------------
-	* Pass module coordinates into package info (#221)
+    * Pass module coordinates into package info (#221)
 
 Version 1.15.2
 --------------
