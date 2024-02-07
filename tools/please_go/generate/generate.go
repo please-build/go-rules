@@ -2,11 +2,13 @@ package generate
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"go/build"
 	"io/fs"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -22,17 +24,16 @@ type Generate struct {
 	srcRoot            string
 	subrepo            string
 	buildContext       build.Context
-	modFile            string
+	hostModFile        string
 	buildFileNames     []string
 	moduleDeps         []string
-	pluginTarget       string
 	replace            map[string]string
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 	thirdPartyFolder   string
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
+func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -46,7 +47,7 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, bu
 		buildContext:       ctxt,
 		buildFileNames:     buildFileNames,
 		moduleDeps:         moduleDeps,
-		modFile:            modFile,
+		hostModFile:        hostModFile,
 		knownImportTargets: map[string]string{},
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
@@ -59,9 +60,24 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, bu
 // Generate generates a new Please project at the src root. It will walk through the directory tree generating new BUILD
 // files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
-	if err := g.readGoMod(g.modFile); err != nil {
-		return fmt.Errorf("failed to read go.mod: %w", err)
+	readModuleReplacePaths := false
+	if g.hostModFile != "" {
+		if err := g.readGoMod(g.hostModFile, true); err != nil {
+			return fmt.Errorf("failed to read host repo go.mod %q: %w", g.hostModFile, err)
+		}
+	} else {
+		// We only want to read the dep replacement rules if there isn't any host go.mod, otherwise third-party dependencies
+		// would dictate the host's naming. There could also be conflicts across different third-party modules.
+		readModuleReplacePaths = true
 	}
+
+	moduleGoMod := path.Join(g.srcRoot, "go.mod")
+	if err := g.readGoMod(moduleGoMod, readModuleReplacePaths); err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("failed to read module go.mod %q: %w", moduleGoMod, err)
+		}
+	}
+
 	if err := g.writeConfig(); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
@@ -196,10 +212,7 @@ func (g *Generate) writeInstallFilegroup() error {
 }
 
 // readGoMod reads the module dependencies
-func (g *Generate) readGoMod(path string) error {
-	if path == "" {
-		path = filepath.Join(g.srcRoot, "go.mod")
-	}
+func (g *Generate) readGoMod(path string, readReplacePaths bool) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -216,10 +229,15 @@ func (g *Generate) readGoMod(path string) error {
 
 	g.moduleDeps = append(g.moduleDeps, g.moduleName)
 
-	g.replace = make(map[string]string, len(modFile.Replace))
-	for _, replace := range modFile.Replace {
-		g.replace[replace.Old.Path] = replace.New.Path
+	if readReplacePaths {
+		if g.replace == nil {
+			g.replace = make(map[string]string, len(modFile.Replace))
+		}
+		for _, replace := range modFile.Replace {
+			g.replace[replace.Old.Path] = replace.New.Path
+		}
 	}
+
 	return nil
 }
 
