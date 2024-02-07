@@ -12,7 +12,7 @@ go_library(
     visibility = ["//tools/..."],
     deps = [
         "//third_party/go:buildtools",
-        "//third_party/go:mod",
+        "//tools/please_go/generate/gomoddeps",
     ],
 )
 

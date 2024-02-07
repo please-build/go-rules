@@ -2,7 +2,6 @@ package generate
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"go/build"
 	"io/fs"
@@ -12,10 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/mod/modfile"
-
 	bazelbuild "github.com/bazelbuild/buildtools/build"
 	bazeledit "github.com/bazelbuild/buildtools/edit"
+
+	"github.com/please-build/go-rules/tools/please_go/generate/gomoddeps"
 )
 
 type Generate struct {
@@ -60,23 +59,12 @@ func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string
 // Generate generates a new Please project at the src root. It will walk through the directory tree generating new BUILD
 // files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
-	readModuleReplacePaths := false
-	if g.hostModFile != "" {
-		if err := g.readGoMod(g.hostModFile, true); err != nil {
-			return fmt.Errorf("failed to read host repo go.mod %q: %w", g.hostModFile, err)
-		}
-	} else {
-		// We only want to read the dep replacement rules if there isn't any host go.mod, otherwise third-party dependencies
-		// would dictate the host's naming. There could also be conflicts across different third-party modules.
-		readModuleReplacePaths = true
+	deps, replacements, err := gomoddeps.GetCombinedDepsAndRequirements(g.hostModFile, path.Join(g.srcRoot, "go.mod"))
+	if err != nil {
+		return err
 	}
-
-	moduleGoMod := path.Join(g.srcRoot, "go.mod")
-	if err := g.readGoMod(moduleGoMod, readModuleReplacePaths); err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("failed to read module go.mod %q: %w", moduleGoMod, err)
-		}
-	}
+	g.moduleDeps = append(deps, g.moduleName)
+	g.replace = replacements
 
 	if err := g.writeConfig(); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
@@ -209,36 +197,6 @@ func (g *Generate) writeInstallFilegroup() error {
 	buildFile.Stmt = append(buildFile.Stmt, rule.Call)
 
 	return saveBuildFile(buildFile)
-}
-
-// readGoMod reads the module dependencies
-func (g *Generate) readGoMod(path string, readReplacePaths bool) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	modFile, err := modfile.ParseLax(path, data, nil)
-	if err != nil {
-		return err
-	}
-
-	// TODO we could probably validate these are known modules
-	for _, req := range modFile.Require {
-		g.moduleDeps = append(g.moduleDeps, req.Mod.Path)
-	}
-
-	g.moduleDeps = append(g.moduleDeps, g.moduleName)
-
-	if readReplacePaths {
-		if g.replace == nil {
-			g.replace = make(map[string]string, len(modFile.Replace))
-		}
-		for _, replace := range modFile.Replace {
-			g.replace[replace.Old.Path] = replace.New.Path
-		}
-	}
-
-	return nil
 }
 
 func (g *Generate) writeConfig() error {
