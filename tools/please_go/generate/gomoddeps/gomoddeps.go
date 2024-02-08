@@ -1,3 +1,4 @@
+// Package gomoddeps parses dependencies and replacements from the host and module go.mod files.
 package gomoddeps
 
 import (
@@ -26,7 +27,13 @@ func GetCombinedDepsAndReplacements(hostGoModPath, moduleGoModPath string) ([]st
 
 	var moduleDeps []string
 	var moduleReplacements = map[string]string{}
-	moduleDeps, moduleReplacements, err = getDepsAndReplacements(moduleGoModPath, true)
+	useLaxParsingForModule := true
+	if hostGoModPath == "" {
+		// If we're only considering the module then we want to extract the replacement's as well (lax mode
+		// doesn't parse them).
+		useLaxParsingForModule = false
+	}
+	moduleDeps, moduleReplacements, err = getDepsAndReplacements(moduleGoModPath, useLaxParsingForModule)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return hostDeps, hostReplacements, nil
