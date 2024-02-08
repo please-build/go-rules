@@ -42,6 +42,7 @@ genrule(
         "//tools/please_go/embed:srcs",
         "//tools/please_go/filter:srcs",
         "//tools/please_go/generate:srcs",
+        "//tools/please_go/generate/gomoddeps:srcs",
         "//tools/please_go/goget:srcs",
         "//tools/please_go/install:srcs",
         "//tools/please_go/install/exec:srcs",

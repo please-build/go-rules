@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var hostGoModPath = "tools/please_go/generate/gomoddeps/testdata/host_go_mod"
-var moduleGoModPath = "tools/please_go/generate/gomoddeps/testdata/module_go_mod"
-var invalidGoModPath = "tools/please_go/generate/gomoddeps/testdata/invalid_go_mod"
+var hostGoModPath = "tools/please_go/generate/gomoddeps/test_data/host_go_mod"
+var moduleGoModPath = "tools/please_go/generate/gomoddeps/test_data/module_go_mod"
+var invalidGoModPath = "tools/please_go/generate/gomoddeps/test_data/invalid_go_mod"
 
 func TestErrors(t *testing.T) {
 	t.Run("errors if host go.mod does not exist", func(t *testing.T) {
