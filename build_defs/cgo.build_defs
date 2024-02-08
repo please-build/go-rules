@@ -92,6 +92,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         tools = [CONFIG.GO.GO_TOOL],
         post_build = post_build if file_srcs != srcs else None,
         requires = ['go', 'cc_hdrs'],
+        deps = deps,
     )
 
     # Compile the various bits
