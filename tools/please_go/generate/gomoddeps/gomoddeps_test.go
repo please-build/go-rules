@@ -12,28 +12,28 @@ var invalidGoModPath = "tools/please_go/generate/gomoddeps/test_data/invalid_go_
 
 func TestErrors(t *testing.T) {
 	t.Run("errors if host go.mod does not exist", func(t *testing.T) {
-		deps, replacements, err := GetCombinedDepsAndRequirements("/does/not/exist", "/does/not/matter")
+		deps, replacements, err := GetCombinedDepsAndReplacements("/does/not/exist", "/does/not/matter")
 		assert.Error(t, err)
 		assert.Nil(t, deps)
 		assert.Nil(t, replacements)
 	})
 
 	t.Run("does not error if module go.mod does not exist", func(t *testing.T) {
-		deps, replacements, err := GetCombinedDepsAndRequirements(hostGoModPath, "/does/not/exist")
+		deps, replacements, err := GetCombinedDepsAndReplacements(hostGoModPath, "/does/not/exist")
 		assert.NoError(t, err)
 		assert.NotNil(t, deps)
 		assert.NotNil(t, replacements)
 	})
 
 	t.Run("errors if host go.mod is invalid", func(t *testing.T) {
-		deps, replacements, err := GetCombinedDepsAndRequirements(invalidGoModPath, "/does/not/exist")
+		deps, replacements, err := GetCombinedDepsAndReplacements(invalidGoModPath, "/does/not/exist")
 		assert.Error(t, err)
 		assert.Nil(t, deps)
 		assert.Nil(t, replacements)
 	})
 
 	t.Run("errors if module go.mod is invalid", func(t *testing.T) {
-		deps, replacements, err := GetCombinedDepsAndRequirements(hostGoModPath, invalidGoModPath)
+		deps, replacements, err := GetCombinedDepsAndReplacements(hostGoModPath, invalidGoModPath)
 		assert.Error(t, err)
 		assert.Nil(t, deps)
 		assert.Nil(t, replacements)
@@ -42,7 +42,7 @@ func TestErrors(t *testing.T) {
 
 func TestHostOnlyDeps(t *testing.T) {
 	t.Run("returns all host dependencies", func(t *testing.T) {
-		deps, _, err := GetCombinedDepsAndRequirements(hostGoModPath, "/does/not/matter")
+		deps, _, err := GetCombinedDepsAndReplacements(hostGoModPath, "/does/not/matter")
 		assert.NoError(t, err)
 
 		assert.Len(t, deps, 3)
@@ -50,7 +50,7 @@ func TestHostOnlyDeps(t *testing.T) {
 	})
 
 	t.Run("returns all host replacements", func(t *testing.T) {
-		_, replacements, err := GetCombinedDepsAndRequirements(hostGoModPath, "/does/not/matter")
+		_, replacements, err := GetCombinedDepsAndReplacements(hostGoModPath, "/does/not/matter")
 		assert.NoError(t, err)
 
 		assert.Len(t, replacements, 1)
@@ -60,7 +60,7 @@ func TestHostOnlyDeps(t *testing.T) {
 
 func TestModuleOnlyDeps(t *testing.T) {
 	t.Run("returns all host dependencies", func(t *testing.T) {
-		deps, _, err := GetCombinedDepsAndRequirements("", moduleGoModPath)
+		deps, _, err := GetCombinedDepsAndReplacements("", moduleGoModPath)
 		assert.NoError(t, err)
 
 		assert.Len(t, deps, 2)
@@ -68,7 +68,7 @@ func TestModuleOnlyDeps(t *testing.T) {
 	})
 
 	t.Run("returns all host replacements", func(t *testing.T) {
-		_, replacements, err := GetCombinedDepsAndRequirements("", moduleGoModPath)
+		_, replacements, err := GetCombinedDepsAndReplacements("", moduleGoModPath)
 		assert.NoError(t, err)
 
 		assert.Len(t, replacements, 1)
@@ -78,7 +78,7 @@ func TestModuleOnlyDeps(t *testing.T) {
 
 func TestBothDeps(t *testing.T) {
 	t.Run("returns combined dependencies", func(t *testing.T) {
-		deps, _, err := GetCombinedDepsAndRequirements(hostGoModPath, moduleGoModPath)
+		deps, _, err := GetCombinedDepsAndReplacements(hostGoModPath, moduleGoModPath)
 		assert.NoError(t, err)
 
 		assert.Len(t, deps, 5)
@@ -86,7 +86,7 @@ func TestBothDeps(t *testing.T) {
 	})
 
 	t.Run("returns only host replacements", func(t *testing.T) {
-		_, replacements, err := GetCombinedDepsAndRequirements(hostGoModPath, moduleGoModPath)
+		_, replacements, err := GetCombinedDepsAndReplacements(hostGoModPath, moduleGoModPath)
 		assert.NoError(t, err)
 
 		assert.Len(t, replacements, 1)

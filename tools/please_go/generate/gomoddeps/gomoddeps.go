@@ -9,16 +9,16 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// GetCombinedDepsAndRequirements returns dependencies and replacements after inspecting both
+// GetCombinedDepsAndReplacements returns dependencies and replacements after inspecting both
 // the host and the module go.mod files.
 // Module's replacement are only returned if there is no host go.mod file.
-func GetCombinedDepsAndRequirements(hostGoModPath, moduleGoModPath string) ([]string, map[string]string, error) {
+func GetCombinedDepsAndReplacements(hostGoModPath, moduleGoModPath string) ([]string, map[string]string, error) {
 	var err error
 
 	hostDeps := []string{}
 	hostReplacements := map[string]string{}
 	if hostGoModPath != "" {
-		hostDeps, hostReplacements, err = getDepsAndReplacements(hostGoModPath)
+		hostDeps, hostReplacements, err = getDepsAndReplacements(hostGoModPath, false)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to read host repo go.mod %q: %w", hostGoModPath, err)
 		}
@@ -26,7 +26,7 @@ func GetCombinedDepsAndRequirements(hostGoModPath, moduleGoModPath string) ([]st
 
 	var moduleDeps []string
 	var moduleReplacements = map[string]string{}
-	moduleDeps, moduleReplacements, err = getDepsAndReplacements(moduleGoModPath)
+	moduleDeps, moduleReplacements, err = getDepsAndReplacements(moduleGoModPath, true)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return hostDeps, hostReplacements, nil
@@ -46,12 +46,18 @@ func GetCombinedDepsAndRequirements(hostGoModPath, moduleGoModPath string) ([]st
 
 // getDepsAndReplacements parses the go.mod file and returns all the dependencies
 // and replacement directives from it.
-func getDepsAndReplacements(goModPath string) ([]string, map[string]string, error) {
+func getDepsAndReplacements(goModPath string, useLaxParsing bool) ([]string, map[string]string, error) {
 	data, err := os.ReadFile(goModPath)
 	if err != nil {
 		return nil, nil, err
 	}
-	modFile, err := modfile.Parse(goModPath, data, nil)
+
+	var modFile *modfile.File
+	if useLaxParsing {
+		modFile, err = modfile.ParseLax(goModPath, data, nil)
+	} else {
+		modFile, err = modfile.Parse(goModPath, data, nil)
+	}
 	if err != nil {
 		return nil, nil, err
 	}

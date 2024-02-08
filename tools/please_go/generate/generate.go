@@ -59,7 +59,7 @@ func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string
 // Generate generates a new Please project at the src root. It will walk through the directory tree generating new BUILD
 // files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
-	deps, replacements, err := gomoddeps.GetCombinedDepsAndRequirements(g.hostModFile, path.Join(g.srcRoot, "go.mod"))
+	deps, replacements, err := gomoddeps.GetCombinedDepsAndReplacements(g.hostModFile, path.Join(g.srcRoot, "go.mod"))
 	if err != nil {
 		return err
 	}
@@ -440,7 +440,7 @@ func (g *Generate) depTarget(importPath string) string {
 		return target
 	}
 
-	if replacement, ok := g.replace[importPath]; ok {
+	if replacement, ok := g.replace[importPath]; ok && replacement != importPath {
 		target := g.depTarget(replacement)
 		g.knownImportTargets[importPath] = target
 		return target
