@@ -1,0 +1,7 @@
+subinclude("///go//build_defs:go")
+
+go_test(
+    name = "go_repo_transitive_deps_test",
+    srcs = ["go_repo_transitive_deps_test.go"],
+    deps = ["//third_party/go:testify"],
+)

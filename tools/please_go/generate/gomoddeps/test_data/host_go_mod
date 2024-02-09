@@ -1,0 +1,11 @@
+module hostmod
+
+go 1.21
+
+require (
+    example.com/foo v0.0.0-1234567890
+    example.com/bar v1.1.1
+    example.com/bob v1.2.2
+)
+
+replace example.com/bob => example.com/new-bob v42.0.0

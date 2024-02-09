@@ -7,13 +7,14 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/mod/modfile"
-
 	bazelbuild "github.com/bazelbuild/buildtools/build"
 	bazeledit "github.com/bazelbuild/buildtools/edit"
+
+	"github.com/please-build/go-rules/tools/please_go/generate/gomoddeps"
 )
 
 type Generate struct {
@@ -22,17 +23,16 @@ type Generate struct {
 	srcRoot            string
 	subrepo            string
 	buildContext       build.Context
-	modFile            string
+	hostModFile        string
 	buildFileNames     []string
 	moduleDeps         []string
-	pluginTarget       string
 	replace            map[string]string
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 	thirdPartyFolder   string
 	install            []string
 }
 
-func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
+func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -46,7 +46,7 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, bu
 		buildContext:       ctxt,
 		buildFileNames:     buildFileNames,
 		moduleDeps:         moduleDeps,
-		modFile:            modFile,
+		hostModFile:        hostModFile,
 		knownImportTargets: map[string]string{},
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
@@ -59,9 +59,13 @@ func New(srcRoot, thirdPartyFolder, modFile, module, version, subrepo string, bu
 // Generate generates a new Please project at the src root. It will walk through the directory tree generating new BUILD
 // files. This is primarily intended to generate a please subrepo for third party code.
 func (g *Generate) Generate() error {
-	if err := g.readGoMod(g.modFile); err != nil {
-		return fmt.Errorf("failed to read go.mod: %w", err)
+	deps, replacements, err := gomoddeps.GetCombinedDepsAndReplacements(g.hostModFile, path.Join(g.srcRoot, "go.mod"))
+	if err != nil {
+		return err
 	}
+	g.moduleDeps = append(deps, g.moduleName)
+	g.replace = replacements
+
 	if err := g.writeConfig(); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
@@ -193,34 +197,6 @@ func (g *Generate) writeInstallFilegroup() error {
 	buildFile.Stmt = append(buildFile.Stmt, rule.Call)
 
 	return saveBuildFile(buildFile)
-}
-
-// readGoMod reads the module dependencies
-func (g *Generate) readGoMod(path string) error {
-	if path == "" {
-		path = filepath.Join(g.srcRoot, "go.mod")
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	modFile, err := modfile.ParseLax(path, data, nil)
-	if err != nil {
-		return err
-	}
-
-	// TODO we could probably validate these are known modules
-	for _, req := range modFile.Require {
-		g.moduleDeps = append(g.moduleDeps, req.Mod.Path)
-	}
-
-	g.moduleDeps = append(g.moduleDeps, g.moduleName)
-
-	g.replace = make(map[string]string, len(modFile.Replace))
-	for _, replace := range modFile.Replace {
-		g.replace[replace.Old.Path] = replace.New.Path
-	}
-	return nil
 }
 
 func (g *Generate) writeConfig() error {
@@ -464,7 +440,7 @@ func (g *Generate) depTarget(importPath string) string {
 		return target
 	}
 
-	if replacement, ok := g.replace[importPath]; ok {
+	if replacement, ok := g.replace[importPath]; ok && replacement != importPath {
 		target := g.depTarget(replacement)
 		g.knownImportTargets[importPath] = target
 		return target

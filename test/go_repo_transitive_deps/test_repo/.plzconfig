@@ -1,0 +1,14 @@
+[Parse]
+BuildFileName = BUILD_FILE
+BuildFileName = BUILD
+
+[Plugin "go"]
+Target = //plugins:go
+PleaseGoTool = <pleasegotool>
+GoTool = <gotool>
+FeatureFlags = go_get
+Stdlib = //third_party/go:std
+Modfile = //third_party/go:modfile
+
+[FeatureFlags]
+ExcludeGoRules = true
