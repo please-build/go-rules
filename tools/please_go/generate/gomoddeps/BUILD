@@ -7,20 +7,24 @@ filegroup(
 )
 
 go_library(
-    name = "generate",
-    srcs = [":srcs"],
-    visibility = ["//tools/..."],
+    name = "gomoddeps",
+    srcs = [
+        ":srcs",
+    ],
+    visibility = ["//tools/please_go/generate/..."],
     deps = [
-        "//third_party/go:buildtools",
-        "//tools/please_go/generate/gomoddeps",
+        "//third_party/go:mod",
     ],
 )
 
 go_test(
-    name = "generate_test",
+    name = "gomoddeps_test",
     srcs = glob(["*_test.go"]),
+    data = [
+        "//tools/please_go/generate/gomoddeps/test_data:test_go_mod_files",
+    ],
     deps = [
         "//third_party/go:testify",
-        ":generate",
+        ":gomoddeps",
     ],
 )

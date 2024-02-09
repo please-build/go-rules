@@ -78,7 +78,7 @@ var opts = struct {
 		Args struct {
 			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
 		} `positional-args:"true"`
-	} `command:"embed" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	} `command:"embed" alias:"e" description:"Generate embed config for a set of Go source files"`
 	PackageInfo struct {
 		ImportPath string            `short:"i" long:"import_path" description:"Go import path (e.g. github.com/please-build/go-rules)"`
 		Pkg        string            `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
@@ -96,7 +96,7 @@ var opts = struct {
 		SrcRoot          string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
 		ImportPath       string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
 		ThirdPartyFolder string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
-		ModFile          string   `long:"mod_file" description:"Path to the mod file to use to resolve dependencies against"`
+		ModFile          string   `long:"mod_file" description:"Path to the host repo mod file to use to resolve dependencies against (dependencies will be resolved against the module as well if it exists)"`
 		Module           string   `long:"module" description:"The name of the current module"`
 		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
@@ -105,7 +105,7 @@ var opts = struct {
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
-	} `command:"generate" alias:"f" description:"Filter go sources based on the go build tag rules."`
+	} `command:"generate" alias:"g" description:"Generate build targets for a Go module"`
 	GoGet struct {
 		ModFile string `short:"m" long:"mod_file" description:"A go.mod file to use as a set of reuirementzs"`
 		Args    struct {

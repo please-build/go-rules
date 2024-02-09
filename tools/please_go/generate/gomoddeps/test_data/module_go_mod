@@ -1,0 +1,10 @@
+module modulemod
+
+go 1.21
+
+require (
+    example.com/dob v1.1.1
+    example.com/bab v1.2.2
+)
+
+replace example.com/bab => example.com/new-bab v42.0.0
