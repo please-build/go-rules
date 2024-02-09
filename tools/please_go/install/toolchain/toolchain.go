@@ -130,10 +130,13 @@ func (tc *Toolchain) Link(archive, out, importcfg string, ldFlags []string) erro
 }
 
 // Symabis will generate the asm header as well as the abi symbol file for the provided asm files.
-func (tc *Toolchain) Symabis(sourceDir, objectDir string, asmFiles []string) (string, string, error) {
+func (tc *Toolchain) Symabis(importpath, sourceDir, objectDir string, asmFiles []string) (string, string, error) {
 	asmH := fmt.Sprintf("%s/go_asm.h", objectDir)
 	symabis := fmt.Sprintf("%s/symabis", objectDir)
 
+	if importpath != "" {
+		importpath = fmt.Sprintf("-p %s", importpath)
+	}
 	// the gc Toolchain does this
 	if err := tc.Exec.Run("touch %s", asmH); err != nil {
 		return "", "", err

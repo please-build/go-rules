@@ -364,7 +364,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             },
             outs = [name + '.abi'],
             building_description = 'Creating ABI...',
-            cmd = f'eval `"$TOOL" env` && mkdir include && touch include/go_asm.h && "$TOOL" tool asm -trimpath "$TMP_DIR" -I include -I $GOROOT/pkg/include -D GOOS_{CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && mkdir include && touch include/go_asm.h && "$TOOL" tool asm -trimpath "$TMP_DIR" -I include -I $GOROOT/pkg/include -D GOOS_{CONFIG.OS} -D GOARCH_{CONFIG.ARCH} -gensymabis -p {package_path} -o "$OUT" $SRCS_ASM',
             env= {
                 "GOOS": CONFIG.OS,
                 "GOARCH": CONFIG.ARCH,

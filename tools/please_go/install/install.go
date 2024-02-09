@@ -397,7 +397,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 	asmFiles := prefixPaths(pkg.SFiles, pkg.Dir)
 	if len(asmFiles) > 0 {
-		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, asmFiles)
+		asmH, symabis, err := install.tc.Symabis(importPath, pkg.Dir, workDir, asmFiles)
 		if err != nil {
 			return err
 		}
