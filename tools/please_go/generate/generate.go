@@ -63,7 +63,10 @@ func (g *Generate) Generate() error {
 	if err != nil {
 		return err
 	}
-	g.moduleDeps = append(deps, g.moduleName)
+	// It's important to not override g.moduleDeps as it can already contains dependencies configured
+	// when `Generate` was constructed.
+	g.moduleDeps = append(g.moduleDeps, deps...)
+	g.moduleDeps = append(g.moduleDeps, g.moduleName)
 	g.replace = replacements
 
 	if err := g.writeConfig(); err != nil {
