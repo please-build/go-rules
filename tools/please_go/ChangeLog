@@ -1,3 +1,7 @@
+Version 1.9.3
+-------------
+    * .a files in the directory of a Go package in a go_repo are now attached as dependencies
+
 Version 1.9.2
 -------------
     * Generate correct paths for subdir imports within a module.
