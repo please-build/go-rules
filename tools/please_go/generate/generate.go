@@ -274,7 +274,22 @@ func (g *Generate) pkgDir(target string) string {
 
 func (g *Generate) importDir(target string) (*build.Package, error) {
 	dir := filepath.Join(os.Getenv("TMP_DIR"), g.pkgDir(target))
-	return g.buildContext.ImportDir(dir, 0)
+	pkg, err := g.buildContext.ImportDir(dir, 0)
+	if err != nil {
+		return nil, err
+	}
+	// We also need to discover & attach any .a files in the directory; some libraries use these
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	pkg.IgnoredOtherFiles = nil
+	for _, entry := range entries {
+		if name := entry.Name(); strings.HasSuffix(name, ".a") {
+			pkg.IgnoredOtherFiles = append(pkg.IgnoredOtherFiles, name)
+		}
+	}
+	return pkg
 }
 
 func (g *Generate) generate(dir string) error {
