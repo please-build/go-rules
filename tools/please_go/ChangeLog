@@ -1,3 +1,7 @@
+Version 1.10.1
+--------------
+    * .a files in the directory of a Go package in a go_repo are now attached as dependencies
+
 Version 1.10.0
 -------------
     * Inspect both the host repo and the module's go.mod when resolving dependencies in the

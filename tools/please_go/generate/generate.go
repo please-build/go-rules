@@ -250,7 +250,22 @@ func (g *Generate) pkgDir(target string) string {
 
 func (g *Generate) importDir(target string) (*build.Package, error) {
 	dir := filepath.Join(os.Getenv("TMP_DIR"), g.pkgDir(target))
-	return g.buildContext.ImportDir(dir, 0)
+	pkg, err := g.buildContext.ImportDir(dir, 0)
+	if err != nil {
+		return nil, err
+	}
+	// We also need to discover & attach any .a files in the directory; some libraries use these
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	pkg.IgnoredOtherFiles = nil
+	for _, entry := range entries {
+		if name := entry.Name(); strings.HasSuffix(name, ".a") {
+			pkg.IgnoredOtherFiles = append(pkg.IgnoredOtherFiles, name)
+		}
+	}
+	return pkg, nil
 }
 
 func (g *Generate) generate(dir string) error {
@@ -272,13 +287,12 @@ func (g *Generate) generate(dir string) error {
 	}
 
 	pkg.GoFiles = goFiles
-
 	lib := g.ruleForPackage(pkg, dir)
 	if lib == nil {
 		return nil
 	}
 
-	return g.createBuildFile(dir, lib)
+	return g.createBuildFile(dir, lib, pkg.IgnoredOtherFiles)
 }
 
 func (g *Generate) matchesInstall(dir string) bool {
@@ -335,7 +349,7 @@ func saveBuildFile(buildFile *bazelbuild.File) error {
 	return err
 }
 
-func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
+func (g *Generate) createBuildFile(pkg string, rule *Rule, aFiles []string) error {
 	buildFile, err := parseOrCreateBuildFile(g.pkgDir(pkg), g.buildFileNames)
 	if err != nil {
 		return err
@@ -356,6 +370,12 @@ func (g *Generate) createBuildFile(pkg string, rule *Rule) error {
 	}
 
 	buildFile.Stmt = append(buildFile.Stmt, g.rule(rule).Call)
+
+	if len(aFiles) != 0 {
+		filegroup := NewRule("filegroup", "a_files")
+		filegroup.SetAttr("srcs", NewStringList(aFiles))
+		buildFile.Stmt = append(buildFile.Stmt, filegroup.Call)
+	}
 
 	return saveBuildFile(buildFile)
 }
@@ -415,6 +435,10 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 	}
 
 	name := nameForLibInPkg(g.moduleName, trimPath(dir, g.srcRoot))
+	deps := g.depTargets(pkg.Imports)
+	if len(pkg.IgnoredOtherFiles) != 0 {
+		deps = append(deps, ":a_files")
+	}
 
 	return &Rule{
 		name:          name,
@@ -429,7 +453,7 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		pkgConfigs:    pkg.CgoPkgConfig,
 		asmFiles:      pkg.SFiles,
 		hdrs:          pkg.HFiles,
-		deps:          g.depTargets(pkg.Imports),
+		deps:          deps,
 		embedPatterns: pkg.EmbedPatterns,
 		isCMD:         pkg.IsCommand(),
 	}
