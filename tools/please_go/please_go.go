@@ -96,7 +96,7 @@ var opts = struct {
 		SrcRoot          string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
 		ImportPath       string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
 		ThirdPartyFolder string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
-		HostModFile      string   `long:"host_mod_file" description:"Path to the host repo mod file to use to resolve dependencies against (dependencies will be resolved against the module as well if it exists)"`
+		ModFile          string   `long:"mod_file" description:"Path to the host repo mod file to use to resolve dependencies against (dependencies will be resolved against the module as well if it exists)"`
 		Module           string   `long:"module" description:"The name of the current module"`
 		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
@@ -184,7 +184,7 @@ var subCommands = map[string]func() int{
 	},
 	"generate": func() int {
 		gen := opts.Generate
-		g := generate.New(gen.SrcRoot, gen.ThirdPartyFolder, gen.HostModFile, gen.Module, gen.Version, gen.Subrepo, []string{"BUILD", "BUILD.plz"}, gen.Args.Requirements, gen.Install, gen.BuildTags)
+		g := generate.New(gen.SrcRoot, gen.ThirdPartyFolder, gen.ModFile, gen.Module, gen.Version, gen.Subrepo, []string{"BUILD", "BUILD.plz"}, gen.Args.Requirements, gen.Install, gen.BuildTags)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}

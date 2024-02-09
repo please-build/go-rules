@@ -1,7 +1,7 @@
-Version 2.0.0
+Version 1.10.0
 -------------
     * Inspect both the host repo and the module's go.mod when resolving dependencies in the
-      `generate` command. The breaking change is the renaming of `--mod_file` to `--host_mod_file`.
+      `generate` command.
 
 Version 1.9.2
 -------------
