@@ -452,7 +452,7 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		cgoSrcs:       pkg.CgoFiles,
 		cSrcs:         pkg.CFiles,
 		compilerFlags: pkg.CgoCFLAGS,
-		linkerFlags:   pkg.CgoLDFLAGS,
+		linkerFlags:   orderLinkerFlags(pkg.CgoLDFLAGS),
 		pkgConfigs:    pkg.CgoPkgConfig,
 		asmFiles:      pkg.SFiles,
 		hdrs:          pkg.HFiles,
@@ -460,6 +460,14 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		embedPatterns: pkg.EmbedPatterns,
 		isCMD:         pkg.IsCommand(),
 	}
+}
+
+// orderLinkerFlags collapses linker flags into one to enforce a consistent ordering
+func orderLinkerFlags(in []string) []string {
+	if len(in) > 0 {
+		return []string{strings.Join(in, " ")}
+	}
+	return nil
 }
 
 func (g *Generate) depTarget(importPath string) string {
