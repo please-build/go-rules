@@ -1,6 +1,7 @@
 Version 1.10.3
 --------------
-    * Support assembly correctly for Go 1.22
+    * Support assembly correctly for Go 1.22 (#227)
+    * ldflags ordering is now correctly maintained (#231)
 
 Version 1.10.2
 -------------
