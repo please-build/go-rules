@@ -1,3 +1,7 @@
+Version 1.10.3
+--------------
+    * Support assembly correctly for Go 1.22
+
 Version 1.10.2
 -------------
     * Fix regression in 1.10.0 where module requirements passed in through `go_repo` were
