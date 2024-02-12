@@ -1,3 +1,8 @@
+Version 1.16.5
+--------------
+    * Support Go 1.22 for third-party packages containing assembly in go_module (#227)
+    * ldflag ordering is now maintained for third-party cgo packages (#231)
+
 Version 1.16.4
 --------------
     * Support Go 1.22 for third-party packages containing assembly
