@@ -568,7 +568,7 @@ def _get_import_path(package="", import_path=""):
 
     return path
 
-def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
+def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list|dict=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO.DEFAULT_STATIC,
               filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False, strip:bool=None):
     """Compiles a Go binary.
@@ -580,7 +580,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
       asm_srcs (list): Assembly source files.
       out (str): Name of the output file to create. Defaults to the same as `name`.
       deps (list): Dependencies
-      data (list): Runtime dependencies of this rule.
+      data (list | dict): Runtime dependencies of this rule.
       visibility (list): Visibility specification
       labels (list): Labels for this rule.
       test_only (bool): If True, is only visible to test rules.
