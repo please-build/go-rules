@@ -1,3 +1,7 @@
+Version 1.16.6
+--------------
+    * Permit `data` parameter to `go_binary` to be a dict (#235)
+
 Version 1.16.5
 --------------
     * Support Go 1.22 for third-party packages containing assembly in go_module (#227)
