@@ -1158,7 +1158,7 @@ def _module_rule_name(module):
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
             licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[], build_tags:list=CONFIG.GO.BUILD_TAGS,
-            third_party_path:str="third_party/go", strip:list=None):
+            third_party_path:str="third_party/go", strip:list=None, labels:list=[]):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1179,22 +1179,23 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     `///third_party/go/github.com_stretchr_testify//assert`
 
     Args:
-      module(str): The name of the module
-      version(str): The version of the module to download, if not providing the download parameter
-      download(str): A build rule to download the module, usually a go_mod_download().
-      name(str): The name of the returned rule. Defaults to the module name with forward slashes replaced with
-                 underscores.
-      install(list): Optional list of package wildcards to return from this rule. This can be useful to avoid cumbersome
-                     labels when depending on this module.
-      requirements(list): A list of requirements of this module that are not defined in its go.mod file
-      licences(list): The licence of this module to be checked against the allowed licences configured in Please.
-      patch(list): Any patch files to apply to the downloaded module.
-      visibility(list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
-      deps(list): Any deps on other rule kinds that provide packages, for example go_module(). This can be used to
-                  migrate to go_repo incrementally, one module at a time.
-      build_tags(list): Build tags to pass to the Go compiler.
-      third_party_path(str): Optional path of third_party directory.
-      strip(list): A list of directories to strip from the repo
+      module (str): The name of the module
+      version (str): The version of the module to download, if not providing the download parameter
+      download (str): A build rule to download the module, usually a go_mod_download().
+      name (str): The name of the returned rule. Defaults to the module name with forward slashes replaced with
+                  underscores.
+      install (list): Optional list of package wildcards to return from this rule. This can be useful to avoid cumbersome
+                      labels when depending on this module.
+      requirements (list): A list of requirements of this module that are not defined in its go.mod file
+      licences (list): The licence of this module to be checked against the allowed licences configured in Please.
+      patch (list): Any patch files to apply to the downloaded module.
+      visibility (list): The visibility for the returned "install" rule. Doesn't affect the subrepo at all.
+      deps (list): Any deps on other rule kinds that provide packages, for example go_module(). This can be used to
+                   migrate to go_repo incrementally, one module at a time.
+      build_tags (list): Build tags to pass to the Go compiler.
+      third_party_path (str): Optional path of third_party directory.
+      strip (list): A list of directories to strip from the repo
+      labels (list): Labels for this rule.
     """
     subrepo_name = _module_rule_name(module)
 
@@ -1224,7 +1225,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     else:
         modFileArg = ""
 
-    labels = ["go_module_path:" + module]
+    labels += ["go_module_path:" + module]
     if version:
         labels += [f"go_module:{module}@{version}"]
     pkg_name = package_name()
