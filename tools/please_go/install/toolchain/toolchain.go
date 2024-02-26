@@ -142,9 +142,7 @@ func (tc *Toolchain) Symabis(importpath, sourceDir, objectDir string, asmFiles [
 		return "", "", err
 	}
 
-	// Although we don't set both `-p` and `-trimpath` flag here, they show up in `go build -work -n -a`.
-	// It doesn't seem to cause things to break without them so far, but leaving this note here for future reference.
-	err := tc.Exec.Run("(cd %s; %s tool asm -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -gensymabis -o %s %s)", sourceDir, tc.GoTool, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, symabis, paths(asmFiles))
+	err := tc.Exec.Run("(cd %s; %s tool asm -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -gensymabis %s -o %s %s)", sourceDir, tc.GoTool, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, importpath, symabis, paths(asmFiles))
 
 	return asmH, symabis, err
 }

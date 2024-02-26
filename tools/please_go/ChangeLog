@@ -1,3 +1,7 @@
+Version 1.10.4
+--------------
+    * correctly pass the path flag to gensymabis
+
 Version 1.10.3
 --------------
     * Support assembly correctly for Go 1.22 (#227)
