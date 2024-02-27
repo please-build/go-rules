@@ -3,7 +3,7 @@ subinclude("//build_defs:go")
 go_toolchain(
     name = "toolchain",
     install_std = False,
-    version = "1.21.1",
+    version = "1.22.0",
 )
 
 go_stdlib(
