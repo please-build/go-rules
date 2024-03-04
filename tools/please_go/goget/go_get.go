@@ -1,8 +1,10 @@
 package goget
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -75,8 +77,7 @@ func (g *getter) getGoModWithFallback(mod, version string) (*modfile.File, error
 	for mod, version := range modVersionsToAttempt {
 		modFile, err := g.getGoMod(mod, version)
 		if err != nil {
-			// TODO: when we upgrade to Go 1.20, use `errors.Join(...)`.
-			errs = fmt.Errorf("%w: %w", errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
@@ -108,8 +109,11 @@ func (g *getter) getDeps(deps map[string]string, mod, version string) error {
 func (g *getter) goGet(mods []string) error {
 	deps := map[string]string{}
 	for _, mod := range mods {
-		parts := strings.Split(mod, "@")
-		deps[parts[0]] = parts[1]
+		path, version, ok := strings.Cut(mod, "@")
+		if !ok {
+			log.Fatalf("Module spec %s is missing a version; must be in the format golang.org/x/sys@v1.0.0", mod)
+		}
+		deps[path] = version
 	}
 
 	for mod, ver := range deps {
