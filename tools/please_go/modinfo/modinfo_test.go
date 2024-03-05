@@ -30,7 +30,7 @@ func TestModInfo(t *testing.T) {
 		},
 		{
 			Path:    "golang.org/x/mod",
-			Version: "v0.5.0",
+			Version: "v0.16.0",
 		},
 		{
 			Path:    "golang.org/x/xerrors",

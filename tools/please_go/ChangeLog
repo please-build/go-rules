@@ -1,3 +1,7 @@
+Version 1.10.5
+--------------
+    * upgrade x/mod to support new directives
+
 Version 1.10.4
 --------------
     * correctly pass the path flag to gensymabis
