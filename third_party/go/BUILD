@@ -117,7 +117,7 @@ go_module(
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/mod",
-    version = "v0.5.0",
+    version = "v0.16.0",
     visibility = ["PUBLIC"],
     deps = [
         ":xerrors",
