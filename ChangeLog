@@ -1,6 +1,6 @@
 Version 1.16.9
 --------------
-    * Support new go mod directives (#245)
+    * Upgrade please_go to support newer go mod directives (#245)
 
 Version 1.16.8
 --------------
