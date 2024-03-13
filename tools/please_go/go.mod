@@ -1,6 +1,6 @@
 module github.com/please-build/go-rules/tools/please_go
 
-go 1.17
+go 1.20
 
 require (
 	github.com/bazelbuild/buildtools v0.0.0-20221110131218-762712d8ce3f

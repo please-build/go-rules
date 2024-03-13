@@ -1,6 +1,6 @@
 module github.com/please-build/go-rules
 
-go 1.18
+go 1.20
 
 require github.com/stretchr/testify v1.7.1
 
