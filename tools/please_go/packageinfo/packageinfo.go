@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
@@ -79,6 +80,13 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 			pkg.ExportFile = imports[pkg.PkgPath]
 		}
 		pkgs = append(pkgs, pkg)
+	}
+	// If we're doing the stdlib, limit it to just things in the importconfig (i.e. no cmd/ packages)
+	if importconfig != "" {
+		pkgs = slices.DeleteFunc(pkgs, func(pkg *packages.Package) bool {
+			_, present := imports[pkg.PkgPath]
+			return !present
+		})
 	}
 	// Ensure output is deterministic
 	sort.Slice(pkgs, func(i, j int) bool {
