@@ -797,7 +797,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         import_path = "main",
         _generate_pkg_info = False,
     )
-    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
 
     test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
@@ -945,7 +945,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         test_only = test_only,
         import_path="main",
     )
-    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
     return build_rule(
         name=name,
@@ -1631,7 +1631,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     return cmds
 
 
-def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False, strip=None):
+def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False, strip=None, test=False):
     """Returns the commands to run for linking a Go binary."""
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
@@ -1650,6 +1650,8 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
         linkerdefs += [f'{linkerdef}' for linkerdef in definitions]
     elif isinstance(definitions, dict):
         linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
+    if test:
+        linkerdefs += ["testing.testBinary=1"]
 
     defs = ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
 
