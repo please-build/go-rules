@@ -92,6 +92,8 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
         entry_points = {
             'go': f'{name}/bin/go',
             'gofmt': f'{name}/bin/gofmt',
+            'compile': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/compile',
+            'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
         },
         tools = {
           "CC": [CONFIG.GO.CC_TOOL],
@@ -462,7 +464,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         deps += [pkg_info]
         provides["pkg_info"] = pkg_info
 
-    tools = { 'go': [CONFIG.GO.GO_TOOL] }
+    tools = { 'go': [CONFIG.GO.GO_COMPILE_TOOL or CONFIG.GO.GO_TOOL] }
     if filter_srcs or cover:
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
 
@@ -1605,7 +1607,8 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     complete_flag = '-complete ' if complete else ''
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
+    tool = '"$TOOLS_GO"' if CONFIG.GO.GO_COMPILE_TOOL else '"$TOOLS_GO" tool compile'
+    compile_cmd = f'{tool} -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     package_flag = f" -p {import_path}" if import_path else ""
     if CONFIG.GO.RACE:
         compile_cmd += ' -race'
@@ -1634,7 +1637,8 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
 def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False, strip=None):
     """Returns the commands to run for linking a Go binary."""
 
-    _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
+    tool = '"$TOOLS_GO"' if CONFIG.GO.GO_LINK_TOOL else '"$TOOLS_GO" tool link'
+    _link_cmd = f'{tool} -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
 
     gen_import_cfg = _set_go_env()
     if not CONFIG.GO.STDLIB:
@@ -1676,7 +1680,7 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
 
     if split_debug:
         return f'{gen_import_cfg} && {_link_cmd} {flags} $SRCS && $TOOLS_STRIP -o $OUT -f $OUT.sym $OUT', {
-            'go': [CONFIG.GO.GO_TOOL],
+            'go': [CONFIG.GO.GO_LINK_TOOL or CONFIG.GO.GO_TOOL],
             'ld': [CONFIG.GO.CC_TOOL],
             'strip': [CONFIG.GO.STRIP_TOOL],
         }
@@ -1689,7 +1693,7 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
         cmds['cover'] = f'{gen_import_cfg} && {_link_cmd} {flags} -extldflags="--coverage" $SRCS'
 
     return cmds, {
-        'go': [CONFIG.GO.GO_TOOL],
+        'go': [CONFIG.GO.GO_LINK_TOOL or CONFIG.GO.GO_TOOL],
         'ld': [CONFIG.GO.CC_TOOL],
     }
 
