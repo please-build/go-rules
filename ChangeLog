@@ -1,3 +1,7 @@
+Version 1.17.2
+--------------
+    * Coverage redesign flag is now inherited by subrepos
+
 Version 1.17.1
 --------------
     * Fixed separate tools for `plz cover` invocations (#255)
