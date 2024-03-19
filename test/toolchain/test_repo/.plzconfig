@@ -8,3 +8,6 @@ BuildFileName = BUILD_FILE
 BuildFileName = BUILD
 PreloadSubincludes = ///go//build_defs:go
 
+[remote]
+url =
+numexecutors = 0
