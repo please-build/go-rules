@@ -1,3 +1,7 @@
+Version 1.17.0
+--------------
+    * Added go_compile_tool and go_link_tool options to bypass `go tool` invocations (#254)
+
 Version 1.16.10
 ---------------
     * Upgrade please_go to support vendor paths correctly in stdlib & strip some paths (#250 & #251)
