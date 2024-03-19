@@ -59,7 +59,8 @@ var opts = struct {
 		} `positional-args:"true"`
 	} `command:"covervars" description:"Generates coverage variable config for a set of go src files"`
 	Cover struct {
-		GoTool      string `short:"g" long:"go" default:"go" description:"Go binary to run"`
+		GoTool      string `short:"g" long:"go" default:"go" env:"TOOLS_GO" description:"Go binary to run"`
+		CoverTool   string `short:"t" long:"go_cover" env:"TOOLS_COVER" description:"Go coverage tool to run"`
 		CoverageCfg string `short:"c" long:"covcfg" required:"true" description:"Output coveragecfg file to feed into go tool compile"`
 		Output      string `short:"o" long:"output" required:"true" description:"File that will contain output names of modified files"`
 		Pkg         string `long:"pkg" env:"PKG_DIR" description:"Package that we're in within the repo"`
@@ -163,7 +164,7 @@ var subCommands = map[string]func() int{
 		return 0
 	},
 	"cover": func() int {
-		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.Args.Sources); err != nil {
+		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.Args.Sources); err != nil {
 			log.Fatalf("failed to write coverage: %s", err)
 		}
 		return 0

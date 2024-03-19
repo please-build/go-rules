@@ -1,3 +1,7 @@
+Version 1.11.0
+--------------
+    * Support calling the `go tool cover` binary directly
+
 Version 1.10.6
 --------------
     * packageinfo files correctly account for stdlib vendoring
