@@ -82,9 +82,7 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
 
-    #TODO(jpoole): Add the option to compile these with -race for the race detector as well. This need to be plumbed
-    # through to the go_library rules as well though.
-    return build_rule(
+    tc = build_rule(
         name = name,
         srcs = srcs,
         cmd = cmd,
@@ -94,6 +92,7 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
             'gofmt': f'{name}/bin/gofmt',
             'compile': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/compile',
             'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
+            'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
         },
         tools = {
           "CC": [CONFIG.GO.CC_TOOL],
@@ -102,6 +101,31 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
         visibility = visibility,
         building_description = "Installing...",
     )
+    genrule(
+        name = f"{name}_compile",
+        outs = ["compile"],
+        binary = True,
+        cmd = "cp $TOOLS $OUT",
+        output_is_complete = True,
+        tools = [f"{tc}|compile"],
+    )
+    genrule(
+        name = f"{name}_link",
+        outs = ["link"],
+        binary = True,
+        cmd = "cp $TOOLS $OUT",
+        output_is_complete = True,
+        tools = [f"{tc}|link"],
+    )
+    genrule(
+        name = f"name_cover",
+        outs = ["cover"],
+        binary = True,
+        cmd = "cp $TOOLS $OUT",
+        output_is_complete = True,
+        tools = [f"{tc}|cover"],
+    )
+    return tc
 
 
 def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=CONFIG.GO.BUILD_TAGS, install_std:bool=True, visibility:list = ["PUBLIC"]):
@@ -464,10 +488,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         deps += [pkg_info]
         provides["pkg_info"] = pkg_info
 
-    tools = { 'go': [CONFIG.GO.GO_COMPILE_TOOL or CONFIG.GO.GO_TOOL] }
-    if filter_srcs or cover:
-        tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
-
     srcs = {
         'go': srcs,
         'embed': [embedcfg],
@@ -484,6 +504,8 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if pgo_file:
         srcs['pgo'] = [pgo_file]
 
+    tools, cmds = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file)
+
     if cover and not CONFIG.GO.COVERAGEREDESIGN:
         provides['cover_vars'] = cover_vars
     return build_rule(
@@ -492,7 +514,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         deps = deps + [hdrs_rule],
         internal_deps = [src_rule],
         outs = outs,
-        cmd = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file),
+        cmd = cmds,
         visibility = visibility,
         building_description = "Compiling...",
         requires = ['go'],
@@ -1597,17 +1619,24 @@ def _set_go_env():
 
 def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
     """Returns the commands to run for building a Go library."""
-    if filter_srcs:
-        build_tags = '-t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
-        filter_cmd = f'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter {build_tags} $SRCS_GO)"; '
-    else:
-        filter_cmd = ''
-
-    # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    tool = '"$TOOLS_GO"' if CONFIG.GO.GO_COMPILE_TOOL else '"$TOOLS_GO" tool compile'
+
+    if CONFIG.GO.GO_COMPILE_TOOL:
+        tool = '"$TOOLS_COMPILE"'
+        tools = {'compile': CONFIG.GO.GO_COMPILE_TOOL}
+    else:
+        tool = '"$TOOLS_GO" tool compile'
+        tools = {'compile': CONFIG.GO.GO_TOOL}
+
+    if filter_srcs:
+        build_tags = '-t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
+        filter_cmd = f'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter {build_tags} $SRCS_GO)"; '
+        tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
+    else:
+        filter_cmd = ''
+
     compile_cmd = f'{tool} -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     package_flag = f" -p {import_path}" if import_path else ""
     if CONFIG.GO.RACE:
@@ -1627,11 +1656,16 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     }
     if cover:
         if CONFIG.GO.COVERAGEREDESIGN:
-            cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt -g $TOOLS_GO {package_flag} $SRCS_GO && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
+            cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt {package_flag} $SRCS_GO && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
         else:
             cover_cmd = 'for SRC in $SRCS_GO; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
             cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd}{package_flag} $SRCS_GO'
-    return cmds
+        tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
+        if CONFIG.GO.GO_COVER_TOOL:
+            tools['cover'] = CONFIG.GO.GO_COVER_TOOL
+        else:
+            tools['go'] = CONFIG.GO.GO_TOOL
+    return cmds, tools
 
 
 def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False, strip=None, test=False):
