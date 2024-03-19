@@ -1587,7 +1587,7 @@ def _set_go_env():
         # not very nice (we don't do this globally because OSX doesn't have realpath).
         cmds += ['export GOROOT="$(dirname $(dirname $(realpath $TOOLS_GO)))"']
     elif not CONFIG.GO.STDLIB:
-        cmds += ['$("$TOOLS_GO" env GOROOT)']
+        cmds += ['export GOROOT="$("$TOOLS_GO" env GOROOT)"']
 
     if CONFIG.GO.C_FLAGS:
         flags = " ".join(CONFIG.GO.C_FLAGS)
