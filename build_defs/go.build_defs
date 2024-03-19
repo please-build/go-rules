@@ -101,30 +101,16 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
         visibility = visibility,
         building_description = "Installing...",
     )
-    genrule(
-        name = f"{name}_compile",
-        outs = ["compile"],
-        binary = True,
-        cmd = "cp $TOOLS $OUT",
-        output_is_complete = True,
-        tools = [f"{tc}|compile"],
-    )
-    genrule(
-        name = f"{name}_link",
-        outs = ["link"],
-        binary = True,
-        cmd = "cp $TOOLS $OUT",
-        output_is_complete = True,
-        tools = [f"{tc}|link"],
-    )
-    genrule(
-        name = f"name_cover",
-        outs = ["cover"],
-        binary = True,
-        cmd = "cp $TOOLS $OUT",
-        output_is_complete = True,
-        tools = [f"{tc}|cover"],
-    )
+    for tool in ['compile', 'link', 'cover']:
+        genrule(
+            name = f"{name}_{tool}",
+            outs = [tool],
+            binary = True,
+            cmd = "cp $TOOLS $OUT",
+            output_is_complete = True,
+            tools = [f"{tc}|{tool}"],
+            visibility = visibility,
+        )
     return tc
 
 
@@ -504,7 +490,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if pgo_file:
         srcs['pgo'] = [pgo_file]
 
-    tools, cmds = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file)
+    cmds, tools = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file)
 
     if cover and not CONFIG.GO.COVERAGEREDESIGN:
         provides['cover_vars'] = cover_vars

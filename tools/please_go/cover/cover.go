@@ -42,7 +42,7 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 	if err := os.WriteFile(output, buf.Bytes(), 0644); err != nil {
 		return err
 	}
-	var cmd exec.Cmd
+	var cmd *exec.Cmd
 	if coverTool != "" {
 		cmd = exec.Command(coverTool, append([]string{"-mode=set", "-var=goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
 	} else {

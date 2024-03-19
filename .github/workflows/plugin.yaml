@@ -29,6 +29,20 @@ jobs:
           name: coverage_logs
           path: |
             plz-out/log
+  test_tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run tests with separate Go tools
+        run: ./pleasew cover -p -v notice --nocoverage_report --log_file plz-out/log/test_tools.log
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: tools_logs
+          path: |
+            plz-out/log
   test_debug:
     runs-on: ubuntu-latest
     steps:
@@ -44,7 +58,11 @@ jobs:
           path: |
             plz-out/log
   release:
-    needs: [test]
+    needs:
+      - test
+      - test_coverage
+      - test_tools
+      - test_debug
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:

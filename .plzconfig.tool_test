@@ -1,0 +1,5 @@
+; This config tests splitting out the Go sub-tools separately.
+[plugin "go"]
+gocompiletool = //third_party/go:toolchain_compile
+golinktool = //third_party/go:toolchain_link
+gocovertool = //third_party/go:toolchain_cover
