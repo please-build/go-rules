@@ -1614,7 +1614,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
         tools = {'compile': CONFIG.GO.GO_COMPILE_TOOL}
     else:
         tool = '"$TOOLS_GO" tool compile'
-        tools = {'compile': CONFIG.GO.GO_TOOL}
+        tools = {'go': CONFIG.GO.GO_TOOL}
 
     if filter_srcs:
         build_tags = '-t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
