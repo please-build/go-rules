@@ -715,7 +715,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
       visibility (list): Visibility specification
       flags (str): Flags to apply to the test invocation.
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
-      cgo (bool): True if this test depends on a cgo_library.
+      cgo (bool): Deprecated, has no effect.
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
       external (bool): True if this test is external to the library it's testing, i.e. it uses the
                        feature of Go that allows it to be in the same directory with a _test suffix.
@@ -755,25 +755,9 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _generate_pkg_info = False,
         import_path = test_package,
     )
-
-    if cgo:
-        archive_name = test_package + "_cgo"
-        lib_rule = merge_cgo_obj(
-            name = name,
-            tag='cgo',
-            a_rule = lib_rule,
-            visibility = visibility,
-            labels = labels + ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
-            test_only = True,
-            deps = deps,
-            package = archive_name,
-        )
-    else:
-        archive_name = test_package
-
     import_config = build_rule(
         name=f'_{name}#lib_import_config',
-        cmd = _write_import_config_cmd(archive_name, test_package),
+        cmd = _write_import_config_cmd(test_package, test_package),
         outs = [f'{test_package}.importconfig'],
         visibility = visibility,
         test_only = True,
@@ -876,7 +860,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
       deps (list): Dependencies
       visibility (list): Visibility specification
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
-      cgo (bool): True if this test depends on a cgo_library.
+      cgo (bool): Deprecated, has no effect.
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
       external (bool): True if this test is external to the library it's testing, i.e. it uses the
                        feature of Go that allows it to be in the same directory with a _test suffix.
@@ -920,16 +904,6 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         test_only=True,
         labels=labels,
     )
-    if cgo:
-        lib_rule = merge_cgo_obj(
-            name = name,
-            tag = 'cgo',
-            a_rule = lib_rule,
-            visibility = visibility,
-            labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)] + labels,
-            deps = deps,
-            test_only = test_only,
-        )
     main_rule = go_test_main(
         name = name,
         _tag = 'main',
