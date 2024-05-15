@@ -1,3 +1,7 @@
+Version 1.17.3
+--------------
+    * Don't install stdlib for other architectures if install_std=False
+
 Version 1.17.2
 --------------
     * Coverage redesign flag is now inherited by subrepos
