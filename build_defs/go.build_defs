@@ -1487,7 +1487,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         visibility = visibility,
         licences = licences,
         linker_flags = linker_flags,
-        env = env,
+        env = env | {"GOEXPERIMENT": CONFIG.GO.EXPERIMENT},
         build_tags = build_tags,
         labels = labels if binary else [],
     )
