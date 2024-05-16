@@ -660,6 +660,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,
+        env = _goexperiment_env(),
         output_is_complete=True,
         test_only=test_only,
         tools=tools,
@@ -841,6 +842,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         env["GOCOVERDIR"] = "$TMP_DIR"
     else:
         env = {"GOCOVERDIR": "$TMP_DIR"}
+    env |= _goexperiment_env()
 
     return build_rule(
         name = name,
@@ -978,6 +980,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         visibility=visibility,
         sandbox=sandbox,
         build_timeout=timeout,
+        env = _goexperiment_env(),
         requires=['go', 'test'],
         labels=labels,
         binary=True,
