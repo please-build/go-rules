@@ -97,7 +97,10 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
             'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
             'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
         },
-        tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
+        env = _goexperiment_env(),
+        tools = ({
+          "CC": [CONFIG.GO.CC_TOOL],
+        } if CONFIG.GO.CGO_ENABLED == "1" else {}) | _goexperiment_env(),
         binary = True,
         labels = labels,
         visibility = visibility,
@@ -210,6 +213,8 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibili
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
             "GODEBUG": "installgoroot=all",
+            "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
+            "GOEXPERIMENT": CONFIG.GO.EXPERIMENT,
         },
         labels = ["go_pkg_info", "go_stdlib", "go"] + labels,
         output_is_complete = True,
@@ -493,6 +498,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         outs = outs,
         cmd = cmds,
         visibility = visibility,
+        env = _goexperiment_env(),
         building_description = "Compiling...",
         requires = ['go'],
         provides = provides,
@@ -502,6 +508,12 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         needs_transitive_deps = _needs_transitive_deps,
         exported_deps = exported_deps,
     )
+
+
+def _goexperiment_env():
+    """Returns the GOEXPERIMENT env var, or None if there isn't one."""
+    return {"GOEXPERIMENT": CONFIG.GO.EXPERIMENT} if CONFIG.GO.EXPERIMENT else None
+
 
 def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
     """
