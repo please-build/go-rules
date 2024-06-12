@@ -1315,7 +1315,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     ] + [f'rm -rf "$OUT/{s}"' for s in strip]
 
     if patch:
-        cmds += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -d {out} -p1 < $p; done']
+        cmds += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -f -d {out} -p1 < $p; done']
 
     labels += [f"go_module:{module}@{version}"]
 
