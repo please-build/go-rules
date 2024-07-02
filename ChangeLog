@@ -1,3 +1,7 @@
+Version 1.17.4
+--------------
+    * Prevent modfile from being exposed to downstream actions
+
 Version 1.17.3
 --------------
     * Don't install stdlib for other architectures if install_std=False
