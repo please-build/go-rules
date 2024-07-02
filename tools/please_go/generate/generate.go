@@ -69,7 +69,7 @@ func (g *Generate) Generate() error {
 	g.moduleDeps = append(g.moduleDeps, g.moduleName)
 	g.replace = replacements
 
-	if err := g.writeConfig(); err != nil {
+	if err := g.writePleaseConfig(); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	if err := g.parseImportConfigs(); err != nil {
@@ -202,7 +202,7 @@ func (g *Generate) writeInstallFilegroup() error {
 	return saveBuildFile(buildFile)
 }
 
-func (g *Generate) writeConfig() error {
+func (g *Generate) writePleaseConfig() error {
 	file, err := os.Create(filepath.Join(g.srcRoot, ".plzconfig"))
 	if err != nil {
 		return err
