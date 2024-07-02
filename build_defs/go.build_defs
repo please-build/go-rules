@@ -1258,6 +1258,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
             "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
         },
         deps = deps + [CONFIG.GO.MOD_FILE] if CONFIG.GO.MOD_FILE else deps,
+        output_is_complete = True,
         _subrepo = True,
         labels = labels,
         requires = ["import_config"],
