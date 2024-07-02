@@ -298,6 +298,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             deps = deps,
         )
+        link_prefix, _, _ = _module.partition('@')
     else:
         # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
         modinfo = filegroup(
@@ -307,6 +308,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             requires = ["modinfo"],
             test_only = test_only,
         )
+        link_prefix = ''
     deps += [modinfo]
 
     # We could just depend on go_src for all our deps but that would mean bringing in srcs for targets outside this
