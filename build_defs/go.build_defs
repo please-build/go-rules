@@ -45,7 +45,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    if version != "" and semver_check(version, ">= 1.20.0") and install_std is None:
+    if install_std is None and version != "" and semver_check(_strip_version_rc(version), ">= 1.20.0"):
         install_std = True
 
     return _go_toolchain(
@@ -1804,3 +1804,7 @@ def _stdlib():
             stdlib = stdlib.removeprefix('///')
         stdlib = f'///{CONFIG.OS}_{CONFIG.ARCH}{stdlib}'
     return [stdlib]
+
+def _strip_version_rc(version):
+    """Removes an rcX suffix from a version string."""
+    return version.split('rc')[0]
