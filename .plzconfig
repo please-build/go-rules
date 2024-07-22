@@ -170,3 +170,6 @@ Help = Build tags to pass to the Go compiler
 
 [Plugin "shell"]
 Target = //plugins:shell
+
+[remote]
+url =
