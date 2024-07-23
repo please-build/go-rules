@@ -1241,8 +1241,8 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     pkg_name = package_name()
     requirements = " ".join(requirements)
 
-    build_tag_args = [f"--build_tag {build_tag}" for build_tag in build_tags].join(" ")
-    label_args = [f"--label {label}" for label in labels].join(" ")
+    build_tag_args = " ".join([f"--build_tag {build_tag}" for build_tag in build_tags])
+    label_args = " ".join([f"--label {label}" for label in labels])
 
     pkgRoot = f"pkg/{CONFIG.OS}_{CONFIG.ARCH}/{module}"
 
