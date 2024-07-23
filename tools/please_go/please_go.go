@@ -103,7 +103,7 @@ var opts = struct {
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
 		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
 		Subrepo          string   `long:"subrepo" description:"The subrepo root to output into"`
-		Labels           []string `long:"labels" description:"Additional labels to attach to subrepo targets"`
+		Labels           []string `long:"label" description:"Additional labels to attach to subrepo targets"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
