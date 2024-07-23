@@ -65,6 +65,7 @@ def cgo_library(
             resources = resources,
             package = package,
             deps = deps,
+            labels = labels,
             import_path = import_path,
             visibility = visibility,
             test_only = test_only,
@@ -124,6 +125,7 @@ def cgo_library(
         pkg_config_libs = pkg_config,
         test_only = test_only,
         deps = deps,
+        labels = labels,
     )
     go_rule = go_library(
         name = f'_{name}#go',
@@ -136,6 +138,7 @@ def cgo_library(
         import_path=import_path,
         _subrepo = _subrepo,
         _module = _module,
+        labels = labels,
     )
 
     output = package if package else name
@@ -146,6 +149,7 @@ def cgo_library(
         outs = [f'{output}.importconfig'],
         visibility=visibility,
         test_only=test_only,
+        labels = labels,
     )
 
     # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
@@ -157,7 +161,7 @@ def cgo_library(
         test_only = test_only,
         linker_flags = linker_flags,
         package = package,
-        labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
+        labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)] + labels,
         provides = {
             'go': ':' + name,
             'go_src': go_rule,
