@@ -1,9 +1,25 @@
 subinclude("///go//build_defs:go", "///cc//build_defs:c")
 
-def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
-                package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
-                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str='',
-                _module:str='', _subrepo:str=''):
+def cgo_library(
+    name:str,
+    srcs:list=[],
+    resources:list=None,
+    go_srcs:list=[],
+    c_srcs:list=[],
+    hdrs:list=[],
+    package:str=None,
+    compiler_flags:list&cflags=[],
+    linker_flags:list&ldflags=[],
+    pkg_config:list=[],
+    subdir:str='',
+    deps:list=[],
+    labels:list=[],
+    visibility:list=None,
+    test_only:bool&testonly=False,
+    import_path:str='',
+    _module:str='',
+    _subrepo:str='',
+):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -32,6 +48,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
       deps (list): Dependencies. Note that if you intend to depend on cc_library rules,
                    you will likely be better off wrapping them into a cc_static_library
                    and depending on that.
+      labels (list): Labels for this rule.
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
       import_path (str): If set, this will override the import path of the generated go package.

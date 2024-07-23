@@ -254,6 +254,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                     code that you never want to be instrumented.
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
       import_path (str): If set, this will override the import path of the generated go package.
+      labels (list): Labels for this rule.
       package (str): The package as it would appear at the top of the go source files. Defaults
                      to name.
       pgo_file (str): The CPU profile to supply for profile-guided optimisation.
