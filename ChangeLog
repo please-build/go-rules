@@ -1,6 +1,6 @@
 Version 1.18.1
 --------------
-    * Disallow empty files being added in `cgo_library`
+    * Filter out empty lines from files being added in `cgo_library`
 
 Version 1.18.0
 --------------
