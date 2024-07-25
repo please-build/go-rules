@@ -1,3 +1,7 @@
+Version 1.19.0
+--------------
+    * Add `labels` parameter to the `go_toolchain`, `go_system_toolchain` and `go_stdlib` rules (#272)
+
 Version 1.18.1
 --------------
     * Filter out empty lines from files being added in `cgo_library`
