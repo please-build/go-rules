@@ -1,3 +1,7 @@
+Version 1.18.1
+--------------
+    * Filter out empty lines from files being added in `cgo_library`
+
 Version 1.18.0
 --------------
     * Propagate labels from `go_repo` targets to targets within the subrepo

@@ -74,7 +74,7 @@ def cgo_library(
         )
 
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
-    post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
+    post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output if line]
     subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
 
     # Resolve the import_path early
