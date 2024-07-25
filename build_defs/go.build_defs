@@ -3,7 +3,7 @@
 Go has a strong built-in concept of packages so it's probably a good idea to match Please
 rules to Go packages.
 """
-def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
+def go_toolchain(name:str, url:str|dict='', version:str='', hashes:list=[], labels:list=[], visibility:list=["PUBLIC"],
                  architectures:list=[], strip_srcs:bool=False, tags:list=CONFIG.GO.BUILD_TAGS, install_std=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
@@ -20,6 +20,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                      and the rule will use the current platforms GOOS and GOARCH setting. Either provide url or version,
                      but not both.
       hashes (list): A list of possible hashes for the downloaded archive. Optional.
+      labels (list): Labels for this rule.
       visibility (list): Visibility specification. Defaults to public.
       architectures (list): Any additional architectures to install in go architecture format e.g. linux_amd64. This
                             rule will automatically install the arch provided through --arch. This is only useful if you
@@ -52,6 +53,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         name = name,
         srcs = [download],
         copy_cmd = 'tar -xf $SRCS && mv go $OUT',
+        labels = labels,
         visibility = visibility,
         architectures = architectures,
         strip_srcs = strip_srcs,
@@ -60,7 +62,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     )
 
 
-def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectures:list, tags:list, strip_srcs:bool=False, install_std:bool=None):
+def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:list, architectures:list, tags:list,
+                  strip_srcs:bool=False, install_std:bool=None):
     cmd = f'export GODEBUG="installgoroot=all" && {copy_cmd} && chmod +x $OUT/bin/*; rm -rf $OUT/test'
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
@@ -98,6 +101,7 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
           "CC": [CONFIG.GO.CC_TOOL],
         } if CONFIG.GO.CGO_ENABLED == "1" else {},
         binary = True,
+        labels = labels,
         visibility = visibility,
         building_description = "Installing...",
     )
@@ -114,7 +118,8 @@ def _go_toolchain(name:str, srcs:list, copy_cmd:str, visibility:list, architectu
     return tc
 
 
-def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=CONFIG.GO.BUILD_TAGS, install_std:bool=True, visibility:list = ["PUBLIC"]):
+def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=CONFIG.GO.BUILD_TAGS, install_std:bool=True,
+                        labels:list=[], visibility:list=["PUBLIC"]):
     """Defines a Go toolchain that's installed on the local system.
 
     This is similar to using simply `go` as your gotool, but from 1.20 onwards it's necessary in order to
@@ -126,12 +131,14 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
       architectures: Architectures to build the standard library for
       install_std: Whether we should build the standard library. On by default.
       tags: Build tags to pass when installing the standard library.
+      labels: Labels for this rule.
       visibility: Visibility of this rule
     """
     return _go_toolchain(
         name = name,
         srcs = [],
         copy_cmd = f'cp -r `{cmd} env GOROOT` $OUT',
+        labels = labels,
         visibility = visibility,
         architectures = architectures,
         strip_srcs = False,
@@ -140,7 +147,7 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
     )
 
 
-def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, visibility:list=["PUBLIC"]):
+def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibility:list=["PUBLIC"]):
     """Defines compilation of the Go standard library.
 
     This is idiomatically configured in //third_party/go and set as the gostdlib config value for the Go plugin.
@@ -148,6 +155,7 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, visibility:list=["PUBLIC
     Args:
       name: Name of the rule
       tags: Go build tags (e.g. 'osusergo' or 'netgo' are relevant to the stdlib)
+      labels: Additional labels for this rule
       visibility: Visibility of this rule
     """
     # Need to write package info for the stdlib as well. This requires the source to be present.
@@ -205,7 +213,7 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, visibility:list=["PUBLIC
             "GODEBUG": "installgoroot=all",
             "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
         },
-        labels = ["go_pkg_info", "go_stdlib", "go"],
+        labels = ["go_pkg_info", "go_stdlib", "go"] + labels,
         output_is_complete = True,
         visibility = visibility,
     )
