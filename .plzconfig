@@ -69,8 +69,10 @@ Inherit = true
 Optional = true
 
 [PluginConfig "cgo_enabled"]
+Type = bool
+DefaultValue = false
 Optional = true
-Help = If set, the CGO_ENABLED environment variable will be set to 1
+Help = If set, cgo will be enabled at build time.
 Inherit = true
 
 [PluginConfig "ar_tool"]

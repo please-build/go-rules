@@ -71,9 +71,9 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
         if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
             architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
 
-        if architectures and CONFIG.GO.CGO_ENABLED == "1":
+        if architectures and CONFIG.GO.CGO_ENABLED:
             flags = " ".join(CONFIG.GO.C_FLAGS)
-            cmd += f" && export CGO_ENABLED={CONFIG.GO.CGO_ENABLED} && export CFLAGS=\"{flags}\" && export CC=$TOOLS_CC"
+            cmd += f" && export CGO_ENABLED=1 && export CFLAGS=\"{flags}\" && export CC=$TOOLS_CC"
 
         tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
         for arch in architectures:
@@ -97,9 +97,7 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
             'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
             'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
         },
-        tools = {
-          "CC": [CONFIG.GO.CC_TOOL],
-        } if CONFIG.GO.CGO_ENABLED == "1" else {},
+        tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
         binary = True,
         labels = labels,
         visibility = visibility,
@@ -194,6 +192,7 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibili
         f'find "$OUTS_PKG" -name "*.a" | sed -e "s=^$OUTS_PKG/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/==" | sed -e s="\.a$"== | xargs -I{{}} echo "packagefile {{}}="$PKG_DIR/$OUTS_PKG"/{CONFIG.OS}_{CONFIG.ARCH}{suffix}/{{}}.a" | sort -u > $OUTS_IC',
         '$TOOLS_PLZGO m -m "" --srcs "$SRCS" --importconfig "$OUTS_IC" > $OUTS_PKG_INFO',
     ]
+    cmd = " && ".join(cmds)
     return genrule(
         name = name,
         srcs = {"srcs": [srcs]},
@@ -202,7 +201,7 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibili
             "ic": [f"{name}/{name}.importconfig"],
             "pkg_info": [name + "/pkg_info.json"],
         },
-        cmd = cmds,
+        cmd = f"export CGO_ENABLED=1 && {cmd}" if CONFIG.GO.CGO_ENABLED else cmd,
         tools = {
             "go": [CONFIG.GO.GO_TOOL],
             "plzgo": [CONFIG.GO.PLEASE_GO_TOOL],
@@ -211,7 +210,6 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibili
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
             "GODEBUG": "installgoroot=all",
-            "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
         },
         labels = ["go_pkg_info", "go_stdlib", "go"] + labels,
         output_is_complete = True,
@@ -1255,17 +1253,26 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
 
     pkgRoot = f"pkg/{CONFIG.OS}_{CONFIG.ARCH}/{module}"
 
+    cmds = [
+        "rm -rf $SRCS_DOWNLOAD/.plzconfig",
+        "find $SRCS_DOWNLOAD -name BUILD -delete",
+        f"mkdir -p $(dirname {pkgRoot})",
+        f"mv $SRCS_DOWNLOAD {pkgRoot}",
+        f"$TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements}",
+        f"mv {pkgRoot} $OUT",
+    ]
+    cmd = " && ".join(cmds)
+
     repo = build_rule(
         name = name,
         tag = "repo" if install else None,
         srcs =  srcs,
-        cmd  = f"rm -rf $SRCS_DOWNLOAD/.plzconfig && find $SRCS_DOWNLOAD -name BUILD -delete && mkdir -p $(dirname {pkgRoot}) && mv $SRCS_DOWNLOAD {pkgRoot} && $TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements} && mv {pkgRoot} $OUT",
+        cmd = f"export CGO_ENABLED=1 && {cmd}" if CONFIG.GO.CGO_ENABLED else cmd,
         outs = [subrepo_name],
         tools = [CONFIG.GO.PLEASE_GO_TOOL],
         env= {
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
-            "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
         },
         deps = deps + [CONFIG.GO.MOD_FILE] if CONFIG.GO.MOD_FILE else deps,
         output_is_complete = True,
@@ -1533,17 +1540,17 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
 
 def _go_modinfo(name:str, test_only:bool=False, deps:list):
     """Generates Go modinfo for a binary which is fed into go tool link via the importconfig"""
+    cmd = f'$TOOLS_PLZ modinfo -m "{CONFIG.GO.IMPORT_PATH}" -b "{CONFIG.GO.BUILDMODE}"'
     return build_rule(
         name = name,
         tag = 'modinfo',
         needs_transitive_deps = True,
         outs = [name + ".modinfo.importconfig"],
-        cmd = f'$TOOLS_PLZ modinfo -m "{CONFIG.GO.IMPORT_PATH}" -b "{CONFIG.GO.BUILDMODE}"',
+        cmd = f"export CGO_ENABLED=1 && {cmd}" if CONFIG.GO.CGO_ENABLED else cmd,
         tools = {
             'go': [CONFIG.GO.GO_TOOL],
             'plz': [CONFIG.GO.PLEASE_GO_TOOL],
         },
-        env = {'CGO_ENABLED': '1' if CONFIG.GO.CGO_ENABLED else '0'},
         test_only = test_only,
         deps = deps,
         requires = ['modinfo'],
@@ -1609,7 +1616,7 @@ def _set_go_env():
         cmds += [f'export GOOS={CONFIG.OS} && export GOARCH={CONFIG.ARCH}']
 
     cmd = ' && '.join(cmds)
-    return f'export CGO_ENABLED={CONFIG.GO.CGO_ENABLED} && {cmd}' if CONFIG.GO.CGO_ENABLED else cmd
+    return f"export CGO_ENABLED=1 && {cmd}" if CONFIG.GO.CGO_ENABLED else cmd
 
 
 def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
