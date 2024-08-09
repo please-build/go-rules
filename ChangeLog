@@ -1,3 +1,11 @@
+Version 1.20.0
+--------------
+    * Convert `cgo_enabled` plugin config field into a boolean (#274). This should not be a breaking
+      change for the vast majority of users - the only case in which a change is needed to the value
+      of `cgo_enabled` after upgrading to v1.20.0 is if it is set to an esoteric value that Please
+      does not already interpret as a boolean in a plugin configuration (i.e. something other than
+      `1`, `0`, `true`, `false`, `on`, or `off`).
+
 Version 1.19.0
 --------------
     * Add `labels` parameter to the `go_toolchain`, `go_system_toolchain` and `go_stdlib` rules (#272)
