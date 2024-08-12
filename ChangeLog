@@ -1,3 +1,8 @@
+Version 1.20.1
+--------------
+    * When building Go code with `go_toolchain`, use the Go headers provided by that toolchain to
+      compile ASM files/headers and the ABI symbol file (#276)
+
 Version 1.20.0
 --------------
     * Convert `cgo_enabled` plugin config field into a boolean (#274). This should not be a breaking
