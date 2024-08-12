@@ -1,3 +1,7 @@
+Version 1.13.0
+--------------
+    * Search for Go headers in toolchain provided by Go tool (#276)
+
 Version 1.12.0
 --------------
     * Add ability to set build labels with generate tool
