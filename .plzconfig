@@ -1,5 +1,5 @@
 [Please]
-Version = >=17.2.0
+Version = >=17.10.0
 
 [build]
 hashcheckers = sha256
@@ -133,6 +133,12 @@ Help = Split debug info for binaries into a separate, optional output.
 DefaultValue = eu-strip
 Inherit = true
 Help = Tool to use to strip debug info. This is temporary and will be removed later!
+
+[PluginConfig "strip_binaries"]
+Optional = true
+Inherit = true
+Type = bool
+Help = Whether to strip generated Go binaries by default. This overrides the behaviour implied by the build mode - for example, building in dbg mode with this option set to true will still cause Go binaries to be stripped.
 
 [PluginConfig "feature_flags"]
 Repeatable = true
