@@ -1,3 +1,7 @@
+Version 1.21.0
+--------------
+    * Add `strip_binaries` configuration option (#280)
+
 Version 1.20.1
 --------------
     * When building Go code with `go_toolchain`, use the Go headers provided by that toolchain to
