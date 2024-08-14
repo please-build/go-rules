@@ -17,7 +17,7 @@ Target = //plugins:cc
 
 [Plugin "e2e"]
 Target = //plugins:e2e
-PleaseVersion = 16.26.1
+PleaseVersion = 17.10.0
 
 [PluginDefinition]
 Name = go
