@@ -587,7 +587,7 @@ def _get_import_path(package="", import_path=""):
 
 def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list|dict=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO.DEFAULT_STATIC,
-              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False, strip:bool=None):
+              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False, strip:bool=CONFIG.GO.STRIP_BINARIES):
     """Compiles a Go binary.
 
     Args:
@@ -614,8 +614,10 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
                      used to contruct the list of definitions passed to the linker.
       stamp (bool): Allows this rule to gain access to information about SCM revision etc
                     via env vars. These can be useful to pass into `definitions`.
-      strip (bool): Determines whether the binary will be stripped of debug symbols or not.
-                    By default it depends on the build mode.
+      strip (bool): Determines whether the binary will be stripped of debug symbols or not. By
+                    default the value of the strip_binaries plugin configuration option is used;
+                    if this is not set, whether or not the binary is stripped depends on the
+                    build mode.
     """
     _srcs = srcs or [name + '.go']
     lib = go_library(
