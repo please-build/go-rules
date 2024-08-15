@@ -96,14 +96,11 @@ def cgo_library(
             'h': [subdir2 + '_cgo_export.h'],
         },
         cmd = ' && '.join([
-            (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
-            'mkdir -p "$OUT_DIR"',
+            (f'OUT_DIR="$TMP_DIR/{subdir}" && mkdir -p "$OUT_DIR"') if subdir else 'OUT_DIR="$TMP_DIR"',
             'cd $PKG_DIR/' + subdir,
-            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -- {compiler_flags_cmd} *.go',
+            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -trimpath "$TMP_DIR" -- {compiler_flags_cmd} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
             'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
-            # cgo leaves absolute paths in these files which we must get rid of :(
-            'find "$OUT_DIR" -type f -maxdepth 1 | xargs sed -i -e "s|"$TMP_DIR"/||g"',
             'cd "$TMP_DIR"',
             f'ls {subdir2}*.c {subdir2}*.go',
         ]),
