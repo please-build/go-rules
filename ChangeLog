@@ -1,3 +1,8 @@
+Version 1.21.1
+--------------
+    * Bump minimum Please version to v17.10.1 to fix a bug blocking the go-rules release workflow
+      (#282)
+
 Version 1.21.0
 --------------
     * Add `strip_binaries` configuration option (#280)
