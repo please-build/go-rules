@@ -1,3 +1,7 @@
+Version 1.21.2
+--------------
+    * Minor simplifications to cgo rules (#285)
+
 Version 1.21.1
 --------------
     * Bump minimum Please version to v17.10.1 to fix a bug blocking the go-rules release workflow
