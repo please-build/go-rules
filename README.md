@@ -1,24 +1,43 @@
 # Go Rules
-This repo provides Golang build rules for the [Please](https://please.build) build system. 
 
-# Basic usage
+This repo provides [Go](https://go.dev/) build rules for the [Please](https://please.build) build system.
 
-First add the plugin to your project. In `plugins/BUILD`:
+Go is especially suited to writing command line tools and utilities. Binaries can be run with `plz run`, or used
+as tools for [custom rules](https://please.build/codelabs/genrule/#0).
+
+# Installation
+
+First, add the plugin to your Please repo. In `plugins/BUILD`:
+
 ```python
 plugin_repo(
     name = "go",
-    revision="vx.x.x",
+    revision = "vx.x.x", # A go-rules version
 )
 ```
 
-Then add the plugin config:
+Next, define a version of Go for the plugin to use. In `third_party/go/BUILD`:
+
+```python
+subinclude("///go//build_defs:go")
+
+go_toolchain(
+    name = "toolchain",
+    version = "1.x.x", # A Go version (see https://go.dev/dl/)
+)
 ```
+
+Finally, configure the plugin in `.plzconfig`:
+
+```ini
 [Plugin "go"]
 Target = //plugins:go
+GoTool = //third_party/go:toolchain|go
 ImportPath = github.com/example/repo
 ```
 
-You can then compile and test go Packages like so:
+# Basic usage
+
 ```python
 subinclude("///go//build_defs:go")
 
@@ -41,7 +60,19 @@ go_test(
 )
 ```
 
-You can define third party code using `go_get`:
+Compile binaries with `go_binary`:
+
+```python
+subinclude("///go//build_defs:go")
+
+go_binary(
+    name = "bin",
+    srcs = ["main.go"],
+)
+```
+
+Introduce dependencies on third-party Go modules with `go_repo`:
+
 ```python
 subinclude("///go//build_defs:go")
 
@@ -49,7 +80,7 @@ subinclude("///go//build_defs:go")
 go_repo(
     name = "testify",
     module = "github.com/stretchr/testify",
-    version="v1.8.2",
+    version = "v1.8.2",
     # We add the subset of packages we actually depend on here
     install = [
         "assert",
@@ -63,18 +94,3 @@ go_repo(module = "github.com/pmezard/go-difflib", version="v1.0.0")
 go_repo(module = "github.com/stretchr/objx", version="v0.5.0")
 go_repo(module = "gopkg.in/yaml.v3", version="v3.0.1")
 ```
-
-To compile a binary, you can use `go_binary()`:
-```python
-subinclude("///go//build_defs:go")
-
-go_binary(
-    name = "bin",
-    srcs = ["main.go"],
-)
-```
-
-Go is especially well suited to writing command line tools and utilities. Binaries can be ran with `plz run`, or used 
-as a tool for other [custom rules](https://please.build/codelabs/genrule/#0). 
-
-**WARNING: From Go 1.20, Golang no longer ships the precompiled standard library and thus you MUST use `go_toolchain` or `go_system_toolchain`.**
