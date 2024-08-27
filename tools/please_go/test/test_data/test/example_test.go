@@ -24,27 +24,6 @@ func TestReadCopiedPkgdef(t *testing.T) {
 	assert.Equal(t, coverageVars, vars)
 }
 
-func TestFindCoverVars(t *testing.T) {
-	vars, err := FindCoverVars("src/build/go/test_data", []string{"src/build/go/test_data/x"})
-	assert.NoError(t, err)
-	assert.Equal(t, coverageVars, vars)
-}
-
-func TestFindCoverVarsFailsGracefully(t *testing.T) {
-	_, err := FindCoverVars("wibble", []string{})
-	assert.Error(t, err)
-}
-
-func TestFindCoverVarsReturnsNothingForEmptyPath(t *testing.T) {
-	vars, err := FindCoverVars("", []string{})
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(vars))
-}
-
 func readPkgdef(name string) ([]string, error) {
-	return nil, nil
-}
-
-func FindCoverVars(filename string, vars []string) ([]string, error) {
 	return nil, nil
 }
