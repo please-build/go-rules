@@ -10,7 +10,6 @@ Stdlib = //third_party/go:std
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
 ValidateModuleVersions = true
-CoverageRedesign = true
 
 [Plugin "cc"]
 Target = //plugins:cc
@@ -145,12 +144,6 @@ Repeatable = true
 Optional = true
 Inherit = true
 Help = Flags to enable in-development features, or toggle breaking changes
-
-[PluginConfig "coverageredesign"]
-Type = bool
-DefaultValue = false
-Inherit = true
-Help = Support Go 1.20's coverage redesign. Will break coverage on 1.19, required for 1.20.
 
 [PluginConfig "buildmode"]
 Optional = true
