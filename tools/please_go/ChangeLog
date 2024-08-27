@@ -1,3 +1,7 @@
+Version 1.14.0
+--------------
+    * Remove support for Go <= 1.19 coverage generation (#291)
+
 Version 1.13.0
 --------------
     * Search for Go headers in toolchain provided by Go tool (#276)
