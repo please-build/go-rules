@@ -149,7 +149,7 @@ Help = Flags to enable in-development features, or toggle breaking changes
 Type = bool
 DefaultValue = true
 Inherit = true
-Help = Support Go 1.20's coverage redesign. This is deprecated and will be removed in a future major version of the go-rules plugin.
+Help = Support Go 1.20's coverage redesign. This option now has no effect and will be removed in a future major version of the go-rules plugin.
 
 [PluginConfig "buildmode"]
 Optional = true
