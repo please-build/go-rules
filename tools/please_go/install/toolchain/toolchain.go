@@ -202,3 +202,9 @@ func (tc *Toolchain) pkgConfig(cmd string, cfgs []string) ([]string, error) {
 	}
 	return strings.Fields(string(out)), nil
 }
+
+// GoMinorVersion invokes the GoMinorVersion from a toolchain with the given Go binary.
+func GoMinorVersion(goTool string) (int, error) {
+	tc := Toolchain{GoTool: goTool}
+	return tc.GoMinorVersion()
+}

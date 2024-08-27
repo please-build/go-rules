@@ -54,8 +54,7 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 }
 
 func needs121CoverVars(goTool string) bool {
-	tc := toolchain.Toolchain{GoTool: goTool}
-	version, err := tc.GoMinorVersion()
+	version, err := toolchain.GoMinorVersion(goTool)
 	return err == nil && version >= 21
 }
 

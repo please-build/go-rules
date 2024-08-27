@@ -23,22 +23,22 @@ type testDescr struct {
 	Imports        []string
 	Coverage       bool
 	Benchmark      bool
-	HasFuzz        bool
+	Is123          bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
-func WriteTestMain(testPackage string, sources []string, output string, coverage, benchmark, hasFuzz bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage, benchmark, is123 bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
 	testDescr.Coverage = coverage
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
-			testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
+		testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
 	}
 
 	testDescr.Benchmark = benchmark
-	testDescr.HasFuzz = hasFuzz
+	testDescr.Is123 = is123
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -131,7 +131,8 @@ package main
 
 import (
 	_gostdlib_os "os"
-	{{if not .Benchmark}}_gostdlib_strings "strings"{{end}}
+	{{ if not .Benchmark }}_gostdlib_strings "strings"{{ end }}
+	{{ if and .Coverage .Is123 }}_gostdlib_cfile "internal/coverage/cfile"{{ end }}
 	_gostdlib_testing "testing"
 	_gostdlib_testdeps "testing/internal/testdeps"
 
@@ -168,7 +169,9 @@ var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
 {{ end }}
 }
 
-{{if .Coverage}}
+{{ if .Coverage }}
+{{ if not .Is123 }}
+
 //go:linkname runtime_coverage_processCoverTestDir runtime/coverage.processCoverTestDir
 func runtime_coverage_processCoverTestDir(dir string, cfile string, cmode string, cpkgs string) error
 
@@ -193,7 +196,8 @@ func coverTearDown(coverprofile string, gocoverdir string) (string, error) {
 	}
 	return "", nil
 }
-{{end}}
+{{ end }}
+{{ end }}
 
 var testDeps = _gostdlib_testdeps.TestDeps{}
 
@@ -202,10 +206,22 @@ func internalMain() int {
 {{if .Coverage}}
     coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
     args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
+{{ if .Is123 }}
+    _gostdlib_testdeps.Cover = true
+    _gostdlib_testdeps.CoverMode = "set"
+    _gostdlib_testdeps.Covered = ""
+    _gostdlib_testdeps.ImportPath = ""
+    _gostdlib_testdeps.CoverSelectedPackages = []string{"command-line-arguments"}
+    _gostdlib_testdeps.CoverSnapshotFunc = _gostdlib_cfile.Snapshot
+    _gostdlib_testdeps.CoverProcessTestDirFunc = _gostdlib_cfile.ProcessCoverTestDir
+    _gostdlib_testdeps.CoverMarkProfileEmittedFunc = _gostdlib_cfile.MarkProfileEmitted
+{{ else }}
 	testing_registerCover2("set", coverTearDown)
-{{else}}
+{{ end }}
+{{ else }}
     args := []string{_gostdlib_os.Args[0], "-test.v"}
 {{end}}
+
 {{if not .Benchmark}}
     testVar := _gostdlib_os.Getenv("TESTS")
     if testVar != "" {
@@ -219,6 +235,7 @@ func internalMain() int {
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
 	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, fuzzTargets, nil)
 {{end}}
+
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
     return 0
