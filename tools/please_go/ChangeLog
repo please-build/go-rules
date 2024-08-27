@@ -1,3 +1,7 @@
+Version 1.15.0
+--------------
+    * Add support for Go 1.23 coverage generation (#294)
+
 Version 1.14.0
 --------------
     * Remove support for Go <= 1.19 coverage generation (#291)
