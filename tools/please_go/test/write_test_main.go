@@ -209,12 +209,12 @@ func internalMain() int {
 {{ if .Is123 }}
     _gostdlib_testdeps.Cover = true
     _gostdlib_testdeps.CoverMode = "set"
-	_gostdlib_testdeps.Covered = ""
-	_gostdlib_testdeps.ImportPath = ""
+    _gostdlib_testdeps.Covered = ""
+    _gostdlib_testdeps.ImportPath = ""
     _gostdlib_testdeps.CoverSelectedPackages = []string{"command-line-arguments"}
-	_gostdlib_testdeps.CoverSnapshotFunc = _gostdlib_cfile.Snapshot
-	_gostdlib_testdeps.CoverProcessTestDirFunc = _gostdlib_cfile.ProcessCoverTestDir
-	_gostdlib_testdeps.CoverMarkProfileEmittedFunc = _gostdlib_cfile.MarkProfileEmitted
+    _gostdlib_testdeps.CoverSnapshotFunc = _gostdlib_cfile.Snapshot
+    _gostdlib_testdeps.CoverProcessTestDirFunc = _gostdlib_cfile.ProcessCoverTestDir
+    _gostdlib_testdeps.CoverMarkProfileEmittedFunc = _gostdlib_cfile.MarkProfileEmitted
 {{ else }}
 	testing_registerCover2("set", coverTearDown)
 {{ end }}
