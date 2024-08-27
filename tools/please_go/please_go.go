@@ -10,7 +10,6 @@ import (
 	"github.com/peterebden/go-cli-init/v5/flags"
 
 	"github.com/please-build/go-rules/tools/please_go/cover"
-	"github.com/please-build/go-rules/tools/please_go/covervars"
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/generate"
@@ -52,12 +51,6 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
-	CoverVars struct {
-		ImportPath string `short:"i" long:"import_path" description:"The import path for the source files"`
-		Args       struct {
-			Sources []string `positional-arg-name:"sources" description:"Source files to generate embed config for"`
-		} `positional-args:"true"`
-	} `command:"covervars" description:"Generates coverage variable config for a set of go src files"`
 	Cover struct {
 		GoTool      string `short:"g" long:"go" default:"go" env:"TOOLS_GO" description:"Go binary to run"`
 		CoverTool   string `short:"t" long:"go_cover" env:"TOOLS_COVER" description:"Go coverage tool to run"`
@@ -168,10 +161,6 @@ var subCommands = map[string]func() int{
 		if err := cover.WriteCoverage(opts.Cover.GoTool, opts.Cover.CoverTool, opts.Cover.CoverageCfg, opts.Cover.Output, opts.Cover.Pkg, opts.Cover.Args.Sources); err != nil {
 			log.Fatalf("failed to write coverage: %s", err)
 		}
-		return 0
-	},
-	"covervars": func() int {
-		covervars.GenCoverVars(os.Stdout, opts.CoverVars.ImportPath, opts.CoverVars.Args.Sources)
 		return 0
 	},
 	"filter": func() int {
