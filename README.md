@@ -1,5 +1,5 @@
 # Go Rules
-This repo provides Golang build rules for the [Please](https://please.build) build system. 
+This repo provides Golang build rules for the [Please](https://please.build) build system. It supports Go >= 1.20.
 
 # Basic usage
 

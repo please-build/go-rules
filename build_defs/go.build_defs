@@ -325,18 +325,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     else:
         exported_deps = []
 
-    if cover and not CONFIG.GO.COVERAGEREDESIGN:
-        cover_vars = build_rule(
-            name = name,
-            tag = "cover_vars",
-            srcs = srcs,
-            cmd = f"$TOOL covervars --import_path {package_path} $($TOOL filter $SRCS) > $OUT",
-            tools = [CONFIG.GO.PLEASE_GO_TOOL],
-            outs = [f"{name}.cover_vars"],
-            visibility = visibility,
-            test_only = test_only,
-        )
-        deps += [cover_vars]
     if resources:
         embedcfg = build_rule(
             name = name,
@@ -432,8 +420,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             deps = [transitive_headers],
         )
         provides = {'go': ':' + name, 'go_src': lib_rule, 'modinfo': modinfo, 'hdrs': hdrs_rule}
-        if cover and not CONFIG.GO.COVERAGEREDESIGN:
-            provides['cover_vars'] = cover_vars
         return build_rule(
             name = name,
             srcs = {
@@ -499,8 +485,6 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
 
     cmds, tools = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file)
 
-    if cover and not CONFIG.GO.COVERAGEREDESIGN:
-        provides['cover_vars'] = cover_vars
     return build_rule(
         name = name,
         srcs = srcs,
@@ -809,7 +793,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         name=f'_{name}#main_lib',
         srcs = [main_rule],
         deps = deps,
-        _needs_transitive_deps = CONFIG.BUILD_CONFIG == "cover" and not CONFIG.GO.COVERAGEREDESIGN,
+        _needs_transitive_deps = False,
         test_only = True,
         _generate_import_config = False,
         labels = labels,
@@ -1032,8 +1016,8 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
         outs = [name + '_main.go'],
         deps = deps,
         cmd = cmds,
-        needs_transitive_deps = cover and not CONFIG.GO.COVERAGEREDESIGN,  # Need all dependencies to template coverage variables
-        requires = ['go', 'cover_vars'] if cover else ['go'],
+        needs_transitive_deps = False,
+        requires = ['go'],
         test_only = test_only,
         tools = {
             'plz': [CONFIG.GO.PLEASE_GO_TOOL],
@@ -1659,11 +1643,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
         'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
     }
     if cover:
-        if CONFIG.GO.COVERAGEREDESIGN:
-            cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt {package_flag} $SRCS_GO && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
-        else:
-            cover_cmd = 'for SRC in $SRCS_GO; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
-            cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd}{package_flag} $SRCS_GO'
+        cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt {package_flag} $SRCS_GO && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
         if CONFIG.GO.GO_COVER_TOOL:
             tools['cover'] = CONFIG.GO.GO_COVER_TOOL
