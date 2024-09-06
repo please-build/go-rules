@@ -1,3 +1,7 @@
+Version 1.21.3
+--------------
+    * Support Go 1.23 coverage (#294)
+
 Version 1.21.2
 --------------
     * Minor simplifications to cgo rules (#285)
