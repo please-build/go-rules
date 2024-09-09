@@ -10,7 +10,7 @@ jobs:
         run: ./pleasew test -p -v notice --log_file plz-out/log/test.log
       - name: Archive logs
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: logs
           path: |
@@ -24,7 +24,7 @@ jobs:
         run: ./pleasew cover -p -v notice --nocoverage_report --log_file plz-out/log/test_coverage.log
       - name: Archive logs
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage_logs
           path: |
@@ -38,7 +38,7 @@ jobs:
         run: ./pleasew cover -p -v notice --nocoverage_report --log_file plz-out/log/test_tools.log
       - name: Archive logs
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: tools_logs
           path: |
@@ -52,7 +52,7 @@ jobs:
         run: ./pleasew build -c dbg -p -v notice --log_file plz-out/log/test_debug.log
       - name: Archive logs
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: debug_logs
           path: |
