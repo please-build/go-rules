@@ -44,9 +44,9 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 	}
 	var cmd *exec.Cmd
 	if coverTool != "" {
-		cmd = exec.Command(coverTool, append([]string{"-mode=set", "-var=goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
+		cmd = exec.Command(coverTool, append([]string{"-mode=set", "-var=_plz_goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
 	} else {
-		cmd = exec.Command(goTool, append([]string{"tool", "cover", "-mode=set", "-var=goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
+		cmd = exec.Command(goTool, append([]string{"tool", "cover", "-mode=set", "-var=_plz_goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
