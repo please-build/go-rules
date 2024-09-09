@@ -825,6 +825,11 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
+    if env:
+        env["GOCOVERDIR"] = "$TMP_DIR"
+    else:
+        env = {"GOCOVERDIR": "$TMP_DIR"}
+
     return build_rule(
         name = name,
         srcs = [lib_rule],
