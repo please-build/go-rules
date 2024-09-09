@@ -13,8 +13,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: logs
-          path: |
-            plz-out/log
+          path: plz-out/log
   test_coverage:
     runs-on: ubuntu-latest
     steps:
@@ -27,8 +26,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage_logs
-          path: |
-            plz-out/log
+          path: plz-out/log
   test_tools:
     runs-on: ubuntu-latest
     steps:
@@ -41,8 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tools_logs
-          path: |
-            plz-out/log
+          path: plz-out/log
   test_debug:
     runs-on: ubuntu-latest
     steps:
@@ -55,8 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug_logs
-          path: |
-            plz-out/log
+          path: plz-out/log
   release:
     needs:
       - test
