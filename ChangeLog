@@ -1,3 +1,7 @@
+Version 1.21.4
+--------------
+    * Suppress Go 1.23 emitting GOCOVERDIR messages
+
 Version 1.21.3
 --------------
     * Support Go 1.23 coverage (#294)
