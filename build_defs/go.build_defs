@@ -213,7 +213,6 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibili
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
             "GODEBUG": "installgoroot=all",
-            "CGO_ENABLED": CONFIG.GO.CGO_ENABLED,
             "GOEXPERIMENT": CONFIG.GO.EXPERIMENT,
         },
         labels = ["go_pkg_info", "go_stdlib", "go"] + labels,
@@ -514,7 +513,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
 
 def _goexperiment_env():
     """Returns the GOEXPERIMENT env var, or None if there isn't one."""
-    return {"GOEXPERIMENT": CONFIG.GO.EXPERIMENT} if CONFIG.GO.EXPERIMENT else None
+    return {"GOEXPERIMENT": CONFIG.GO.EXPERIMENT} if CONFIG.GO.EXPERIMENT else {}
 
 
 def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
