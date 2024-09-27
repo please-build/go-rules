@@ -1,3 +1,7 @@
+Version 1.21.5
+--------------
+    * Race config property is inherited so it works on binaries from `go_repo` (#302)
+
 Version 1.21.4
 --------------
     * Suppress Go 1.23 emitting GOCOVERDIR messages
