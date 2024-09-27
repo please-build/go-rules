@@ -159,6 +159,7 @@ Help = The Go build mode to target (see `go help buildmode` for info)
 Type = bool
 DefaultValue = false
 Optional = true
+Inherit = true
 Help = Compile for the Go race detector
 
 [PluginConfig "mod_file"]
