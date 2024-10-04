@@ -963,7 +963,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
     import_config = build_rule(
         name=f'_{name}#lib_import_config',
         cmd = _write_import_config_cmd(test_package if test_package else lib_rule.removeprefix(":"), test_package),
-        outs = [f'{test_package}.importconfig'],
+        outs = [f'_{name}#lib.importconfig'],
         visibility=visibility,
         test_only=True,
         labels=labels,
