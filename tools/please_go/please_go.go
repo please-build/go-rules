@@ -13,7 +13,6 @@ import (
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
 	"github.com/please-build/go-rules/tools/please_go/generate"
-	"github.com/please-build/go-rules/tools/please_go/goget"
 	"github.com/please-build/go-rules/tools/please_go/install"
 	"github.com/please-build/go-rules/tools/please_go/modinfo"
 	"github.com/please-build/go-rules/tools/please_go/packageinfo"
@@ -177,18 +176,6 @@ var subCommands = map[string]func() int{
 		gen := opts.Generate
 		g := generate.New(gen.SrcRoot, gen.ThirdPartyFolder, gen.ModFile, gen.Module, gen.Version, gen.Subrepo, []string{"BUILD", "BUILD.plz"}, gen.Args.Requirements, gen.Install, gen.BuildTags, gen.Labels)
 		if err := g.Generate(); err != nil {
-			log.Fatalf("failed to generate go rules: %v", err)
-		}
-		return 0
-	},
-	"get": func() int {
-		if opts.GoGet.ModFile != "" {
-			if err := goget.GetMod(opts.GoGet.ModFile); err != nil {
-				log.Fatalf("failed to generate go rules: %v", err)
-			}
-			return 0
-		}
-		if err := goget.GoGet(opts.GoGet.Args.Requirements); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
 		return 0
