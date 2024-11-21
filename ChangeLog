@@ -1,3 +1,7 @@
+Version 1.22.0
+--------------
+    * Plumb cc_hdrs provide though cgo_library (#307)
+
 Version 1.21.5
 --------------
     * Race config property is inherited so it works on binaries from `go_repo` (#302)

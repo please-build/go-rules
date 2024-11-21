@@ -163,6 +163,7 @@ def cgo_library(
             'go': ':' + name,
             'go_src': go_rule,
             'cgo': c_rule,
+            'cc_hdrs': c_rule,
         },
         deps = deps,
         exported_deps=[import_config],
