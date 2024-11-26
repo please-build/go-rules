@@ -1,3 +1,7 @@
+Version 1.15.2
+--------------
+    * Fully remove `get` subcommand (#309)
+
 Version 1.15.1
 --------------
     * Use more specific names for coverage variables to avoid clashes
