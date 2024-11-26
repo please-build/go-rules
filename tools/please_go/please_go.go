@@ -100,12 +100,6 @@ var opts = struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
 	} `command:"generate" alias:"g" description:"Generate build targets for a Go module"`
-	GoGet struct {
-		ModFile string `short:"m" long:"mod_file" description:"A go.mod file to use as a set of reuirementzs"`
-		Args    struct {
-			Requirements []string `positional-arg-name:"requirements" description:"a set of module@version pairs"`
-		} `positional-args:"true"`
-	} `command:"get" description:"Generate go_get rules"`
 	ModInfo struct {
 		GoTool     string `short:"g" long:"go" env:"TOOLS_GO" required:"true" description:"The Go tool we'll use"`
 		ModulePath string `short:"m" long:"module_path" description:"The path for the module being built"`
