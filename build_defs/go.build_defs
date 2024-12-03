@@ -1683,9 +1683,9 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
     defs = ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
 
     if static:
-        flags = f'-linkmode external -extldflags "-static {ldflags} {pkg_config}"'
+        flags = f'-linkmode external -extldflags "-static {pkg_config} {ldflags}"'
     elif ldflags or pkg_config:
-        flags = f'-extldflags "{ldflags} {pkg_config}"'
+        flags = f'-extldflags "{pkg_config} {ldflags}"'
     else:
         flags = ''
 

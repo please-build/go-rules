@@ -1,3 +1,7 @@
+Version 1.23.0
+--------------
+    * pkg_config arguments now come before ldflags when acquired from cgo_library
+
 Version 1.22.0
 --------------
     * Plumb cc_hdrs provide though cgo_library (#307)
