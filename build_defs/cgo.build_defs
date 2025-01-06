@@ -71,6 +71,7 @@ def cgo_library(
             visibility = visibility,
             test_only = test_only,
             asm_srcs = asm_srcs,
+            hdrs = hdrs,
             _module = _module,
             _subrepo = _subrepo,
         )
@@ -133,6 +134,7 @@ def cgo_library(
         test_only = test_only,
         complete = False,
         deps = deps,
+        hdrs = hdrs,
         _generate_import_config=False,
         import_path=import_path,
         _subrepo = _subrepo,
