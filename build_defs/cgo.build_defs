@@ -17,6 +17,7 @@ def cgo_library(
     visibility:list=None,
     test_only:bool&testonly=False,
     import_path:str='',
+    asm_srcs:list=None,
     _module:str='',
     _subrepo:str='',
 ):
@@ -69,6 +70,7 @@ def cgo_library(
             import_path = import_path,
             visibility = visibility,
             test_only = test_only,
+            asm_srcs = asm_srcs,
             _module = _module,
             _subrepo = _subrepo,
         )
@@ -136,6 +138,7 @@ def cgo_library(
         _subrepo = _subrepo,
         _module = _module,
         labels = labels,
+        asm_srcs = asm_srcs,
     )
 
     output = package if package else name
