@@ -74,6 +74,7 @@ def cgo_library(
             hdrs = hdrs,
             _module = _module,
             _subrepo = _subrepo,
+            _kind = "cgo_library",
         )
 
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
@@ -172,4 +173,5 @@ def cgo_library(
         },
         deps = deps,
         exported_deps=[import_config],
+        _kind="cgo_library",
     )

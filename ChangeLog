@@ -1,3 +1,7 @@
+Version 1.23.0
+--------------
+    * Add `kind:` labels to all non-private build defs (#312)
+
 Version 1.22.0
 --------------
     * Plumb cc_hdrs provide though cgo_library (#307)
