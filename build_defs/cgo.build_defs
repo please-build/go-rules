@@ -66,7 +66,7 @@ def cgo_library(
             resources = resources,
             package = package,
             deps = deps,
-            labels = labels + ["kind:cgo_library"],
+            labels = labels,
             import_path = import_path,
             visibility = visibility,
             test_only = test_only,
@@ -74,6 +74,7 @@ def cgo_library(
             hdrs = hdrs,
             _module = _module,
             _subrepo = _subrepo,
+            _kind = "cgo_library",
         )
 
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
@@ -163,7 +164,7 @@ def cgo_library(
         test_only = test_only,
         linker_flags = linker_flags,
         package = package,
-        labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)] + labels + ["kind:cgo_library"],
+        labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)] + labels,
         provides = {
             'go': ':' + name,
             'go_src': go_rule,
@@ -172,4 +173,5 @@ def cgo_library(
         },
         deps = deps,
         exported_deps=[import_config],
+        _kind="cgo_library",
     )
