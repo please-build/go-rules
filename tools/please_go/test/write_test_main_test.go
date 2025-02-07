@@ -44,17 +44,7 @@ func TestParseTestSourcesFailsGracefully(t *testing.T) {
 }
 
 func TestWriteTestMain(t *testing.T) {
-	err := WriteTestMain("test_pkg", []string{"tools/please_go/test/test_data/test/example_test.go"}, "test.go", false, false, true)
-	assert.NoError(t, err)
-	// It's not really practical to assert the contents of the file in great detail.
-	// We'll do the obvious thing of asserting that it is valid Go source.
-	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
-	assert.NoError(t, err)
-	assert.Equal(t, "main", f.Name.Name)
-}
-
-func TestWriteTestMainWithCoverage(t *testing.T) {
-	err := WriteTestMain("test_package", []string{"tools/please_go/test/test_data/test/example_test.go"}, "test.go", true, false, false)
+	err := WriteTestMain("test_pkg", []string{"tools/please_go/test/test_data/test/example_test.go"}, "test.go", false)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
 	// We'll do the obvious thing of asserting that it is valid Go source.
@@ -64,7 +54,7 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 }
 
 func TestWriteTestMainWithBenchmark(t *testing.T) {
-	err := WriteTestMain("test_package", []string{"tools/please_go/test/test_data/bench/example_benchmark_test.go"}, "test.go", true, true, true)
+	err := WriteTestMain("test_package", []string{"tools/please_go/test/test_data/bench/example_benchmark_test.go"}, "test.go", true)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
 	// We'll do the obvious thing of asserting that it is valid Go source.
