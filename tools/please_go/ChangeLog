@@ -1,3 +1,7 @@
+Version 1.16.0
+--------------
+    * Switch to using `go tool covdata` for test coverage reports
+
 Version 1.15.2
 --------------
     * Fully remove `get` subcommand (#309)
