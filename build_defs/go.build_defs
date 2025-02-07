@@ -808,6 +808,8 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
+    if CONFIG.BUILD_CONFIG == 'cover':
+        test_cmd += " && go tool covdata textfmt -i=. -o=$COVERAGE_FILE"
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name = name,
