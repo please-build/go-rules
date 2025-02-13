@@ -1,4 +1,4 @@
-VERSION = "1.15.1"
+VERSION = "1.16.0"
 
 hashes = {
     "darwin_amd64": "e7fd623e923a5f2f26b6510a100db36a4af74a178aaef0989f9ba9991633c82b",
