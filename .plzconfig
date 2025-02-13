@@ -41,6 +41,11 @@ Help = A file path or build label for the go cover tool to use. If not set, go_t
 Inherit = true
 Optional = true
 
+[PluginConfig "go_covdata_tool"]
+Help = A file path or build label for the go covdata tool to use. If not set, go_tool will be used to find it.
+Inherit = true
+Optional = true
+
 [PluginConfig "stdlib"]
 Optional = true
 Help = The build label for a go_stdlib target used to re-compile the standard library for different architectures and build modes.

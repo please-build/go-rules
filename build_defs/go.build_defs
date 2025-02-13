@@ -96,6 +96,7 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
             'compile': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/compile',
             'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
             'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
+            'covdata': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/covdata',
         },
         tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
         binary = True,
@@ -103,7 +104,7 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
         visibility = visibility,
         building_description = "Installing...",
     )
-    for tool in ['compile', 'link', 'cover']:
+    for tool in ['compile', 'link', 'cover', 'covdata']:
         genrule(
             name = f"{name}_{tool}",
             outs = [tool],
@@ -808,6 +809,14 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
+    test_tools = {}
+    if CONFIG.BUILD_CONFIG == 'cover':
+        if CONFIG.GO.GO_COVDATA_TOOL:
+            test_tools["covdata"] = CONFIG.GO.GO_COVDATA_TOOL
+            test_cmd += " && $TOOLS_COVDATA textfmt -i=. -o=$COVERAGE_FILE"
+        else:
+            test_tools["go"] = CONFIG.GO.GO_TOOL
+            test_cmd += " && $TOOLS_GO tool covdata textfmt -i=. -o=$COVERAGE_FILE"
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name = name,
@@ -838,6 +847,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         deps = deps + [modinfo],
         outs = [name],
         tools = tools,
+        test_tools = test_tools,
         debug_tools = debug_tools,
         cmd = cmds,
         test_cmd = test_cmd,

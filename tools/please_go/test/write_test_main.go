@@ -21,24 +21,20 @@ type testDescr struct {
 	FuzzFunctions  []string
 	Examples       []*doc.Example
 	Imports        []string
-	Coverage       bool
 	Benchmark      bool
-	Is123          bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
-func WriteTestMain(testPackage string, sources []string, output string, coverage, benchmark, is123 bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, benchmark bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
-	testDescr.Coverage = coverage
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
 		testDescr.Imports = []string{fmt.Sprintf("%s \"%s\"", testDescr.Package, testPackage)}
 	}
 
 	testDescr.Benchmark = benchmark
-	testDescr.Is123 = is123
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -132,14 +128,8 @@ package main
 import (
 	_gostdlib_os "os"
 	{{ if not .Benchmark }}_gostdlib_strings "strings"{{ end }}
-	{{ if and .Coverage .Is123 }}_gostdlib_cfile "internal/coverage/cfile"{{ end }}
 	_gostdlib_testing "testing"
 	_gostdlib_testdeps "testing/internal/testdeps"
-
-{{if .Coverage}}
-	_ "runtime/coverage"
-	_ "unsafe"
-{{end}}
 
 {{range .Imports}}
 	{{.}}
@@ -169,58 +159,10 @@ var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
 {{ end }}
 }
 
-{{ if .Coverage }}
-{{ if not .Is123 }}
-
-//go:linkname runtime_coverage_processCoverTestDir runtime/coverage.processCoverTestDir
-func runtime_coverage_processCoverTestDir(dir string, cfile string, cmode string, cpkgs string) error
-
-//go:linkname testing_registerCover2 testing.registerCover2
-func testing_registerCover2(mode string, tearDown func(coverprofile string, gocoverdir string) (string, error))
-
-//go:linkname runtime_coverage_markProfileEmitted runtime/coverage.markProfileEmitted
-func runtime_coverage_markProfileEmitted(val bool)
-
-func coverTearDown(coverprofile string, gocoverdir string) (string, error) {
-	var err error
-	if gocoverdir == "" {
-		gocoverdir, err = _gostdlib_os.MkdirTemp("", "gocoverdir")
-		if err != nil {
-			return "error setting GOCOVERDIR: bad os.MkdirTemp return", err
-		}
-		defer _gostdlib_os.RemoveAll(gocoverdir)
-	}
-	runtime_coverage_markProfileEmitted(true)
-	if err := runtime_coverage_processCoverTestDir(gocoverdir, coverprofile, "set", ""); err != nil {
-		return "error generating coverage report", err
-	}
-	return "", nil
-}
-{{ end }}
-{{ end }}
-
 var testDeps = _gostdlib_testdeps.TestDeps{}
 
 func internalMain() int {
-
-{{if .Coverage}}
-    coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
-    args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
-{{ if .Is123 }}
-    _gostdlib_testdeps.Cover = true
-    _gostdlib_testdeps.CoverMode = "set"
-    _gostdlib_testdeps.Covered = ""
-    _gostdlib_testdeps.ImportPath = ""
-    _gostdlib_testdeps.CoverSelectedPackages = []string{"command-line-arguments"}
-    _gostdlib_testdeps.CoverSnapshotFunc = _gostdlib_cfile.Snapshot
-    _gostdlib_testdeps.CoverProcessTestDirFunc = _gostdlib_cfile.ProcessCoverTestDir
-    _gostdlib_testdeps.CoverMarkProfileEmittedFunc = _gostdlib_cfile.MarkProfileEmitted
-{{ else }}
-	testing_registerCover2("set", coverTearDown)
-{{ end }}
-{{ else }}
-    args := []string{_gostdlib_os.Args[0], "-test.v"}
-{{end}}
+	args := []string{_gostdlib_os.Args[0], "-test.v"}
 
 {{if not .Benchmark}}
     testVar := _gostdlib_os.Getenv("TESTS")
