@@ -1,3 +1,7 @@
+Version 1.17.0
+--------------
+    * Build with Go 1.24.1
+
 Version 1.16.0
 --------------
     * Switch to using `go tool covdata` for test coverage reports
