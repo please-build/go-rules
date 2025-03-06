@@ -26,15 +26,7 @@ func TestModInfo(t *testing.T) {
 		},
 		{
 			Path:    "github.com/stretchr/testify",
-			Version: "v1.7.0",
-		},
-		{
-			Path:    "golang.org/x/mod",
-			Version: "v0.16.0",
-		},
-		{
-			Path:    "golang.org/x/xerrors",
-			Version: "v0.0.0-20200804184101-5ec99f83aff1",
+			Version: "v1.7.1",
 		},
 		{
 			Path:    "gopkg.in/yaml.v3",

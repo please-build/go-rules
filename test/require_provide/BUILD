@@ -10,6 +10,6 @@ go_test(
     srcs = ["require_provide_test.go"],
     deps = [
         ":require_provide",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

@@ -2,18 +2,21 @@ subinclude("///go//build_defs:go")
 
 filegroup(
     name = "srcs",
-    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["//tools/please_go:bootstrap"],
 )
 
 go_library(
     name = "gomoddeps",
     srcs = [
-        ":srcs",
+        "gomoddeps.go",
     ],
     visibility = ["//tools/please_go/generate/..."],
     deps = [
-        "//third_party/go:mod",
+        "///third_party/go/golang.org_x_mod//modfile",
     ],
 )
 
@@ -24,7 +27,7 @@ go_test(
         "//tools/please_go/generate/gomoddeps/test_data:test_go_mod_files",
     ],
     deps = [
-        "//third_party/go:testify",
         ":gomoddeps",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

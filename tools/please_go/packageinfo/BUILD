@@ -9,11 +9,11 @@ filegroup(
 go_library(
     name = "packageinfo",
     srcs = glob(["*.go"]),
-    deps = [
-        "//third_party/go:xtools",
-    ],
     visibility = [
-        "//tools/please_go/...",
         "//tools/driver/...",
+        "//tools/please_go/...",
+    ],
+    deps = [
+        "///third_party/go/golang.org_x_tools//go/packages",
     ],
 )

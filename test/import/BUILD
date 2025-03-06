@@ -6,6 +6,6 @@ go_test(
     deps = [
         "//test/import/legacy:foo",
         "//test/message",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
