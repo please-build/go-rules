@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -161,7 +160,7 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		}
 		pkgs = append(pkgs, stdlib...)
 	}
-	log.Debugf("Built package set for %s", runtime.Version())
+	log.Debugf("Built package set")
 	return &packages.DriverResponse{
 		Packages: pkgs,
 		Roots:    roots,
