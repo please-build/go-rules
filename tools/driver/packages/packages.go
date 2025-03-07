@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
-	"go/types"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -24,29 +24,12 @@ import (
 
 var log = logging.MustGetLogger()
 
-// DriverRequest is copied from go/packages; it's the format of config that we get on stdin.
-type DriverRequest struct {
-	Mode       packages.LoadMode `json:"mode"`
-	Env        []string          `json:"env"`
-	BuildFlags []string          `json:"build_flags"`
-	Tests      bool              `json:"tests"`
-	Overlay    map[string][]byte `json:"overlay"`
-}
-
-// DriverResponse is copied from go/packages; it's our response about packages we've loaded.
-type DriverResponse struct {
-	NotHandled bool
-	Sizes      *types.StdSizes
-	Roots      []string `json:",omitempty"`
-	Packages   []*packages.Package
-}
-
 // Load reads a set of packages and returns information about them.
 // Most of the request structure isn't honoured at the moment.
-func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
+func Load(req *packages.DriverRequest, files []string) (*packages.DriverResponse, error) {
 	// If there are no files provided, do nothing.
 	if len(files) == 0 {
-		return &DriverResponse{NotHandled: true}, nil
+		return &packages.DriverResponse{NotHandled: true}, nil
 	}
 	// We need to find the plz repo that we need to be in (we might be invoked from outside it)
 	// For now we're assuming they're all in the same repo (which is probably reasonable) and just
@@ -65,7 +48,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	} else if len(files) == 0 {
 		// Not obvious that this really is an error case.
 		log.Warning("No Go files found in initial query")
-		return &DriverResponse{NotHandled: true}, nil
+		return &packages.DriverResponse{NotHandled: true}, nil
 	} else if err := os.Chdir(filepath.Dir(files[0])); err != nil {
 		return nil, err
 	}
@@ -93,7 +76,7 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 
 // LoadOffline is like Load but rather than querying plz to find the file to load, it just
 // walks a file tree looking for pkg_info.json files.
-func LoadOffline(req *DriverRequest, searchDir string, files []string) (*DriverResponse, error) {
+func LoadOffline(req *packages.DriverRequest, searchDir string, files []string) (*packages.DriverResponse, error) {
 	pkgs := []*packages.Package{}
 	if err := filepath.WalkDir(searchDir, func(path string, d fs.DirEntry, err error) error {
 		lpkgs := []*packages.Package{}
@@ -127,7 +110,7 @@ func LoadOffline(req *DriverRequest, searchDir string, files []string) (*DriverR
 	return packagesToResponse(searchDir, pkgs, dirs)
 }
 
-func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[string]struct{}) (*DriverResponse, error) {
+func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[string]struct{}) (*packages.DriverResponse, error) {
 	// Build the set of root packages
 	seenRoots := map[string]struct{}{}
 	roots := []string{}
@@ -178,13 +161,8 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		}
 		pkgs = append(pkgs, stdlib...)
 	}
-	log.Debug("Built package set")
-	return &DriverResponse{
-		Sizes: &types.StdSizes{
-			// These are obviously hardcoded. To worry about later.
-			WordSize: 8,
-			MaxAlign: 8,
-		},
+	log.Debugf("Built package set for %s", runtime.Version())
+	return &packages.DriverResponse{
 		Packages: pkgs,
 		Roots:    roots,
 	}, nil

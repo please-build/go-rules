@@ -1,8 +1,8 @@
 remote_file(
     name = "gosec_download",
-    hashes = ["226bd8825b7aed3d454446d1ec094f817f37859dded4211a5b707d0f36c5fdb7"],
+    hashes = ["38e596e1ad580666e5efaa159fbaf63bd5873ea1e74beacbdf785b025b52e1db"],
     test_only = True,
-    url = ["https://github.com/securego/gosec/releases/download/v2.14.0/gosec_2.14.0_linux_amd64.tar.gz"],
+    url = ["https://github.com/securego/gosec/releases/download/v2.22.0/gosec_2.22.0_linux_amd64.tar.gz"],
 )
 
 genrule(
@@ -10,7 +10,7 @@ genrule(
     srcs = [":gosec_download"],
     outs = ["gosec"],
     binary = True,
-    cmd = "$TOOLS x $SRCS -s v2.14.0",
+    cmd = "$TOOLS x $SRCS -s v2.22.0",
     test_only = True,
     tools = [CONFIG.ARCAT_TOOL],
     visibility = ["//tools/driver/..."],
