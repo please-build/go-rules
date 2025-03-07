@@ -5,7 +5,7 @@ Version = >=17.11.0
 hashcheckers = sha256
 
 [BuildConfig]
-puku-version = "1.15.1"
+puku-version = 1.15.1
 
 [Plugin "go"]
 Target = //plugins:go
