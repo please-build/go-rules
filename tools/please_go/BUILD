@@ -8,7 +8,7 @@ go_binary(
     labels = ["link:plz-out/please"],
     visibility = ["PUBLIC"],
     deps = [
-        "//third_party/go:flags",
+        "///third_party/go/github.com_peterebden_go-cli-init_v5//flags",
         "//tools/please_go/cover",
         "//tools/please_go/embed",
         "//tools/please_go/filter",

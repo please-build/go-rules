@@ -6,11 +6,15 @@ plugin_repo(
 
 plugin_repo(
     name = "cc",
-    plugin = "cc-rules",
-    revision="v0.3.2"
+    revision = "v0.3.2",
 )
 
 plugin_repo(
-  name = "shell",
-  revision = "v0.1.2",
+    name = "shell",
+    revision = "v0.1.2",
+)
+
+plugin_repo(
+    name = "go",
+    revision = "master",
 )

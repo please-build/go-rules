@@ -4,12 +4,16 @@ Version = >=17.11.0
 [build]
 hashcheckers = sha256
 
+[BuildConfig]
+puku-version = 1.15.1
+
 [Plugin "go"]
+Target = //plugins:go
 GoTool = //third_party/go:toolchain|go
 Stdlib = //third_party/go:std
 PleaseGoTool = //tools/please_go:bootstrap
 ImportPath = github.com/please-build/go-rules
-ValidateModuleVersions = true
+ModFile = //:gomod
 
 [Plugin "cc"]
 Target = //plugins:cc
@@ -183,3 +187,8 @@ Help = Build tags to pass to the Go compiler
 
 [Plugin "shell"]
 Target = //plugins:shell
+
+[alias "puku"]
+cmd = run --wd=. //third_party/binary:puku --
+desc = Formats BUILD files and update go rules
+positionallabels = true

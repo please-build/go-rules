@@ -4,6 +4,6 @@ go_test(
     name = "testing_definition_test",
     srcs = ["testing_definition_test.go"],
     deps = [
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

@@ -24,6 +24,6 @@ go_test(
     labels = ["no-musl"],
     deps = [
         ":toolchain",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//require",
     ],
 )
