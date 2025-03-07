@@ -1,3 +1,7 @@
+Version 0.7.0
+-------------
+    * Use the now-exported types for the request/response (#317)
+
 Version 0.6.0
 -------------
     * Migrate to `go_repo` and upgrade golang.org/x packages (#316)

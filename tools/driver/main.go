@@ -16,7 +16,7 @@ var log = logging.MustGetLogger()
 var opts = struct {
 	Usage      string
 	Verbosity  logging.Verbosity `short:"v" long:"verbosity" env:"PLZ_GOPACKAGESDRIVER_VERBOSITY" default:"warning" description:"Verbosity of output (higher number = more output)"`
-	LogFile    string `long:"log_file" env:"PLZ_GOPACKAGESDRIVER_LOG_FILE" description:"Log additionally to this file"`
+	LogFile    string            `long:"log_file" env:"PLZ_GOPACKAGESDRIVER_LOG_FILE" description:"Log additionally to this file"`
 	NoInput    bool              `short:"n" long:"no_input" description:"Assume a default config and don't try to read from stdin"`
 	WorkingDir string            `short:"w" long:"working_dir" description:"Change to this working directory before running"`
 	OutputFile string            `short:"o" long:"output_file" env:"PLZ_GOPACKAGESDRIVER_OUTPUT_FILE" description:"File to write output to (in addition to stdout)"`
@@ -48,7 +48,7 @@ func main() {
 		}
 	}
 
-	req := &packages.DriverRequest{}
+	req := &xpackages.DriverRequest{}
 	if opts.NoInput {
 		req.Mode = xpackages.NeedExportFile
 	} else {
@@ -77,7 +77,7 @@ func main() {
 	}
 }
 
-func load(req *packages.DriverRequest) (*packages.DriverResponse, error) {
+func load(req *xpackages.DriverRequest) (*xpackages.DriverResponse, error) {
 	if opts.SearchDir == "" {
 		return packages.Load(req, opts.Args.Files)
 	}
