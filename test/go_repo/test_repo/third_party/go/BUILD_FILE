@@ -38,3 +38,11 @@ go_module(
     licences = ["MIT"],
     visibility = ["PUBLIC"],
 )
+
+go_repo(
+    name = "okta-sdk-golang",
+    install = ["..."],
+    licences = ["Apache-2.0"],
+    module = "github.com/okta/okta-sdk-golang/v2",
+    version = "v2.16.0",
+)
