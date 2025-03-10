@@ -98,7 +98,10 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
             'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
             'covdata': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/covdata',
         },
-        tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
+        env = _goexperiment_env(),
+        tools = ({
+          "CC": [CONFIG.GO.CC_TOOL],
+        } if CONFIG.GO.CGO_ENABLED == "1" else {}) | _goexperiment_env(),
         binary = True,
         labels = labels,
         visibility = visibility,
@@ -211,6 +214,7 @@ def go_stdlib(name:str, tags:list=CONFIG.GO.BUILD_TAGS, labels:list=[], visibili
             "GOOS": CONFIG.OS,
             "GOARCH": CONFIG.ARCH,
             "GODEBUG": "installgoroot=all",
+            "GOEXPERIMENT": CONFIG.GO.EXPERIMENT,
         },
         labels = ["go_pkg_info", "go_stdlib", "go"] + labels,
         output_is_complete = True,
@@ -294,6 +298,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             deps = deps,
         )
+        link_prefix, _, _ = _module.partition('@')
     else:
         # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
         modinfo = filegroup(
@@ -303,6 +308,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             requires = ["modinfo"],
             test_only = test_only,
         )
+        link_prefix = ''
     deps += [modinfo]
 
     # We could just depend on go_src for all our deps but that would mean bringing in srcs for targets outside this
@@ -494,6 +500,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         outs = outs,
         cmd = cmds,
         visibility = visibility,
+        env = _goexperiment_env(),
         building_description = "Compiling...",
         requires = ['go'],
         provides = provides,
@@ -503,6 +510,12 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         needs_transitive_deps = _needs_transitive_deps,
         exported_deps = exported_deps,
     )
+
+
+def _goexperiment_env():
+    """Returns the GOEXPERIMENT env var, or None if there isn't one."""
+    return {"GOEXPERIMENT": CONFIG.GO.EXPERIMENT} if CONFIG.GO.EXPERIMENT else {}
+
 
 def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
     """
@@ -649,6 +662,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,
+        env = _goexperiment_env(),
         output_is_complete=True,
         test_only=test_only,
         tools=tools,
@@ -838,6 +852,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         env["GOCOVERDIR"] = "$TMP_DIR"
     else:
         env = {"GOCOVERDIR": "$TMP_DIR"}
+    env |= _goexperiment_env()
 
     return build_rule(
         name = name,
@@ -976,6 +991,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         visibility=visibility,
         sandbox=sandbox,
         build_timeout=timeout,
+        env = _goexperiment_env(),
         requires=['go', 'test'],
         labels=labels,
         binary=True,
@@ -1485,7 +1501,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         visibility = visibility,
         licences = licences,
         linker_flags = linker_flags,
-        env = env,
+        env = env | {"GOEXPERIMENT": CONFIG.GO.EXPERIMENT},
         build_tags = build_tags,
         labels = labels if binary else [],
     )
