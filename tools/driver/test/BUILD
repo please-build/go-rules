@@ -7,15 +7,16 @@ gentest(
     cmd = [
         'export PLZ_GOPACKAGESDRIVER_SEARCHDIR="$TMP_DIR"',
         'export GOPACKAGESDRIVER="$TOOLS_DRIVER"',
-        '"$TOOLS_GOSEC" --exclude G104,G304,G307 tools/driver/packages',
+        '"$TOOLS_GOSEC" --exclude G104,G304,G307 tools/driver/packages/... | tee $OUT',
     ],
+    outs = ["gosec_test.txt"],
     needs_transitive_deps = True,
     no_test_output = True,
     requires = [
         "go",
         "go_src",
     ],
-    test_cmd = "true",
+    test_cmd = "cat $TEST",
     tools = {
         "driver": ["//tools/driver:plz-gopackagesdriver"],
         "gosec": ["//third_party/binary:gosec"],
