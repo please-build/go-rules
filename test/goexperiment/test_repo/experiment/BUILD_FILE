@@ -1,0 +1,4 @@
+go_test(
+    name = "experiment_test",
+    srcs = ["experiment_test.go"],
+)

@@ -185,6 +185,10 @@ Repeatable = true
 Optional = true
 Help = Build tags to pass to the Go compiler
 
+[PluginConfig "experiment"]
+Optional = true
+Help = Value to pass for GOEXPERIMENT
+
 [Plugin "shell"]
 Target = //plugins:shell
 
