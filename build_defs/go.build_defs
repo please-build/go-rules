@@ -494,7 +494,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         abi=_abi,
         embedcfg=embedcfg,
         pgo_file=pgo_file,
-        giant_package_mode=len(srcs)>100,
+        giant_package_mode=len(srcs["go"])>100,
     )
 
     return build_rule(
