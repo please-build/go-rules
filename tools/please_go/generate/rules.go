@@ -3,21 +3,22 @@ package generate
 import "github.com/bazelbuild/buildtools/build"
 
 type Rule struct {
-	name          string
-	kind          string
-	module        string
-	subrepo       string
-	srcs          []string
-	cgoSrcs       []string
-	cSrcs         []string
-	compilerFlags []string
-	linkerFlags   []string
-	pkgConfigs    []string
-	asmFiles      []string
-	hdrs          []string
-	deps          []string
-	embedPatterns []string
-	isCMD         bool
+	name           string
+	kind           string
+	module         string
+	subrepo        string
+	srcs           []string
+	cgoSrcs        []string
+	cSrcs          []string
+	compilerFlags  []string
+	linkerFlags    []string
+	pkgConfigs     []string
+	asmFiles       []string
+	hdrs           []string
+	deps           []string
+	embedPatterns  []string
+	isCMD          bool
+	isLargePackage bool
 }
 
 func populateRule(r *build.Rule, targetState *Rule) {
@@ -59,5 +60,8 @@ func populateRule(r *build.Rule, targetState *Rule) {
 	if !targetState.isCMD {
 		r.SetAttr("_module", NewStringExpr(targetState.module))
 		r.SetAttr("_subrepo", NewStringExpr(targetState.subrepo))
+	}
+	if targetState.isLargePackage {
+		r.SetAttr("_is_large_package", NewBoolExpr(true))
 	}
 }

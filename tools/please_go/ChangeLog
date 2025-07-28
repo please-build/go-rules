@@ -1,5 +1,9 @@
 Version 1.18.0
 -------------
+    * Add support for large packages (#320)
+
+Version 1.18.0
+-------------
     * Migrate to `go_repo` and upgrade golang.org/x packages (#316)
 
 Version 1.17.0
