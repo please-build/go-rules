@@ -1644,7 +1644,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     complete_flag = '-complete ' if complete else ''
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    srcs_var = '$PKG_DIR/*.go' if large_package else '$SRCS_GO'
+    srcs_var = '$(cat _plz/named_srcs/go)' if large_package else '$SRCS_GO'
 
     if CONFIG.GO.GO_COMPILE_TOOL:
         tool = '"$TOOLS_COMPILE"'
