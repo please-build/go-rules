@@ -1,5 +1,5 @@
 [Please]
-Version = >=17.11.0
+Version = >=17.21.0
 
 [build]
 hashcheckers = sha256
@@ -20,7 +20,7 @@ Target = //plugins:cc
 
 [Plugin "e2e"]
 Target = //plugins:e2e
-PleaseVersion = 17.10.1
+PleaseVersion = 17.21.0
 
 [PluginDefinition]
 Name = go

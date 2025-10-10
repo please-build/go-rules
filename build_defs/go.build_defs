@@ -515,7 +515,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         tools = tools,
         needs_transitive_deps = _needs_transitive_deps,
         exported_deps = exported_deps,
-        no_src_env_vars = _is_large_package,
+        src_list_files = _is_large_package,
     )
 
 def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
@@ -1612,7 +1612,7 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
         labels = ["go_pkg_info"],
         test_only = test_only,
         visibility=visibility,
-        no_src_env_vars=large_package,
+        src_list_files=large_package,
     )
 
 
