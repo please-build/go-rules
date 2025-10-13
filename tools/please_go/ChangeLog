@@ -1,6 +1,6 @@
 Version 1.19.0
 -------------
-    * Add support for large packages (#320)
+    * Enable `go_library` to compile packages containing large numbers of files (#320)
 
 Version 1.18.0
 -------------
