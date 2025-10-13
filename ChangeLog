@@ -1,3 +1,7 @@
+Version 1.25.0
+--------------
+    * Enable `go_library` to compile packages containing large numbers of files (#320)
+
 Version 1.24.0
 --------------
     * Update please_go to a version built with Go 1.24
