@@ -240,7 +240,8 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
                _generate_import_config:bool=True, _generate_pkg_info:bool=CONFIG.GO.PKG_INFO,
-               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None, _module:str='', _subrepo:str=''):
+               import_path:str='', labels:list=[], package:str=None, pgo_file:str=None, _module:str='',
+               _subrepo:str='', _is_large_package:bool=False):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -464,6 +465,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             package = package,
             test_only = test_only,
             visibility = visibility,
+            large_package = _is_large_package,
         )
         deps += [pkg_info]
         provides["pkg_info"] = pkg_info
@@ -484,7 +486,18 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
     if pgo_file:
         srcs['pgo'] = [pgo_file]
 
-    cmds, tools = _go_library_cmds(name, import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg, pgo_file=pgo_file)
+    cmds, tools = _go_library_cmds(
+        name,
+        import_path=package_path,
+        complete=complete,
+        all_srcs=_all_srcs,
+        cover=cover,
+        filter_srcs=filter_srcs,
+        abi=_abi,
+        embedcfg=embedcfg,
+        pgo_file=pgo_file,
+        large_package=_is_large_package,
+    )
 
     return build_rule(
         name = name,
@@ -502,6 +515,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         tools = tools,
         needs_transitive_deps = _needs_transitive_deps,
         exported_deps = exported_deps,
+        src_list_files = _is_large_package,
     )
 
 def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
@@ -1176,7 +1190,7 @@ def _module_rule_name(module):
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
             licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[], build_tags:list=CONFIG.GO.BUILD_TAGS,
-            third_party_path:str="third_party/go", strip:list=None, labels:list=[]):
+            third_party_path:str="third_party/go", strip:list=None, labels:list=[], large_packages:list=[]):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1214,6 +1228,9 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
       third_party_path (str): Optional path of third_party directory.
       strip (list): A list of directories to strip from the repo
       labels (list): Labels for this rule.
+      large_packages (list): List of relative package names which should be marked as large in the
+                             generated go_library rules (i.e. packages which have large number of
+                             source files)
     """
     subrepo_name = _module_rule_name(module)
 
@@ -1251,6 +1268,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
 
     build_tag_args = " ".join([f"--build_tag {build_tag}" for build_tag in build_tags])
     label_args = " ".join([f"--label '{label}'" for label in labels])
+    large_package_args = " ".join([f"--large_package '{pkg}'" for pkg in large_packages])
 
     pkgRoot = f"pkg/{CONFIG.OS}_{CONFIG.ARCH}/{module}"
 
@@ -1259,7 +1277,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         "find $SRCS_DOWNLOAD -name BUILD -delete",
         f"mkdir -p $(dirname {pkgRoot})",
         f"mv $SRCS_DOWNLOAD {pkgRoot}",
-        f"$TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements}",
+        f"$TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} {large_package_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements}",
         f"mv {pkgRoot} $OUT",
     ]
     cmd = " && ".join(cmds)
@@ -1559,7 +1577,7 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 
 def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, import_path:str="", package:str="",
-                 module:str="", subrepo:str="", test_only:bool=False, install:list=[]):
+                 module:str="", subrepo:str="", test_only:bool=False, install:list=[], large_package:bool=False):
     """Internal-only function for generating the pkg_info files"""
     install_flags = ""
     for i in install:
@@ -1594,6 +1612,7 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
         labels = ["go_pkg_info"],
         test_only = test_only,
         visibility=visibility,
+        src_list_files=large_package,
     )
 
 
@@ -1620,11 +1639,12 @@ def _set_go_env():
     return f"export CGO_ENABLED=1 && {cmd}" if CONFIG.GO.CGO_ENABLED else cmd
 
 
-def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None):
+def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None, pgo_file=None, large_package=False):
     """Returns the commands to run for building a Go library."""
     complete_flag = '-complete ' if complete else ''
     embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
+    srcs_var = '$(cat _plz/named_srcs/go)' if large_package else '$SRCS_GO'
 
     if CONFIG.GO.GO_COMPILE_TOOL:
         tool = '"$TOOLS_COMPILE"'
@@ -1635,10 +1655,10 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
 
     if filter_srcs:
         build_tags = '-t ' + ' -t '.join(CONFIG.GO.BUILD_TAGS) if CONFIG.GO.BUILD_TAGS else ''
-        filter_cmd = f'export SRCS_GO="$(\"${TOOLS_PLEASE_GO}\" filter {build_tags} $SRCS_GO)"; '
+        filter_cmd = f'filtered_srcs="$(\"${TOOLS_PLEASE_GO}\" filter {build_tags} {srcs_var})"; '
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
     else:
-        filter_cmd = ''
+        filter_cmd = f'filtered_srcs={srcs_var}; '
 
     compile_cmd = f'{tool} -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     package_flag = f" -p {import_path}" if import_path else ""
@@ -1654,11 +1674,11 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
 
     cmds = {
-        'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} -N -l $SRCS_GO',
-        'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
+        'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} -N -l $filtered_srcs',
+        'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $filtered_srcs',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt {package_flag} $SRCS_GO && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
+        cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt {package_flag} $filtered_srcs && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
         if CONFIG.GO.GO_COVER_TOOL:
             tools['cover'] = CONFIG.GO.GO_COVER_TOOL

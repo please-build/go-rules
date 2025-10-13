@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	bazelbuild "github.com/bazelbuild/buildtools/build"
@@ -31,9 +32,10 @@ type Generate struct {
 	thirdPartyFolder   string
 	install            []string
 	labels             []string
+	largePackages      []string
 }
 
-func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string, labels []string) *Generate {
+func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string, labels []string, largePackages []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -55,6 +57,7 @@ func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string
 		moduleArg:          moduleArg,
 		subrepo:            subrepo,
 		labels:             labels,
+		largePackages:      largePackages,
 	}
 }
 
@@ -401,6 +404,13 @@ func NewStringExpr(s string) *bazelbuild.StringExpr {
 	return &bazelbuild.StringExpr{Value: s}
 }
 
+func NewBoolExpr(v bool) bazelbuild.Expr {
+	if v {
+		return &bazelbuild.LiteralExpr{Token: "True"}
+	}
+	return &bazelbuild.LiteralExpr{Token: "False"}
+}
+
 func NewStringList(ss []string) *bazelbuild.ListExpr {
 	l := new(bazelbuild.ListExpr)
 	for _, s := range ss {
@@ -447,21 +457,22 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 	}
 
 	return &Rule{
-		name:          name,
-		kind:          packageKind(pkg),
-		srcs:          pkg.GoFiles,
-		module:        g.moduleArg,
-		subrepo:       g.subrepo,
-		cgoSrcs:       pkg.CgoFiles,
-		cSrcs:         pkg.CFiles,
-		compilerFlags: pkg.CgoCFLAGS,
-		linkerFlags:   orderLinkerFlags(pkg.CgoLDFLAGS),
-		pkgConfigs:    pkg.CgoPkgConfig,
-		asmFiles:      pkg.SFiles,
-		hdrs:          pkg.HFiles,
-		deps:          deps,
-		embedPatterns: pkg.EmbedPatterns,
-		isCMD:         pkg.IsCommand(),
+		name:           name,
+		kind:           packageKind(pkg),
+		srcs:           pkg.GoFiles,
+		module:         g.moduleArg,
+		subrepo:        g.subrepo,
+		cgoSrcs:        pkg.CgoFiles,
+		cSrcs:          pkg.CFiles,
+		compilerFlags:  pkg.CgoCFLAGS,
+		linkerFlags:    orderLinkerFlags(pkg.CgoLDFLAGS),
+		pkgConfigs:     pkg.CgoPkgConfig,
+		asmFiles:       pkg.SFiles,
+		hdrs:           pkg.HFiles,
+		deps:           deps,
+		embedPatterns:  pkg.EmbedPatterns,
+		isCMD:          pkg.IsCommand(),
+		isLargePackage: slices.Contains(g.largePackages, dir),
 	}
 }
 

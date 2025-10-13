@@ -96,6 +96,7 @@ var opts = struct {
 		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
 		Subrepo          string   `long:"subrepo" description:"The subrepo root to output into"`
 		Labels           []string `long:"label" description:"Additional labels to attach to subrepo targets"`
+		LargePackages    []string `long:"large_package" description:"Relative names of packages which have lots of input files (meaning the go_library target should be marked as large)"`
 		Args             struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
@@ -168,7 +169,7 @@ var subCommands = map[string]func() int{
 	},
 	"generate": func() int {
 		gen := opts.Generate
-		g := generate.New(gen.SrcRoot, gen.ThirdPartyFolder, gen.ModFile, gen.Module, gen.Version, gen.Subrepo, []string{"BUILD", "BUILD.plz"}, gen.Args.Requirements, gen.Install, gen.BuildTags, gen.Labels)
+		g := generate.New(gen.SrcRoot, gen.ThirdPartyFolder, gen.ModFile, gen.Module, gen.Version, gen.Subrepo, []string{"BUILD", "BUILD.plz"}, gen.Args.Requirements, gen.Install, gen.BuildTags, gen.Labels, gen.LargePackages)
 		if err := g.Generate(); err != nil {
 			log.Fatalf("failed to generate go rules: %v", err)
 		}
