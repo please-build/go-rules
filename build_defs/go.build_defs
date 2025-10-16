@@ -104,16 +104,16 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
         tools += ['covdata']
 
     tc = build_rule(
-            name = name,
-            srcs = srcs,
-            cmd = cmd,
-            outs = [name],
-            entry_points = entry_points,
-            tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
-            binary = True,
-            labels = labels,
-            visibility = visibility,
-            building_description = "Installing...",
+        name = name,
+        srcs = srcs,
+        cmd = cmd,
+        outs = [name],
+        entry_points = entry_points,
+        tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
+        binary = True,
+        labels = labels,
+        visibility = visibility,
+        building_description = "Installing...",
     )
 
     for tool in tools:
@@ -126,7 +126,7 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
             tools = [f"{tc}|{tool}"],
             visibility = visibility,
         )
-        
+
     return tc
 
 
