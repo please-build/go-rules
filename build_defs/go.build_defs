@@ -100,7 +100,7 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
     tools = ['compile', 'link', 'cover']
 
     if expose_covdata:
-        entry_points['covdata'] = f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/covdata',
+        entry_points['covdata'] = f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/covdata'
         tools += ['covdata']
 
     tc = build_rule(
