@@ -145,6 +145,7 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
       tags: Build tags to pass when installing the standard library.
       labels: Labels for this rule.
       visibility: Visibility of this rule
+      expose_covdata: Whether to expose the covdata tool. Defaults to True.
     """
     return _go_toolchain(
         name = name,
