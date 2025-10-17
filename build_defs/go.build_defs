@@ -131,7 +131,7 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
 
 
 def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=CONFIG.GO.BUILD_TAGS, install_std:bool=True,
-                        labels:list=[], visibility:list=["PUBLIC"]):
+                        labels:list=[], visibility:list=["PUBLIC"], expose_covdata:bool=True):
     """Defines a Go toolchain that's installed on the local system.
 
     This is similar to using simply `go` as your gotool, but from 1.20 onwards it's necessary in order to
@@ -156,6 +156,7 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
         strip_srcs = False,
         tags = tags,
         install_std = install_std,
+        expose_covdata = expose_covdata,
     )
 
 
