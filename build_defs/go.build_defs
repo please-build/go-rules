@@ -49,6 +49,9 @@ def go_toolchain(name:str, url:str|dict='', version:str='', hashes:list=[], labe
     if install_std is None and version != "" and semver_check(_strip_version_rc(version), ">= 1.20.0"):
         install_std = True
 
+    # covdata binary has been removed for go version 1.25.0 and above
+    expose_covdata = version != "" and semver_check(_strip_version_rc(version), "< 1.25.0")
+
     return _go_toolchain(
         name = name,
         srcs = [download],
@@ -59,11 +62,12 @@ def go_toolchain(name:str, url:str|dict='', version:str='', hashes:list=[], labe
         strip_srcs = strip_srcs,
         tags = tags,
         install_std = install_std,
+        expose_covdata = expose_covdata,
     )
 
 
 def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:list, architectures:list, tags:list,
-                  strip_srcs:bool=False, install_std:bool=None):
+                  strip_srcs:bool=False, install_std:bool=None, expose_covdata:bool):
     cmd = f'export GODEBUG="installgoroot=all" && {copy_cmd} && chmod +x $OUT/bin/*; rm -rf $OUT/test'
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
@@ -85,26 +89,34 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
 
+    entry_points = {
+        'go': f'{name}/bin/go',
+        'gofmt': f'{name}/bin/gofmt',
+        'compile': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/compile',
+        'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
+        'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
+    }
+
+    tools = ['compile', 'link', 'cover']
+
+    if expose_covdata:
+        entry_points['covdata'] = f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/covdata'
+        tools += ['covdata']
+
     tc = build_rule(
         name = name,
         srcs = srcs,
         cmd = cmd,
         outs = [name],
-        entry_points = {
-            'go': f'{name}/bin/go',
-            'gofmt': f'{name}/bin/gofmt',
-            'compile': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/compile',
-            'link': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/link',
-            'cover': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/cover',
-            'covdata': f'{name}/pkg/tool/{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}/covdata',
-        },
+        entry_points = entry_points,
         tools = {"CC": [CONFIG.GO.CC_TOOL]} if CONFIG.GO.CGO_ENABLED else {},
         binary = True,
         labels = labels,
         visibility = visibility,
         building_description = "Installing...",
     )
-    for tool in ['compile', 'link', 'cover', 'covdata']:
+
+    for tool in tools:
         genrule(
             name = f"{name}_{tool}",
             outs = [tool],
@@ -114,11 +126,12 @@ def _go_toolchain(name:str, srcs:list, labels:list=[], copy_cmd:str, visibility:
             tools = [f"{tc}|{tool}"],
             visibility = visibility,
         )
+
     return tc
 
 
 def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list=CONFIG.GO.BUILD_TAGS, install_std:bool=True,
-                        labels:list=[], visibility:list=["PUBLIC"]):
+                        labels:list=[], visibility:list=["PUBLIC"], expose_covdata:bool=True):
     """Defines a Go toolchain that's installed on the local system.
 
     This is similar to using simply `go` as your gotool, but from 1.20 onwards it's necessary in order to
@@ -132,6 +145,7 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
       tags: Build tags to pass when installing the standard library.
       labels: Labels for this rule.
       visibility: Visibility of this rule
+      expose_covdata: Whether to expose the covdata tool. Defaults to True.
     """
     return _go_toolchain(
         name = name,
@@ -143,6 +157,7 @@ def go_system_toolchain(name:str, cmd:str="go", architectures:list=[], tags:list
         strip_srcs = False,
         tags = tags,
         install_std = install_std,
+        expose_covdata = expose_covdata,
     )
 
 
