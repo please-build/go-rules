@@ -1,9 +1,13 @@
+Version 1.20.0
+--------------
+    * Build with Go 1.25.2 (#324)
+
 Version 1.19.0
--------------
+--------------
     * Enable `go_library` to compile packages containing large numbers of files (#320)
 
 Version 1.18.0
--------------
+--------------
     * Migrate to `go_repo` and upgrade golang.org/x packages (#316)
 
 Version 1.17.0
