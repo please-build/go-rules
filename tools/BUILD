@@ -1,11 +1,11 @@
-VERSION = "1.19.0"
+VERSION = "1.20.0"
 
 hashes = {
-    "darwin_amd64": "5545418c33bcffacf3fc17d3ae533404b5892d24d9aff1658b3746d620f0046b",
-    "darwin_arm64": "22880ff53c278f071a11b49c7394a5ceada03851d23fd0cce57116daccc0447f",
-    "freebsd_amd64": "c4293cc3c48fc6ce3cc4ee9db7ab4229476d63cee8f404ea83c6b79677abd33c",
-    "linux_amd64": "804af54d8dfd5eace871e7b91e0503311a896e3718f8a765c2c053ae05a345f6",
-    "linux_arm64": "554d7a2afbda8f887b31f06d52610b6cc8ff0c1d487fa9ab706cee0c92af3978",
+    "darwin_amd64": "c78ad796230f92547b66ad6fb2fb1ffd7ed7d6a98f5693b448c0e1ca49d26b18",
+    "darwin_arm64": "7a049e7411b569eaef389c2a9e1bc649552de57ca867c33adddb1bea28c78f79",
+    "freebsd_amd64": "d2800b1fcf49781d2f4197d9c7842f5b9210b50946c9dce1f14eeb4cde501b96",
+    "linux_amd64": "69d6e5e935971f2e1c97b8ee11a6c9f0e501f23a24e1ed517841d3c08511cbfa",
+    "linux_arm64": "65be124a799af1e70b4ee89f6f33c986a3a3673505ef081d77a49452bf26ff0a",
 }
 
 for a, h in hashes.items():
