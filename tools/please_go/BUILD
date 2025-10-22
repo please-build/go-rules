@@ -22,14 +22,12 @@ go_binary(
 
 genrule(
     name = "bootstrap",
-    srcs = [
-        "go.mod",
-        "go.sum",
-        "please_go.go",
-    ],
+    srcs = ["please_go.go"],
     outs = ["please_go.bootstrap"],
     binary = True,
-    cmd = "(cd $PKG_DIR && $TOOL build please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
+    # Go ignores go.mod files in the "system temp root" so we have to override TMPDIR and TMP_DIR to
+    # convince it not to.
+    cmd = "(TMPDIR=/tmp TMP_DIR=/tmp $TOOL build tools/please_go/please_go.go && mv please_go $OUT && $TOOL clean -modcache) || ($TOOL clean -modcache; exit 1)",
     requires = ["go_src"],
     sandbox = False,
     tools = [CONFIG.GO.GO_TOOL],
@@ -46,6 +44,8 @@ genrule(
         "//tools/please_go/modinfo:srcs",
         "//tools/please_go/packageinfo:srcs",
         "//tools/please_go/test:srcs",
+        "//:gomod",
+        "//:gosum",
     ],
 )
 
