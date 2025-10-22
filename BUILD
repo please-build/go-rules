@@ -10,3 +10,9 @@ filegroup(
     srcs = ["go.mod"],
     visibility = ["PUBLIC"],
 )
+
+filegroup(
+    name = "gosum",
+    srcs = ["go.sum"],
+    visibility = ["PUBLIC"],
+)
