@@ -1,3 +1,7 @@
+Version 0.7.0
+-------------
+    * Build with Go 1.25.2 (#324)
+
 Version 0.6.0
 -------------
     * Migrate to `go_repo` and upgrade golang.org/x packages (#316)

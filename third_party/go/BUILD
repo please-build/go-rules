@@ -5,7 +5,7 @@ subinclude(
 go_toolchain(
     name = "toolchain",
     install_std = False,
-    version = "1.24.1",
+    version = "1.25.2",
 )
 
 go_stdlib(
