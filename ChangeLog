@@ -1,3 +1,8 @@
+Version 1.27.0
+--------------
+    * Use `please_go` v1.21.0 built with Go `1.25.2` and `golang.org/x/mod@v0.29.0` to allow for
+      `ignore` directives in `go.mod` files (#325)
+
 Version 1.26.0
 --------------
     * Remove covdata entrypoint in go_toolchain for versions above 1.25 (#323)
