@@ -1059,7 +1059,7 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
         cmds['cover'] = f'{cmd} --dir . $SRCS'
 
     if external:
-        labels = labels + ['external']
+        labels += ["external"]
 
     return build_rule(
         name = name,
