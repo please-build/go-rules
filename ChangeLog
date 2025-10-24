@@ -1,3 +1,8 @@
+Version 1.28.0
+--------------
+    * Setting the `external` parameter to True in `go_test` and `go_benchmark` targets now also adds
+      'external' to the labels (#328)
+
 Version 1.27.0
 --------------
     * Use `please_go` v1.21.0 built with Go `1.25.2` and `golang.org/x/mod@v0.29.0` to allow for
