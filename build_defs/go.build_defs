@@ -761,6 +761,9 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
       env (dict): Additional environment variables to set for the test
     """
 
+    if external:
+        labels = labels + ['external']
+
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
@@ -935,6 +938,10 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
        test_only (bool): If True, is only visible to test rules.
     """
     test_package = name + '_lib'
+
+    if external:
+        labels = labels + ['external'] if labels is not None else ['external']
+
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
         name = '_%s#lib' % name,
@@ -1034,7 +1041,6 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
       test_only (bool): If True, can only be consumed by tests (or other test_only rules).
       external (bool): True if this test is external to the library it's testing, i.e. it uses the
                        feature of Go that allows it to be in the same directory with a _test suffix.
-                       Setting this to True also adds "external" to the labels.
       deps (list): Any additional dependencies
       visibility (list): Visibility of the rule.
       benchmark (bool): If True, it will run benchmarks instead of tests.
@@ -1057,9 +1063,6 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
 
     if not benchmark:
         cmds['cover'] = f'{cmd} --dir . $SRCS'
-
-    if external:
-        labels = labels + ['external']
 
     return build_rule(
         name = name,

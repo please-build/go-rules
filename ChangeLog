@@ -1,3 +1,8 @@
+Version 1.28.1
+--------------
+    * Fix the handling of the `external` parameter in `go_test` and `go_benchmark` targets to add
+      'external' to the correct sets of labels (#329)
+
 Version 1.28.0
 --------------
     * Setting the `external` parameter to True in `go_test` and `go_benchmark` targets now also adds
