@@ -6,8 +6,4 @@ BuildFileName = BUILD
 Target = //plugins:go
 PleaseGoTool = <pleasegotool>
 GoTool = <gotool>
-FeatureFlags = go_get
 Stdlib = //third_party/go:std
-
-[FeatureFlags]
-ExcludeGoRules = true

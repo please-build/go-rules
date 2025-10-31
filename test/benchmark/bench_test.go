@@ -1,12 +1,12 @@
 package benchmark
 
 import (
+	"github.com/stretchr/testify/require"
+
 	"os"
 	"os/exec"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestBenchDuration(t *testing.T) {
