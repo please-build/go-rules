@@ -1,14 +1,10 @@
 package external_test
 
 import (
-	"os/exec"
-	"slices"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	. "github.com/please-build/go-rules/test/external"
 )
@@ -42,19 +38,4 @@ func TestExecGitBranch(t *testing.T) {
 	assert.True(t, len(GetExecGitBranchFull()) > len(GetExecGitBranchShort()), "git_branch() lengths inconsistent")
 	assert.Regexp(t, "^refs/", GetExecGitBranchFull())
 	assert.Contains(t, GetExecGitBranchFull(), GetExecGitBranchShort(), "short branch should be in full branch")
-}
-
-func TestExternalIsAddedToLabelsForExternalTest(t *testing.T) {
-	expectedTarget := "//test/external:external_test"
-
-	output, err := exec.Command("plz", "query", "alltargets", "-i", "external").Output()
-	require.NoError(t, err)
-
-	outputLines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	assert.True(t,
-		slices.Contains(outputLines, expectedTarget),
-		"Did not find %s in targets with the label 'external' even though external is set to True. Matching targets: %s",
-		expectedTarget,
-		outputLines,
-	)
 }

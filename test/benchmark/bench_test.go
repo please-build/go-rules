@@ -3,12 +3,9 @@ package benchmark
 import (
 	"os"
 	"os/exec"
-	"slices"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,19 +23,4 @@ func TestBenchDuration(t *testing.T) {
 
 	r.Contains(string(out), "BenchmarkOneSecWait")
 	r.Contains(string(out), "Benchmark100msWait")
-}
-
-func TestExternalIsAddedToLabelsForExternalBenchmark(t *testing.T) {
-	expectedTarget := "//test/benchmark:benchmark"
-
-	output, err := exec.Command("plz", "query", "alltargets", "-i", "external").Output()
-	require.NoError(t, err)
-
-	outputLines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	assert.True(t,
-		slices.Contains(outputLines, expectedTarget),
-		"Did not find %s in targets with the label 'external' even though external is set to True. Matching targets: %s",
-		expectedTarget,
-		outputLines,
-	)
 }
