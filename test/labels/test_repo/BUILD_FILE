@@ -1,0 +1,13 @@
+subinclude("///go//build_defs:go")
+
+go_test(
+    name = "labels_test",
+    srcs = ["labels_test.go"],
+    external = True,
+)
+
+go_benchmark(
+    name = "benchmark_test",
+    srcs = ["benchmark_test.go"],
+    external = True,
+)
