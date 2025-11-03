@@ -3,7 +3,10 @@ subinclude("//build_defs:go")
 go_library(
     name = "asm",
     srcs = ["asm.go"],
-    asm_srcs = ["add.s"],
+    asm_srcs = [
+        "add.s",
+        "subtract.s",
+    ],
     deps = ["//test/asm/lib/golib"],
 )
 

@@ -13,3 +13,7 @@ import (
 func TestAssemblyAdd(t *testing.T) {
 	assert.Equal(t, 15, asm.Add())
 }
+
+func TestAssemblySubtract(t *testing.T) {
+	assert.Equal(t, 5, asm.Subtract())
+}
