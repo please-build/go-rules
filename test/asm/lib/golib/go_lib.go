@@ -1,4 +1,4 @@
 package golib
 
 const LHS = 10
-const RHS = 5
+const RHS = 4

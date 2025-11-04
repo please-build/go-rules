@@ -11,9 +11,9 @@ import (
 )
 
 func TestAssemblyAdd(t *testing.T) {
-	assert.Equal(t, 15, asm.Add())
+	assert.Equal(t, 14, asm.Add())
 }
 
 func TestAssemblySubtract(t *testing.T) {
-	assert.Equal(t, 5, asm.Subtract())
+	assert.Equal(t, 6, asm.Subtract())
 }
