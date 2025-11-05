@@ -426,21 +426,21 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             },
             output_dirs = ["_out"],
             building_description = 'Assembling...',
-            cmd = f"""eval `"$TOOL" env` &&
-            mkdir _out &&
-            mkdir include &&
-            mv $SRCS_GOASM include/go_asm.h &&
-            for ASM_FILE in $SRCS_ASM
-            do "$TOOL" tool asm \\
-                -trimpath "$TMP_DIR" \\
-                -I "$TMP_DIR"/include \\
-                -I ${GOROOT}/pkg/include \\
-                -D GOOS={CONFIG.OS} \\
-                -D GOARCH_{CONFIG.ARCH} \\
-                -p {package_path} \\
-                -o "_out/$(basename -s .s $ASM_FILE).o" \\
-                $ASM_FILE
-            done""",
+            cmd = " && ".join([
+                'eval `"$TOOL" env`',
+                'mkdir _out',
+                'mkdir include',
+                'mv $SRCS_GOASM include/go_asm.h',
+                'for ASM_FILE in $SRCS_ASM; do "$TOOL" tool asm ' + " ".join([
+                    '-trimpath "$TMP_DIR"',
+                    '-I "$TMP_DIR"/include',
+                    '-I ${GOROOT}/pkg/include',
+                    f'-D GOOS={CONFIG.OS}',
+                    f'-D GOARCH_{CONFIG.ARCH}',
+                    f'-p {package_path}',
+                    '-o "_out/$(basename -s .s $ASM_FILE).o"',
+                ]) + ' $ASM_FILE; done',
+            ]),
             env= {
                 "GOOS": CONFIG.OS,
                 "GOARCH": CONFIG.ARCH,
