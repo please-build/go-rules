@@ -424,11 +424,10 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                 'hdrs': [hdrs_rule],
                 'goasm': [lib_rule + '|h'],
             },
-            output_dirs = ["_out"],
+            outs = [name + "#" + (splitext(basename(a)))[0] + ".o" for a in asm_srcs],
             building_description = 'Assembling...',
             cmd = " && ".join([
                 'eval `"$TOOL" env`',
-                'mkdir _out',
                 'mkdir include',
                 'mv $SRCS_GOASM include/go_asm.h',
                 'for ASM_FILE in $SRCS_ASM; do "$TOOL" tool asm ' + " ".join([
@@ -438,7 +437,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                     f'-D GOOS={CONFIG.OS}',
                     f'-D GOARCH_{CONFIG.ARCH}',
                     f'-p {package_path}',
-                    '-o "_out/$(basename -s .s $ASM_FILE).o"',
+                    f'-o "{name}#$(basename $ASM_FILE .s).o"',
                 ]) + ' $ASM_FILE; done',
             ]),
             env= {
