@@ -437,7 +437,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                     f'-D GOOS={CONFIG.OS}',
                     f'-D GOARCH_{CONFIG.ARCH}',
                     f'-p {package_path}',
-                    f'-o "{name}#$(basename $ASM_FILE .s).o"',
+                    f'''-o "{name}#$(basename $ASM_FILE | sed -e 's/\.[sS]$//').o"''',
                 ]) + ' $ASM_FILE; done',
             ]),
             env= {
