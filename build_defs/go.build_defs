@@ -847,10 +847,29 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         import_path = "main",
         _generate_pkg_info = False,
     )
-    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
+    # Match go test: testing/testing.go:692 (Go 1.25.3) relies on testing.testing=true when linking tests.
+    testing_definition = "testing.testing=true"
+    if definitions is None:
+        test_definitions = [testing_definition]
+    elif isinstance(definitions, dict):
+        if "testing.testing" in definitions:
+            test_definitions = definitions
+        else:
+            test_definitions = definitions | {"testing.testing": "true"}
+    else:
+        if isinstance(definitions, str):
+            test_definitions = [definitions]
+        elif isinstance(definitions, list):
+            test_definitions = list(definitions)
+        else:
+            test_definitions = list(definitions)
+        if testing_definition not in test_definitions:
+            test_definitions.append(testing_definition)
+
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=test_definitions, gcov=cgo, test=True)
 
 
-    test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
+    test_cmd = f'$TEST {flags} 2>&1 | tee -- "$TMP_DIR/test.results"'
     worker_cmd = f'$(worker {worker})' if worker else ""
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
