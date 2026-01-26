@@ -214,7 +214,7 @@ func loadPackageInfo(files []string, mode packages.LoadMode) ([]*packages.Packag
 		return nil, err
 	}
 	// N.B. deliberate not to close these here, they happen exactly when needed.
-	whatinputs := plz(append([]string{"query", "whatinputs"}, files...)...)
+	whatinputs := plz(append([]string{"query", "whatinputs", "--ignore_unknown" }, files...)...)
 	whatinputs.Stdout = w1
 	args := []string{"query", "deps", "-", "--hidden", "-i", "go_pkg_info", "-i", "go_src"}
 	if (mode & packages.NeedExportFile) != 0 {
