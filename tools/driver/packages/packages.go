@@ -157,12 +157,12 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		for i, file := range pkg.GoFiles {
 			// This is pretty awkward; we need to try to figure out where these files exist now,
 			// which isn't particularly clear to the build actions that generated them.
-			if path := filepath.Join(rootpath, "plz-out/subrepos", file); pathExists(path) {
+			if pathExists(file) {
+				pkg.GoFiles[i] = filepath.Join(rootpath, file)
+			} else if path := filepath.Join(rootpath, "plz-out/subrepos", file); pathExists(path) {
 				pkg.GoFiles[i] = path
 			} else if path := filepath.Join(rootpath, "plz-out/gen", file); pathExists(path) {
 				pkg.GoFiles[i] = path
-			} else {
-				pkg.GoFiles[i] = filepath.Join(rootpath, file)
 			}
 		}
 		pkg.CompiledGoFiles = pkg.GoFiles
