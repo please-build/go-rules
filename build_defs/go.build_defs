@@ -859,8 +859,6 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     else:
         if isinstance(definitions, str):
             test_definitions = [definitions]
-        elif isinstance(definitions, list):
-            test_definitions = list(definitions)
         else:
             test_definitions = list(definitions)
         if testing_definition not in test_definitions:
