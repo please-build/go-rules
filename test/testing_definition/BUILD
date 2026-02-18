@@ -13,7 +13,5 @@ please_repo_e2e_test(
     name = "testing_definition_integration_test",
     plz_command = "plz test --show_all_output //sample:testing_flag_test -- -test.v",
     repo = "test_repo",
-    expect_output_contains = {
-        "output": "testing.Testing() = true",
-    },
+    expect_stdout_contains = "testing.Testing() = true",
 )

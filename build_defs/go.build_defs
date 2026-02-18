@@ -847,24 +847,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         import_path = "main",
         _generate_pkg_info = False,
     )
-    # Match go test: testing/testing.go:692 (Go 1.25.3) relies on testing.testing=true when linking tests.
-    testing_definition = "testing.testing=true"
-    if definitions is None:
-        test_definitions = [testing_definition]
-    elif isinstance(definitions, dict):
-        if "testing.testing" in definitions:
-            test_definitions = definitions
-        else:
-            test_definitions = definitions | {"testing.testing": "true"}
-    else:
-        if isinstance(definitions, str):
-            test_definitions = [definitions]
-        else:
-            test_definitions = list(definitions)
-        if testing_definition not in test_definitions:
-            test_definitions.append(testing_definition)
-
-    cmds, tools = _go_binary_cmds(name, static=static, definitions=test_definitions, gcov=cgo, test=True)
+    cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
 
     test_cmd = f'$TEST {flags} 2>&1 | tee -- "$TMP_DIR/test.results"'
@@ -1764,7 +1747,12 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
     elif isinstance(definitions, dict):
         linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
     if test:
-        linkerdefs += ["testing.testBinary=1"]
+        # testing.testBinary and testing.testing are required by the Go test runtime.
+        # Match go test: testing/testing.go:692 (Go 1.25.3) relies on testing.testing=true when linking tests.
+        if "testing.testBinary=1" not in linkerdefs:
+            linkerdefs += ["testing.testBinary=1"]
+        if "testing.testing=true" not in linkerdefs:
+            linkerdefs += ["testing.testing=true"]
 
     defs = ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
 
