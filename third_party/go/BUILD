@@ -5,7 +5,7 @@ subinclude(
 go_toolchain(
     name = "toolchain",
     install_std = False,
-    version = "1.25.2",
+    version = "1.26.1",
 )
 
 go_stdlib(
@@ -85,7 +85,7 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/tools",
-    version = "v0.37.0",
+    version = "v0.43.0",
 )
 
 go_repo(
