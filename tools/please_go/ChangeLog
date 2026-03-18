@@ -1,3 +1,7 @@
+Version 1.22.0
+--------------
+    * Build with Go 1.26.1
+
 Version 1.21.0
 --------------
     * Update `golang.org/x/mod` to allow using `ignore` directives in `go.mod` files (#327)
