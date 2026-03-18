@@ -1,3 +1,7 @@
+Version 1.29.0
+--------------
+    * Use `please_go` v1.22.0 built with Go `1.26.1`
+
 Version 1.28.2
 --------------
     * Compile assembly files individually in `go_library` (#330)
