@@ -847,6 +847,21 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         import_path = "main",
         _generate_pkg_info = False,
     )
+    provides = {
+        'go': lib_rule,
+    }
+    if CONFIG.GO.PKG_INFO:
+        pkg_info = _go_pkg_info(
+            name = name,
+            srcs = srcs + (resources or []),
+            package = test_package,
+            test_only = True,
+            include_tests = True,
+            visibility = visibility,
+            importconfig = import_config,
+        )
+        deps += [pkg_info]
+        provides["pkg_info"] = pkg_info
     cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
 
@@ -913,6 +928,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         output_is_complete = True,
         pre_build = _collect_linker_flags(static, definitions),
         env = env,
+        provides = provides,
     )
 
 
@@ -1013,7 +1029,24 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         labels = labels,
         test_only = test_only,
         import_path="main",
+        _generate_pkg_info = False,
     )
+    provides = {
+        'go': lib_rule,
+    }
+    if CONFIG.GO.PKG_INFO:
+        pkg_info = _go_pkg_info(
+            name = name,
+            srcs = srcs + (resources or []),
+            package = test_package,
+            test_only = True,
+            include_tests = True,
+            visibility = visibility,
+            importconfig = import_config,
+        )
+        deps += [pkg_info]
+        provides["pkg_info"] = pkg_info
+
     cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
     return build_rule(
@@ -1035,6 +1068,7 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         output_is_complete=True,
         test_only=test_only,
         pre_build = _collect_linker_flags(static, definitions),
+        provides = provides,
     )
 
 def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False, external=False,
@@ -1616,7 +1650,8 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 
 def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, import_path:str="", package:str="",
-                 module:str="", subrepo:str="", test_only:bool=False, install:list=[], large_package:bool=False):
+                 module:str="", subrepo:str="", test_only:bool=False, install:list=[], large_package:bool=False,
+                 include_tests:bool=False):
     """Internal-only function for generating the pkg_info files"""
     install_flags = ""
     for i in install:
@@ -1638,6 +1673,8 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
             cmd = f"{cmd} -s {subrepo}"
         if module:
             cmd = f"{cmd} --mod {module}"
+        if include_tests:
+            cmd = f"{cmd} -t"
     return build_rule(
         name = name,
         tag = "pkg_info",

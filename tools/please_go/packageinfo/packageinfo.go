@@ -8,7 +8,6 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -20,7 +19,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo, module string, w io.Writer) error {
+func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo, module string, includeTests bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	module = modulePath(module, importPath)
@@ -30,7 +29,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 			return err
 		} else if name := d.Name(); name == "testdata" {
 			return filepath.SkipDir // Don't descend into testdata
-		} else if strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+		} else if strings.HasSuffix(name, ".go") && (includeTests || !strings.HasSuffix(name, "_test.go")) {
 			dir := filepath.Dir(path)
 			goFiles[dir] = append(goFiles[dir], path)
 		}
@@ -130,20 +129,27 @@ func createPackage(pkgPath, pkgDir, subrepo, module string) (*packages.Package, 
 
 // FromBuildPackage creates a packages Package from a build Package.
 func FromBuildPackage(pkg *build.Package, subrepo, module string) *packages.Package {
+	goFiles := slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.XTestGoFiles)
+	imports :=slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
+	name := pkg.Name
+	id := pkg.ImportPath
+	if len(pkg.XTestGoFiles) > 0 || len(pkg.XTestImports) > 0 {
+		name += "_test"
+		id += "_test"
+	}
 	p := &packages.Package{
-		ID:              pkg.ImportPath,
-		Name:            pkg.Name,
-		PkgPath:         pkg.ImportPath,
-		GoFiles:         make([]string, len(pkg.GoFiles)),
-		CompiledGoFiles: make([]string, len(pkg.GoFiles)),
+		ID:              id,
+		Name:            name,
+		PkgPath:         id,
+		GoFiles:         make([]string, len(goFiles)),
+		CompiledGoFiles: make([]string, len(goFiles)),
 		OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
 		EmbedPatterns:   pkg.EmbedPatterns,
-		Imports:         make(map[string]*packages.Package, len(pkg.Imports)),
+		Imports:         make(map[string]*packages.Package, len(imports)),
 	}
-	for i, file := range pkg.GoFiles {
+	for i, file := range goFiles {
 		if subrepo != "" {
 			// this is fairly nasty... there must be a better way of getting it without the pkg/ prefix
-			log.Printf("here %s | %s | %s | %s", subrepo, pkg.Dir, file, module)
 			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
 			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), module)
 			p.GoFiles[i] = filepath.Join(subrepo, dir, file)
@@ -153,7 +159,7 @@ func FromBuildPackage(pkg *build.Package, subrepo, module string) *packages.Pack
 			p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file)
 		}
 	}
-	for _, imp := range pkg.Imports {
+	for _, imp := range imports {
 		p.Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
 	}
 	return p
