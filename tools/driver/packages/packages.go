@@ -82,7 +82,10 @@ func Load(req *DriverRequest, files []string) (*DriverResponse, error) {
 	// Now turn these back into the set of original directories; we use these to determine roots later
 	dirs := map[string]struct{}{}
 	for _, file := range files {
-		dirs[filepath.Dir(file)] = struct{}{}
+		rel, err := filepath.Rel(rootpath, filepath.Dir(file))
+		if err == nil {
+			dirs[rel] = struct{}{}
+		}
 	}
 	pkgs, err := loadPackageInfo(files, req.Mode)
 	if err != nil {
@@ -133,7 +136,7 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 	roots := []string{}
 	seenRuntime := false
 	for _, pkg := range pkgs {
-		if _, present := dirs[pkg.PkgPath]; present {
+		if _, present := dirs[filepath.Dir(pkg.ExportFile)]; present {
 			seenRoots[pkg.ID] = struct{}{}
 			roots = append(roots, pkg.ID)
 			continue
