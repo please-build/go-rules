@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -234,51 +235,122 @@ func loadPackageInfo(files []string, mode packages.LoadMode) ([]*packages.Packag
 		return []*packages.Package{}, nil
 	}
 
-	r1, w1, err := os.Pipe()
+	// Pipes for whatinputs -> [deps, filter]
+	whatinputsR, whatinputsW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	r2, w2, err := os.Pipe()
+	depsInR, depsInW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	// N.B. deliberate not to close these here, they happen exactly when needed.
+	filterInR, filterInW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+
+	// Pipes for [deps, filter] -> build
+	depsOutR, depsOutW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	filterOutR, filterOutW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	buildInR, buildInW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+
 	whatinputs := plz("query", "whatinputs", "--ignore_unknown", "--hidden", "-")
 	whatinputs.Stdin = strings.NewReader(strings.Join(files, "\n"))
-	whatinputs.Stdout = w1
-	args := []string{"query", "deps", "-", "--hidden", "-i", "go_pkg_info", "-i", "go_src"}
+	whatinputs.Stdout = whatinputsW
+
+	args := []string{"-", "--hidden", "-i", "go_pkg_info", "-i", "go_src"}
 	if (mode & packages.NeedExportFile) != 0 {
 		args = append(args, "-i", "go")
 	}
-	deps := plz(args...)
-	deps.Stdin = r1
-	deps.Stdout = w2
+	deps := plz(append([]string{"query", "deps"}, args...)...)
+	deps.Stdin = depsInR
+	deps.Stdout = depsOutW
+
+	filter := plz(append([]string{"query", "filter"}, args...)...)
+	filter.Stdin = filterInR
+	filter.Stdout = filterOutW
+
 	build := plz("build", "-")
-	build.Stdin = r2
+	build.Stdin = buildInR
 	build.Stdout = &bytes.Buffer{}
+
 	if err := whatinputs.Start(); err != nil {
 		return nil, err
 	} else if err := deps.Start(); err != nil {
 		return nil, err
+	} else if err := filter.Start(); err != nil {
+		return nil, err
 	} else if err := build.Start(); err != nil {
 		return nil, err
 	}
+
+	// Duplicate whatinputs output to deps and filter
+	go func() {
+		defer depsInW.Close()
+		defer filterInW.Close()
+		io.Copy(io.MultiWriter(depsInW, filterInW), whatinputsR)
+	}()
+
+	// Merge deps and filter outputs to build input
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	wg.Add(2)
+	copyLines := func(r io.Reader) {
+		defer wg.Done()
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			mu.Lock()
+			buildInW.Write(scanner.Bytes())
+			buildInW.Write([]byte{'\n'})
+			mu.Unlock()
+		}
+	}
+	go copyLines(depsOutR)
+	go copyLines(filterOutR)
+	go func() {
+		wg.Wait()
+		buildInW.Close()
+	}()
+
 	log.Debug("Waiting for plz query whatinputs...")
 	if err := whatinputs.Wait(); err != nil {
 		return nil, handleSubprocessErr(whatinputs, err)
 	}
-	w1.Close()
-	r1.Close()
+	whatinputsW.Close()
+
 	log.Debug("Waiting for plz query deps...")
 	if err := deps.Wait(); err != nil {
 		return nil, handleSubprocessErr(deps, err)
 	}
-	w2.Close()
-	r2.Close()
+	depsOutW.Close()
+
+	log.Debug("Waiting for plz query filter...")
+	if err := filter.Wait(); err != nil {
+		return nil, handleSubprocessErr(filter, err)
+	}
+	filterOutW.Close()
+
 	log.Debug("Waiting for plz build...")
 	if err := build.Wait(); err != nil {
 		return nil, handleSubprocessErr(build, err)
 	}
+
+	whatinputsR.Close()
+	depsInR.Close()
+	filterInR.Close()
+	depsOutR.Close()
+	filterOutR.Close()
+	buildInR.Close()
+
 	// Now we can read all the package info files from the build process' stdout.
 	return loadPackageInfoFiles(strings.Fields(strings.TrimSpace(build.Stdout.(*bytes.Buffer).String())))
 }
