@@ -1,3 +1,7 @@
+Version 1.23.0
+--------------
+    * Be able to specify whether to add tests (#346)
+
 Version 1.22.0
 --------------
     * Build with Go 1.26.1
