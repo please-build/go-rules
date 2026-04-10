@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -301,15 +302,20 @@ func loadPackageInfo(files []string, mode packages.LoadMode) ([]*packages.Packag
 
 	// Merge deps and filter outputs to build input
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 	wg.Add(2)
-	go func() {
+	copyLines := func(r io.Reader) {
 		defer wg.Done()
-		io.Copy(buildInW, depsOutR)
-	}()
-	go func() {
-		defer wg.Done()
-		io.Copy(buildInW, filterOutR)
-	}()
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			mu.Lock()
+			buildInW.Write(scanner.Bytes())
+			buildInW.Write([]byte{'\n'})
+			mu.Unlock()
+		}
+	}
+	go copyLines(depsOutR)
+	go copyLines(filterOutR)
 	go func() {
 		wg.Wait()
 		buildInW.Close()

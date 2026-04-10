@@ -1029,7 +1029,6 @@ def go_benchmark(name:str, srcs:list, resources:list=None, data:list|dict=None, 
         labels = labels,
         test_only = test_only,
         import_path="main",
-        _generate_pkg_info = False,
     )
     provides = {
         'go': lib_rule,

@@ -130,10 +130,12 @@ func createPackage(pkgPath, pkgDir, subrepo, module string) (*packages.Package, 
 // FromBuildPackage creates a packages Package from a build Package.
 func FromBuildPackage(pkg *build.Package, subrepo, module string) *packages.Package {
 	goFiles := slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.XTestGoFiles)
-	imports :=slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
+	imports := slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
 	name := pkg.Name
 	id := pkg.ImportPath
 	if len(pkg.XTestGoFiles) > 0 || len(pkg.XTestImports) > 0 {
+		// In please we may have an external test target and an internal test within the same please package.
+		// To ensure they have different go package import paths we appending to the name and id.
 		name += "_test"
 		id += "_test"
 	}
