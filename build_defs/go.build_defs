@@ -865,7 +865,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
 
-    test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
+    test_cmd = f'$TEST {flags} 2>&1 | tee -- "$TMP_DIR/test.results"'
     worker_cmd = f'$(worker {worker})' if worker else ""
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
@@ -1783,7 +1783,12 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
     elif isinstance(definitions, dict):
         linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
     if test:
-        linkerdefs += ["testing.testBinary=1"]
+        # testing.testBinary and testing.testing are required by the Go test runtime.
+        # Match go test: testing/testing.go:692 (Go 1.25.3) relies on testing.testing=true when linking tests.
+        if "testing.testBinary=1" not in linkerdefs:
+            linkerdefs += ["testing.testBinary=1"]
+        if "testing.testing=true" not in linkerdefs:
+            linkerdefs += ["testing.testing=true"]
 
     defs = ' '.join([f'-X "{linkerdef}"' for linkerdef in linkerdefs])
 

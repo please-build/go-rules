@@ -1,0 +1,4 @@
+go_test(
+    name = "testing_flag_test",
+    srcs = ["testing_flag_test.go"],
+)
