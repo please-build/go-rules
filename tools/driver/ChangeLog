@@ -1,3 +1,13 @@
+Version 0.8.0
+-------------
+    * Include test files and their packag info if requested (#346)
+    * ignore unknown srcs when querying whatinputs in package driver (#335)
+    * skip plz-out when walking directories in the package driver (#339)
+    * use --hidden when querying what inputs (#340)
+    * find embed files and embed patterns (#341)
+    * exclude experimental dir from package driver (#342)
+    * roots calculated by looking at the export file rather than package (#345)
+
 Version 0.7.0
 -------------
     * Build with Go 1.25.2 (#324)
