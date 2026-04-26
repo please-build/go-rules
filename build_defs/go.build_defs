@@ -874,10 +874,11 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     if CONFIG.BUILD_CONFIG == 'cover':
         if CONFIG.GO.GO_COVDATA_TOOL:
             test_tools["covdata"] = CONFIG.GO.GO_COVDATA_TOOL
-            test_cmd += " && $TOOLS_COVDATA textfmt -i=. -o=$COVERAGE_FILE"
+            covdata_cmd = "$TOOLS_COVDATA"
         else:
             test_tools["go"] = CONFIG.GO.GO_TOOL
-            test_cmd += " && $TOOLS_GO tool covdata textfmt -i=. -o=$COVERAGE_FILE"
+            covdata_cmd = "$TOOLS_GO tool covdata"
+        test_cmd += f"; status=$?; {covdata_cmd} textfmt -i=. -o=$COVERAGE_FILE; exit $status"
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name = name,
