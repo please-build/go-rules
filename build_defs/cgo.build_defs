@@ -99,7 +99,9 @@ def cgo_library(
             'h': [subdir2 + '_cgo_export.h'],
         },
         cmd = ' && '.join([
-            (f'OUT_DIR="$TMP_DIR/{subdir}" && mkdir -p "$OUT_DIR"') if subdir else 'OUT_DIR="$TMP_DIR"',
+            f'OUT_DIR="$TMP_DIR/{subdir}"' if subdir else 'OUT_DIR="$TMP_DIR"',
+            f'OUT_DIR=${OUT_DIR%/}/',
+            'mkdir -p "$OUT_DIR"' if subdir else 'true',
             'cd $PKG_DIR/' + subdir,
             f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -trimpath "$TMP_DIR" -- {compiler_flags_cmd} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
