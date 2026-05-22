@@ -1,0 +1,4 @@
+plugin_repo(
+    name = "go",
+    revision = "master",
+)

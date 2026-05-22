@@ -2,11 +2,22 @@ subinclude("///e2e//build_defs:e2e")
 
 _please_repo_e2e_test = please_repo_e2e_test
 
-def please_repo_e2e_test(name, expected_output=None, plz_command, repo, labels=[]):
+def please_repo_e2e_test(name, expected_output=None, plz_command, repo, labels=[], expect_stdout_contains=None, expect_stderr_contains=None):
+    plz_cmd = plz_command.replace("plz ", "plz -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.gotool:$TOOLS_GO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO ")
+    # Tee stdout and stderr to separate files while preserving the exit code.
+    wrapped_plz_command = f"( {plz_cmd} > >(tee stdout.log) 2> >(tee stderr.log >&2) ); STATUS=$?; exit $STATUS"
+
+    expect_output_contains = {}
+    if expect_stdout_contains:
+        expect_output_contains["stdout.log"] = expect_stdout_contains
+    if expect_stderr_contains:
+        expect_output_contains["stderr.log"] = expect_stderr_contains
+
     return _please_repo_e2e_test(
         name = name,
         expected_output = expected_output,
-        plz_command = plz_command.replace("plz ", "plz -o please.PluginRepo:file://$TMP_DIR/$DATA_PLUGIN_REPO -o plugin.go.gotool:$TOOLS_GO -o plugin.go.pleasegotool:$TOOLS_PLEASE_GO "),
+        expect_output_contains = expect_output_contains if expect_output_contains else None,
+        plz_command = wrapped_plz_command,
         repo = repo,
         data = {
             "PLUGIN_REPO": ["//test:export"],

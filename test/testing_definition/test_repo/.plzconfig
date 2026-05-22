@@ -1,0 +1,7 @@
+[Parse]
+BuildFileName = BUILD_FILE
+PreloadSubincludes = ///go//build_defs:go
+
+[Plugin "go"]
+Target = //plugins:go
+Stdlib = //third_party/go:std
