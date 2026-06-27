@@ -421,7 +421,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg, "", ""))
+		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg))
 	}
 	return pkgs, nil
 }
