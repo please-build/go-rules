@@ -185,7 +185,7 @@ var subCommands = map[string]func() int{
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WritePackageInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, "", "", false, os.Stdout); err != nil {
+		if err := packageinfo.WriteModuleInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, "", "", false, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
