@@ -118,8 +118,16 @@ func loadImportConfig(filename string) (map[string]string, error) {
 
 // FromBuildPackageForModule creates a packages Package from a build Package for a module.
 func FromBuildPackageForModule(pkg *build.Package) *packages.Package {
-	goFiles := slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.XTestGoFiles)
-	imports := slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
+	goFiles := make([]string, len(pkg.GoFiles)+len(pkg.TestGoFiles)+len(pkg.XTestGoFiles))
+	for i, file := range pkg.GoFiles {
+		goFiles[i] = filepath.Join(pkg.Dir, file)
+	}
+
+	imports := make(map[string]*packages.Package, len(pkg.Imports)+len(pkg.TestImports)+len(pkg.XTestImports))
+	for _, imp := range pkg.Imports {
+		imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
+	}
+
 	name := pkg.Name
 	id := pkg.ImportPath
 	if len(pkg.XTestGoFiles) > 0 || len(pkg.XTestImports) > 0 {
@@ -128,22 +136,14 @@ func FromBuildPackageForModule(pkg *build.Package) *packages.Package {
 		name += "_test"
 		id += "_test"
 	}
-	p := &packages.Package{
+	return &packages.Package{
 		ID:              id,
 		Name:            name,
 		PkgPath:         id,
-		GoFiles:         make([]string, len(goFiles)),
-		CompiledGoFiles: make([]string, len(goFiles)),
+		GoFiles:         goFiles,
+		CompiledGoFiles: goFiles,
 		OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
 		EmbedPatterns:   pkg.EmbedPatterns,
-		Imports:         make(map[string]*packages.Package, len(imports)),
+		Imports:         imports,
 	}
-	for i, file := range goFiles {
-		p.GoFiles[i] = filepath.Join(pkg.Dir, file)
-		p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file)
-	}
-	for _, imp := range imports {
-		p.Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
-	}
-	return p
 }
