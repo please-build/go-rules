@@ -44,10 +44,6 @@ func Hello() {
 		tmpDir,
 		icFile,
 		nil,
-		nil,
-		"",
-		"",
-		false,
 		&buf,
 	)
 	require.NoError(t, err)
@@ -99,10 +95,6 @@ func TestWriteModuleInfo_Filtering(t *testing.T) {
 		tmpDir,
 		icFile,
 		nil,
-		nil,
-		"",
-		"",
-		false,
 		&buf,
 	)
 	require.NoError(t, err)
@@ -151,10 +143,6 @@ packagefile github.com/example/bar=export/bar.a
 			tmpDir,
 			icFile,
 			nil, // installPkgs is nil
-			nil,
-			"",
-			"",
-			false,
 			&buf,
 		)
 		require.NoError(t, err)
@@ -176,11 +164,7 @@ packagefile github.com/example/bar=export/bar.a
 			"github.com/example",
 			tmpDir,
 			icFile,
-			nil,
 			[]string{"foo"},
-			"",
-			"",
-			false,
 			&buf,
 		)
 		require.NoError(t, err)
@@ -200,11 +184,7 @@ packagefile github.com/example/bar=export/bar.a
 			"github.com/example",
 			tmpDir,
 			icFile,
-			nil,
 			[]string{"foo/..."},
-			"",
-			"",
-			false,
 			&buf,
 		)
 		require.NoError(t, err)
@@ -250,10 +230,6 @@ import "github.com/example/lib"
 		tmpDir,
 		icFile,
 		nil,
-		nil,
-		"",
-		"",
-		false,
 		&buf,
 	)
 	require.NoError(t, err)

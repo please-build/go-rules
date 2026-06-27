@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
-
 	"github.com/please-build/go-rules/tools/please_go/cover"
 	"github.com/please-build/go-rules/tools/please_go/embed"
 	"github.com/please-build/go-rules/tools/please_go/filter"
@@ -185,7 +184,7 @@ var subCommands = map[string]func() int{
 	},
 	"module_info": func() int {
 		mi := opts.ModuleInfo
-		if err := packageinfo.WriteModuleInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, nil, mi.Packages, "", "", false, os.Stdout); err != nil {
+		if err := packageinfo.WriteModuleInfo(mi.ModulePath, mi.Srcs, mi.ImportConfig, mi.Packages, os.Stdout); err != nil {
 			log.Fatalf("failed to write module info: %s", err)
 		}
 		return 0
