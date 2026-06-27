@@ -47,7 +47,7 @@ func WritePackageInfo(importPath string, srcRoot string, imports map[string]stri
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkg := FromBuildPackage(bpkg, subrepo, module)
+		pkg := fromBuildPackage(bpkg, subrepo, module)
 
 		if subrepo != "" {
 			_, pkgPath, ok := strings.Cut(imports[pkg.PkgPath], pkg.PkgPath)
@@ -105,8 +105,7 @@ func buildPackage(
 	return bpkg, nil
 }
 
-// FromBuildPackage creates a packages Package from a build Package.
-func FromBuildPackage(pkg *build.Package, subrepo, module string) *packages.Package {
+func fromBuildPackage(pkg *build.Package, subrepo, module string) *packages.Package {
 	goFiles := slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.XTestGoFiles)
 	imports := slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
 	name := pkg.Name

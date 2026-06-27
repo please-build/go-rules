@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -62,7 +63,7 @@ func WriteModuleInfo(importPath string, srcRoot, importconfig string, installPkg
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkg := FromBuildPackage(bpkg, "", importPath)
+		pkg := FromBuildPackageForModule(bpkg, "", importPath)
 
 		pkg.ExportFile = imports[pkg.PkgPath]
 		pkgs = append(pkgs, pkg)
@@ -114,4 +115,44 @@ func loadImportConfig(filename string) (map[string]string, error) {
 		}
 	}
 	return m, nil
+}
+
+// FromBuildPackageForModule creates a packages Package from a build Package for a module.
+func FromBuildPackageForModule(pkg *build.Package, subrepo, module string) *packages.Package {
+	goFiles := slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.XTestGoFiles)
+	imports := slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
+	name := pkg.Name
+	id := pkg.ImportPath
+	if len(pkg.XTestGoFiles) > 0 || len(pkg.XTestImports) > 0 {
+		// In please we may have an external test target and an internal test within the same please package.
+		// To ensure they have different go package import paths we appending to the name and id.
+		name += "_test"
+		id += "_test"
+	}
+	p := &packages.Package{
+		ID:              id,
+		Name:            name,
+		PkgPath:         id,
+		GoFiles:         make([]string, len(goFiles)),
+		CompiledGoFiles: make([]string, len(goFiles)),
+		OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
+		EmbedPatterns:   pkg.EmbedPatterns,
+		Imports:         make(map[string]*packages.Package, len(imports)),
+	}
+	for i, file := range goFiles {
+		if subrepo != "" {
+			// this is fairly nasty... there must be a better way of getting it without the pkg/ prefix
+			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
+			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), module)
+			p.GoFiles[i] = filepath.Join(subrepo, dir, file)
+			p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file) // Stash this here for later
+		} else {
+			p.GoFiles[i] = filepath.Join(pkg.Dir, file)
+			p.CompiledGoFiles[i] = filepath.Join(pkg.Dir, file)
+		}
+	}
+	for _, imp := range imports {
+		p.Imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
+	}
+	return p
 }
