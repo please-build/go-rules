@@ -62,20 +62,6 @@ func WritePackageInfo(importPath string, srcRoot string, imports map[string]stri
 		pkgs = append(pkgs, pkg)
 	}
 
-	// Vendor packages. They aren't identified by the original imports but we know what they are now.
-	vendorised := map[string]*packages.Package{}
-	for _, pkg := range pkgs {
-		if strings.HasPrefix(pkg.PkgPath, "vendor/") {
-			vendorised[strings.TrimPrefix(pkg.PkgPath, "vendor/")] = pkg
-		}
-	}
-	for _, pkg := range pkgs {
-		for k := range pkg.Imports {
-			if v, present := vendorised[k]; present {
-				pkg.Imports[k] = v
-			}
-		}
-	}
 	// Ensure output is deterministic
 	sort.Slice(pkgs, func(i, j int) bool {
 		return pkgs[i].ID < pkgs[j].ID
