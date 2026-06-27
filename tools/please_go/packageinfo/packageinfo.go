@@ -41,12 +41,14 @@ func WritePackageInfo(importPath string, srcRoot string, imports map[string]stri
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, srcRoot), "/")
-		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, subrepo, module)
+		bpkg, err := buildPackage(filepath.Join(importPath, pkgDir), dir)
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
+		pkg := FromBuildPackage(bpkg, subrepo, module)
+
 		if subrepo != "" {
 			_, pkgPath, ok := strings.Cut(imports[pkg.PkgPath], pkg.PkgPath)
 			if !ok {
@@ -83,7 +85,10 @@ func WritePackageInfo(importPath string, srcRoot string, imports map[string]stri
 	return e.Encode(pkgs)
 }
 
-func createPackage(pkgPath, pkgDir, subrepo, module string) (*packages.Package, error) {
+func buildPackage(
+	pkgPath string,
+	pkgDir string,
+) (*build.Package, error) {
 	if pkgDir == "" || pkgDir == "." {
 		// This happens when we're in the repo root, ImportDir refuses to read it for some reason.
 		path, err := filepath.Abs(pkgDir)
@@ -97,7 +102,7 @@ func createPackage(pkgPath, pkgDir, subrepo, module string) (*packages.Package, 
 		return nil, err
 	}
 	bpkg.ImportPath = pkgPath
-	return FromBuildPackage(bpkg, subrepo, module), nil
+	return bpkg, nil
 }
 
 // FromBuildPackage creates a packages Package from a build Package.

@@ -56,12 +56,14 @@ func WriteModuleInfo(importPath string, srcRoot, importconfig string, installPkg
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, srcRoot), "/")
-		pkg, err := createPackage(filepath.Join(importPath, pkgDir), dir, "", importPath)
+		bpkg, err := buildPackage(filepath.Join(importPath, pkgDir), dir)
 		if _, ok := err.(*build.NoGoError); ok {
 			continue // Don't really care, this happens sometimes for modules
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
+		pkg := FromBuildPackage(bpkg, "", importPath)
+
 		pkg.ExportFile = imports[pkg.PkgPath]
 		pkgs = append(pkgs, pkg)
 	}
