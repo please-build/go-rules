@@ -117,20 +117,20 @@ func loadImportConfig(filename string) (map[string]string, error) {
 }
 
 // FromBuildPackageForModule creates a packages Package from a build Package for a module.
-func FromBuildPackageForModule(pkg *build.Package) *packages.Package {
-	goFiles := make([]string, len(pkg.GoFiles)+len(pkg.TestGoFiles)+len(pkg.XTestGoFiles))
-	for i, file := range pkg.GoFiles {
-		goFiles[i] = filepath.Join(pkg.Dir, file)
+func FromBuildPackageForModule(bpkg *build.Package) *packages.Package {
+	goFiles := make([]string, len(bpkg.GoFiles)+len(bpkg.TestGoFiles)+len(bpkg.XTestGoFiles))
+	for i, file := range bpkg.GoFiles {
+		goFiles[i] = filepath.Join(bpkg.Dir, file)
 	}
 
-	imports := make(map[string]*packages.Package, len(pkg.Imports)+len(pkg.TestImports)+len(pkg.XTestImports))
-	for _, imp := range pkg.Imports {
+	imports := make(map[string]*packages.Package, len(bpkg.Imports)+len(bpkg.TestImports)+len(bpkg.XTestImports))
+	for _, imp := range bpkg.Imports {
 		imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
 	}
 
-	name := pkg.Name
-	id := pkg.ImportPath
-	if len(pkg.XTestGoFiles) > 0 || len(pkg.XTestImports) > 0 {
+	name := bpkg.Name
+	id := bpkg.ImportPath
+	if len(bpkg.XTestGoFiles) > 0 || len(bpkg.XTestImports) > 0 {
 		// In please we may have an external test target and an internal test within the same please package.
 		// To ensure they have different go package import paths we appending to the name and id.
 		name += "_test"
@@ -142,8 +142,8 @@ func FromBuildPackageForModule(pkg *build.Package) *packages.Package {
 		PkgPath:         id,
 		GoFiles:         goFiles,
 		CompiledGoFiles: goFiles,
-		OtherFiles:      slices.Concat(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
-		EmbedPatterns:   pkg.EmbedPatterns,
+		OtherFiles:      slices.Concat(bpkg.CFiles, bpkg.CXXFiles, bpkg.MFiles, bpkg.HFiles, bpkg.SFiles, bpkg.SwigFiles, bpkg.SwigCXXFiles, bpkg.SysoFiles),
+		EmbedPatterns:   bpkg.EmbedPatterns,
 		Imports:         imports,
 	}
 }

@@ -92,32 +92,32 @@ func buildPackage(
 }
 
 func fromBuildPackage(
-	pkg *build.Package,
+	bpkg *build.Package,
 	subrepo string,
 	module string,
 ) *packages.Package {
-	goFiles := make([]string, len(pkg.GoFiles)+len(pkg.TestGoFiles)+len(pkg.XTestGoFiles))
+	goFiles := make([]string, len(bpkg.GoFiles)+len(bpkg.TestGoFiles)+len(bpkg.XTestGoFiles))
 	compiledGoFiles := make([]string, len(goFiles))
-	for i, file := range slices.Concat(pkg.GoFiles, pkg.TestGoFiles, pkg.XTestGoFiles) {
+	for i, file := range slices.Concat(bpkg.GoFiles, bpkg.TestGoFiles, bpkg.XTestGoFiles) {
 		if subrepo != "" {
 			// this is fairly nasty... there must be a better way of getting it without the pkg/ prefix
-			dir := strings.TrimPrefix(pkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
+			dir := strings.TrimPrefix(bpkg.Dir, "pkg/"+runtime.GOOS+"_"+runtime.GOARCH)
 			dir = strings.TrimPrefix(strings.TrimPrefix(dir, "/"), module)
 			goFiles[i] = filepath.Join(subrepo, dir, file)
-			compiledGoFiles[i] = filepath.Join(pkg.Dir, file) // Stash this here for later
+			compiledGoFiles[i] = filepath.Join(bpkg.Dir, file) // Stash this here for later
 		} else {
-			goFiles[i] = filepath.Join(pkg.Dir, file)
-			compiledGoFiles[i] = filepath.Join(pkg.Dir, file)
+			goFiles[i] = filepath.Join(bpkg.Dir, file)
+			compiledGoFiles[i] = filepath.Join(bpkg.Dir, file)
 		}
 	}
-	imports := make(map[string]*packages.Package, len(pkg.Imports)+len(pkg.TestImports)+len(pkg.XTestImports))
-	for _, imp := range slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports) {
+	imports := make(map[string]*packages.Package, len(bpkg.Imports)+len(bpkg.TestImports)+len(bpkg.XTestImports))
+	for _, imp := range slices.Concat(bpkg.Imports, bpkg.TestImports, bpkg.XTestImports) {
 		imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
 	}
 
-	name := pkg.Name
-	id := pkg.ImportPath
-	if len(pkg.XTestGoFiles) > 0 || len(pkg.XTestImports) > 0 {
+	name := bpkg.Name
+	id := bpkg.ImportPath
+	if len(bpkg.XTestGoFiles) > 0 || len(bpkg.XTestImports) > 0 {
 		// In please we may have an external test target and an internal test within the same please package.
 		// To ensure they have different go package import paths we appending to the name and id.
 		name += "_test"
@@ -129,8 +129,8 @@ func fromBuildPackage(
 		PkgPath:         id,
 		GoFiles:         goFiles,
 		CompiledGoFiles: compiledGoFiles,
-		OtherFiles:      slices.Concat(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
-		EmbedPatterns:   pkg.EmbedPatterns,
+		OtherFiles:      slices.Concat(bpkg.CFiles, bpkg.CXXFiles, bpkg.MFiles, bpkg.HFiles, bpkg.SFiles, bpkg.SwigFiles, bpkg.SwigCXXFiles, bpkg.SysoFiles),
+		EmbedPatterns:   bpkg.EmbedPatterns,
 		Imports:         imports,
 	}
 }
