@@ -39,9 +39,7 @@ func Hello() {
 	err = WritePackageInfo(
 		"module/foo",
 		fooDir,
-		"",
 		imports,
-		nil,
 		"",
 		"",
 		false,

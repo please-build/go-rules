@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -91,4 +92,24 @@ func WriteModuleInfo(importPath string, srcRoot, importconfig string, installPkg
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	return e.Encode(pkgs)
+}
+
+// loadImportConfig reads the given importconfig file and produces a map of package name -> export path
+func loadImportConfig(filename string) (map[string]string, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(b), "\n")
+	m := make(map[string]string, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "packagefile ") {
+			pkg, exportFile, found := strings.Cut(strings.TrimPrefix(line, "packagefile "), "=")
+			if !found {
+				return nil, fmt.Errorf("unknown syntax for line: %s", line)
+			}
+			m[pkg] = exportFile
+		}
+	}
+	return m, nil
 }

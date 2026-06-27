@@ -177,7 +177,7 @@ var subCommands = map[string]func() int{
 	},
 	"package_info": func() int {
 		pi := opts.PackageInfo
-		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, "", pi.ImportMap, nil, pi.Subrepo, pi.Module, pi.IncludeTests, os.Stdout); err != nil {
+		if err := packageinfo.WritePackageInfo(pi.ImportPath, pi.Pkg, pi.ImportMap, pi.Subrepo, pi.Module, pi.IncludeTests, os.Stdout); err != nil {
 			log.Fatalf("failed to write package info: %s", err)
 		}
 		return 0

@@ -8,7 +8,6 @@ import (
 	"go/build"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -19,7 +18,7 @@ import (
 )
 
 // WritePackageInfo writes a series of package info files to the given file.
-func WritePackageInfo(importPath string, srcRoot, importconfig string, imports map[string]string, installPkgs []string, subrepo, module string, includeTests bool, w io.Writer) error {
+func WritePackageInfo(importPath string, srcRoot string, imports map[string]string, subrepo, module string, includeTests bool, w io.Writer) error {
 	// Discover all Go files in the module
 	goFiles := map[string][]string{}
 	module = modulePath(module, importPath)
@@ -35,30 +34,10 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 		}
 		return nil
 	}
-	// Check install packages first
-	for _, pkg := range installPkgs {
-		if strings.Contains(pkg, "...") {
-			pkg = strings.TrimSuffix(pkg, "...")
-			if err := filepath.WalkDir(filepath.Join(srcRoot, pkg), walkDirFunc); err != nil {
-				return fmt.Errorf("failed to read module dir: %w", err)
-			}
-		} else {
-			dir := filepath.Join(srcRoot, pkg)
-			goFiles[dir] = append(goFiles[dir], filepath.Join(srcRoot, pkg))
-		}
+	if err := filepath.WalkDir(srcRoot, walkDirFunc); err != nil {
+		return fmt.Errorf("failed to read module dir: %w", err)
 	}
-	if len(installPkgs) == 0 {
-		if err := filepath.WalkDir(srcRoot, walkDirFunc); err != nil {
-			return fmt.Errorf("failed to read module dir: %w", err)
-		}
-	}
-	if importconfig != "" {
-		m, err := loadImportConfig(importconfig)
-		if err != nil {
-			return fmt.Errorf("failed to read importconfig: %w", err)
-		}
-		imports = m
-	}
+
 	pkgs := make([]*packages.Package, 0, len(goFiles))
 	for dir := range goFiles {
 		pkgDir := strings.TrimPrefix(strings.TrimPrefix(dir, srcRoot), "/")
@@ -80,13 +59,7 @@ func WritePackageInfo(importPath string, srcRoot, importconfig string, imports m
 		}
 		pkgs = append(pkgs, pkg)
 	}
-	// If we're doing the stdlib, limit it to just things in the importconfig (i.e. no cmd/ packages)
-	if importconfig != "" {
-		pkgs = slices.DeleteFunc(pkgs, func(pkg *packages.Package) bool {
-			_, present := imports[pkg.PkgPath]
-			return !present
-		})
-	}
+
 	// Vendor packages. They aren't identified by the original imports but we know what they are now.
 	vendorised := map[string]*packages.Package{}
 	for _, pkg := range pkgs {
@@ -173,26 +146,6 @@ func mappend(s []string, args ...[]string) []string {
 		s = append(s, arg...)
 	}
 	return s
-}
-
-// loadImportConfig reads the given importconfig file and produces a map of package name -> export path
-func loadImportConfig(filename string) (map[string]string, error) {
-	b, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	lines := strings.Split(string(b), "\n")
-	m := make(map[string]string, len(lines))
-	for _, line := range lines {
-		if strings.HasPrefix(line, "packagefile ") {
-			pkg, exportFile, found := strings.Cut(strings.TrimPrefix(line, "packagefile "), "=")
-			if !found {
-				return nil, fmt.Errorf("unknown syntax for line: %s", line)
-			}
-			m[pkg] = exportFile
-		}
-	}
-	return m, nil
 }
 
 // modulePath returns the import path for a module, or the given one if the module isn't set.
