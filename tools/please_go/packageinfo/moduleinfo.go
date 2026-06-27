@@ -76,8 +76,8 @@ func WriteModuleInfo(importPath string, srcRoot, importconfig string, installPkg
 	// Vendor packages. They aren't identified by the original imports but we know what they are now.
 	vendorised := map[string]*packages.Package{}
 	for _, pkg := range pkgs {
-		if strings.HasPrefix(pkg.PkgPath, "vendor/") {
-			vendorised[strings.TrimPrefix(pkg.PkgPath, "vendor/")] = pkg
+		if after, ok := strings.CutPrefix(pkg.PkgPath, "vendor/"); ok {
+			vendorised[after] = pkg
 		}
 	}
 	for _, pkg := range pkgs {
@@ -105,8 +105,8 @@ func loadImportConfig(filename string) (map[string]string, error) {
 	lines := strings.Split(string(b), "\n")
 	m := make(map[string]string, len(lines))
 	for _, line := range lines {
-		if strings.HasPrefix(line, "packagefile ") {
-			pkg, exportFile, found := strings.Cut(strings.TrimPrefix(line, "packagefile "), "=")
+		if after, ok := strings.CutPrefix(line, "packagefile "); ok {
+			pkg, exportFile, found := strings.Cut(after, "=")
 			if !found {
 				return nil, fmt.Errorf("unknown syntax for line: %s", line)
 			}
