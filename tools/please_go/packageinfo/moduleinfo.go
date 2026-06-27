@@ -142,7 +142,7 @@ func FromBuildPackageForModule(pkg *build.Package) *packages.Package {
 		PkgPath:         id,
 		GoFiles:         goFiles,
 		CompiledGoFiles: goFiles,
-		OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
+		OtherFiles:      slices.Concat(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
 		EmbedPatterns:   pkg.EmbedPatterns,
 		Imports:         imports,
 	}

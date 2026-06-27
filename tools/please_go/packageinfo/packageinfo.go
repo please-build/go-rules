@@ -129,18 +129,10 @@ func fromBuildPackage(
 		PkgPath:         id,
 		GoFiles:         goFiles,
 		CompiledGoFiles: compiledGoFiles,
-		OtherFiles:      mappend(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
+		OtherFiles:      slices.Concat(pkg.CFiles, pkg.CXXFiles, pkg.MFiles, pkg.HFiles, pkg.SFiles, pkg.SwigFiles, pkg.SwigCXXFiles, pkg.SysoFiles),
 		EmbedPatterns:   pkg.EmbedPatterns,
 		Imports:         imports,
 	}
-}
-
-// mappend appends multiple slices together.
-func mappend(s []string, args ...[]string) []string {
-	for _, arg := range args {
-		s = append(s, arg...)
-	}
-	return s
 }
 
 // modulePath returns the import path for a module, or the given one if the module isn't set.
