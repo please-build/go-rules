@@ -33,9 +33,10 @@ type Generate struct {
 	install            []string
 	labels             []string
 	largePackages      []string
+	licences           []string
 }
 
-func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install []string, buildTags []string, labels []string, largePackages []string) *Generate {
+func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install, buildTags, labels, largePackages, licences []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -58,6 +59,7 @@ func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string
 		subrepo:            subrepo,
 		labels:             labels,
 		largePackages:      largePackages,
+		licences:           licences,
 	}
 }
 
@@ -320,6 +322,7 @@ func (g *Generate) matchesInstall(dir string) bool {
 func (g *Generate) rule(rule *Rule) *bazelbuild.Rule {
 	r := NewRule(rule.kind, rule.name)
 	populateRule(r, rule)
+	r.SetAttr("licences", NewStringList(g.licences))
 	r.SetAttr("visibility", NewStringList([]string{"PUBLIC"}))
 	r.SetAttr("labels", NewStringList(g.labels))
 	if rule.kind == "go_library" {
