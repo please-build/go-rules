@@ -256,7 +256,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
                _generate_import_config:bool=True, _generate_pkg_info:bool=CONFIG.GO.PKG_INFO,
                import_path:str='', labels:list=[], package:str=None, pgo_file:str=None, _module:str='',
-               _subrepo:str='', _is_large_package:bool=False):
+               _subrepo:str='', _is_large_package:bool=False, licences:list=[]):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -281,6 +281,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
       package (str): The package as it would appear at the top of the go source files. Defaults
                      to name.
       pgo_file (str): The CPU profile to supply for profile-guided optimisation.
+      licences (list): The licence of this package to be checked against the allowed licences configured in Please.
     """
     assert srcs, "Cannot provide an empty srcs list to go_library"
     cover = cover and CONFIG.BUILD_CONFIG == "cover"
@@ -309,6 +310,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             requires = ["modinfo"],
             test_only = test_only,
             deps = deps,
+            licences = licences,
         )
     else:
         # Dummy modinfo so we don't have to provide everything for binary modinfo actions.
@@ -337,6 +339,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             visibility=visibility,
             test_only=test_only,
             labels=labels,
+            licences = licences,
         )
         exported_deps = [import_cfg]
     else:
@@ -357,6 +360,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             tools = [CONFIG.GO.PLEASE_GO_TOOL],
             test_only = test_only,
             labels = labels,
+            licences = licences,
         )
     else:
         embedcfg = None
@@ -397,6 +401,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             labels=labels,
             deps = [transitive_headers],
+            licences = licences,
         )
         lib_rule = go_library(
             name = f'_{name}#lib',
@@ -414,6 +419,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             _module = _module,
             labels=labels + ["foo"],
             import_path=package_path,
+            licences = licences,
         )
         deps += [lib_rule]
         asm_rule = build_rule(
@@ -448,6 +454,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             labels=labels,
             deps = [transitive_headers],
+            licences = licences,
         )
         provides = {'go': ':' + name, 'go_src': lib_rule, 'modinfo': modinfo, 'hdrs': hdrs_rule}
         return build_rule(
@@ -467,6 +474,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             exported_deps = exported_deps,
             deps = deps,
+            licences = licences,
         )
 
     # go_test and cgo_library need access to the sources as well.
@@ -494,6 +502,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
             test_only = test_only,
             visibility = visibility,
             large_package = _is_large_package,
+            licences = licences,
         )
         deps += [pkg_info]
         provides["pkg_info"] = pkg_info
@@ -544,6 +553,7 @@ def go_library(name:str, srcs:list, resources:list=[], asm_srcs:list=None, hdrs:
         needs_transitive_deps = _needs_transitive_deps,
         exported_deps = exported_deps,
         src_list_files = _is_large_package,
+        licences = licences,
     )
 
 def _generate_pkg_import_cfg_cmd(name, out, pkg_location, handle_basename_eq_dirname=False):
@@ -614,7 +624,8 @@ def _get_import_path(package="", import_path=""):
 
 def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list|dict=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO.DEFAULT_STATIC,
-              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False, strip:bool=CONFIG.GO.STRIP_BINARIES):
+              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False, strip:bool=CONFIG.GO.STRIP_BINARIES,
+              licences:list=[]):
     """Compiles a Go binary.
 
     Args:
@@ -645,6 +656,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
                     default the value of the strip_binaries plugin configuration option is used;
                     if this is not set, whether or not the binary is stripped depends on the
                     build mode.
+      licences (list): The licence of this binary to be checked against the allowed licences configured in Please.
     """
     _srcs = srcs or [name + '.go']
     lib = go_library(
@@ -660,6 +672,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _link_extra = False,
         _generate_import_config=False,
         import_path="main",
+        licences = licences,
     )
     modinfo = _go_modinfo(
         name = name,
@@ -703,6 +716,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         },
         pre_build=_collect_linker_flags(static, definitions, strip=strip),
         stamp = stamp,
+        licences = licences,
     )
 
 def merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
@@ -1370,6 +1384,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         _subrepo = True,
         labels = labels,
         requires = ["import_config"],
+        licences = licences,
     )
     subrepo(
         name = subrepo_name,
@@ -1650,7 +1665,7 @@ def _go_modinfo(name:str, test_only:bool=False, deps:list):
 
 def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, import_path:str="", package:str="",
                  module:str="", subrepo:str="", test_only:bool=False, install:list=[], large_package:bool=False,
-                 include_tests:bool=False):
+                 include_tests:bool=False, licences:list=[]):
     """Internal-only function for generating the pkg_info files"""
     install_flags = ""
     for i in install:
@@ -1688,6 +1703,7 @@ def _go_pkg_info(name:str, srcs:list, visibility:list, importconfig:str=None, im
         test_only = test_only,
         visibility=visibility,
         src_list_files=large_package,
+        licences = licences,
     )
 
 
