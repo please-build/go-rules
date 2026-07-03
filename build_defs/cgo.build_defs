@@ -20,6 +20,7 @@ def cgo_library(
     asm_srcs:list=None,
     _module:str='',
     _subrepo:str='',
+    licences:list=[],
 ):
     """Generates a Go library which can be reused by other rules.
 
@@ -53,6 +54,7 @@ def cgo_library(
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
       import_path (str): If set, this will override the import path of the generated go package.
+      licences (list): The licence of this package to be checked against the allowed licences configured in Please.
     """
     assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
 
@@ -74,6 +76,7 @@ def cgo_library(
             hdrs = hdrs,
             _module = _module,
             _subrepo = _subrepo,
+            licences = licences,
         )
 
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
@@ -141,6 +144,7 @@ def cgo_library(
         _module = _module,
         labels = labels,
         asm_srcs = asm_srcs,
+        licences = licences,
     )
 
     output = package if package else name
