@@ -1354,7 +1354,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
 
     licence_args = ""
     if licences:
-        licence_args = " ".join([f"--licence {licence}" for licence in licences])
+        licence_args = " ".join([f"--licence '{licence}'" for licence in licences])
 
     build_tag_args = " ".join([f"--build_tag {build_tag}" for build_tag in build_tags])
     label_args = " ".join([f"--label '{label}'" for label in labels])
