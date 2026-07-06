@@ -96,7 +96,7 @@ var opts = struct {
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
 		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
 		Subrepo          string   `long:"subrepo" description:"The subrepo root to output into"`
-		Licences         []string `long:"licence" description:"A licence for the module"`
+		Licences         []string `long:"licence" description:"The licences under which the module is released"`
 		Labels           []string `long:"label" description:"Additional labels to attach to subrepo targets"`
 		LargePackages    []string `long:"large_package" description:"Relative names of packages which have lots of input files (meaning the go_library target should be marked as large)"`
 		Args             struct {
