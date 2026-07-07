@@ -1352,6 +1352,10 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     pkg_name = package_name()
     requirements = " ".join(requirements)
 
+    licence_args = ""
+    if licences:
+        licence_args = " ".join([f"--licence '{licence}'" for licence in licences])
+
     build_tag_args = " ".join([f"--build_tag {build_tag}" for build_tag in build_tags])
     label_args = " ".join([f"--label '{label}'" for label in labels])
     large_package_args = " ".join([f"--large_package '{pkg}'" for pkg in large_packages])
@@ -1363,7 +1367,7 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         "find $SRCS_DOWNLOAD -name BUILD -delete",
         f"mkdir -p $(dirname {pkgRoot})",
         f"mv $SRCS_DOWNLOAD {pkgRoot}",
-        f"$TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} {large_package_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements}",
+        f"$TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} {large_package_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements} {licence_args}",
         f"mv {pkgRoot} $OUT",
     ]
     cmd = " && ".join(cmds)
