@@ -943,6 +943,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         pre_build = _collect_linker_flags(static, definitions),
         env = env,
         provides = provides,
+        test_cmd_args_placeholder = "__TEST_ARGS__",
     )
 
 

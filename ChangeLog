@@ -1,3 +1,7 @@
+Version 1.32.0
+--------------
+    * Allow passing command-line arguments to go_test targets
+
 Version 1.31.1
 --------------
     * Fix bug in 1.31.0 where the plugin was still referencing the last version of `please_go`
