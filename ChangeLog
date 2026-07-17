@@ -1,6 +1,6 @@
 Version 1.32.0
 --------------
-    * Allow passing command-line arguments to go_test targets
+    * Allow passing command-line arguments to go_test targets (#368)
 
 Version 1.31.1
 --------------
