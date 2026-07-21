@@ -879,7 +879,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     cmds, tools = _go_binary_cmds(name, static=static, definitions=definitions, gcov=cgo, test=True)
 
 
-    test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
+    test_cmd = f'$TEST {flags} __TEST_ARGS__ 2>&1 | tee $TMP_DIR/test.results'
     worker_cmd = f'$(worker {worker})' if worker else ""
     if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
@@ -943,6 +943,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         pre_build = _collect_linker_flags(static, definitions),
         env = env,
         provides = provides,
+        test_cmd_args_placeholder = "__TEST_ARGS__",
     )
 
 
