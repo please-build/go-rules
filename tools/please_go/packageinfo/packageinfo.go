@@ -47,18 +47,11 @@ func WritePackageInfo(importPath string, srcRoot string, imports map[string]stri
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkg := fromBuildPackage(bpkg, subrepo, module)
-
-		if subrepo != "" {
-			_, pkgPath, ok := strings.Cut(imports[pkg.PkgPath], pkg.PkgPath)
-			if !ok {
-				return fmt.Errorf("Cannot determine export file path for package %s from %s", pkg.PkgPath, imports[pkg.PkgPath])
-			}
-			// This is a really gross hack to sneak both paths through the one field.
-			pkg.ExportFile = filepath.Join(subrepo, pkgPath) + "|" + imports[pkg.PkgPath]
-		} else {
-			pkg.ExportFile = imports[pkg.PkgPath]
+		pkg, err := fromBuildPackage(bpkg, subrepo, module, imports[importPath])
+		if err != nil {
+			return fmt.Errorf("creating packages.Package: %w", err)
 		}
+
 		pkgs = append(pkgs, pkg)
 	}
 
@@ -95,7 +88,8 @@ func fromBuildPackage(
 	bpkg *build.Package,
 	subrepo string,
 	module string,
-) *packages.Package {
+	exportFile string,
+) (*packages.Package, error) {
 	goFiles := make([]string, len(bpkg.GoFiles)+len(bpkg.TestGoFiles)+len(bpkg.XTestGoFiles))
 	compiledGoFiles := make([]string, len(goFiles))
 	for i, file := range slices.Concat(bpkg.GoFiles, bpkg.TestGoFiles, bpkg.XTestGoFiles) {
@@ -115,6 +109,15 @@ func fromBuildPackage(
 		imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
 	}
 
+	if subrepo != "" {
+		_, pkgPath, ok := strings.Cut(exportFile, bpkg.ImportPath)
+		if !ok {
+			return nil, fmt.Errorf("Cannot determine export file path for package %s from %s", bpkg.ImportPath, exportFile)
+		}
+		// This is a really gross hack to sneak both paths through the one field.
+		exportFile = filepath.Join(subrepo, pkgPath) + "|" + exportFile
+	}
+
 	name := bpkg.Name
 	id := bpkg.ImportPath
 	if len(bpkg.XTestGoFiles) > 0 || len(bpkg.XTestImports) > 0 {
@@ -130,9 +133,10 @@ func fromBuildPackage(
 		GoFiles:         goFiles,
 		CompiledGoFiles: compiledGoFiles,
 		OtherFiles:      slices.Concat(bpkg.CFiles, bpkg.CXXFiles, bpkg.MFiles, bpkg.HFiles, bpkg.SFiles, bpkg.SwigFiles, bpkg.SwigCXXFiles, bpkg.SysoFiles),
+		ExportFile:      exportFile,
 		EmbedPatterns:   bpkg.EmbedPatterns,
 		Imports:         imports,
-	}
+	}, nil
 }
 
 // modulePath returns the import path for a module, or the given one if the module isn't set.

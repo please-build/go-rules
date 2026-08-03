@@ -62,10 +62,7 @@ func WriteModuleInfo(importPath string, srcRoot, importconfig string, installPkg
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkg := FromBuildPackageForModule(bpkg)
-
-		pkg.ExportFile = imports[pkg.PkgPath]
-		pkgs = append(pkgs, pkg)
+		pkgs = append(pkgs, FromBuildPackageForModule(bpkg, imports[bpkg.ImportPath]))
 	}
 	// If we're doing the stdlib, limit it to just things in the importconfig (i.e. no cmd/ packages)
 	pkgs = slices.DeleteFunc(pkgs, func(pkg *packages.Package) bool {
@@ -117,7 +114,7 @@ func loadImportConfig(filename string) (map[string]string, error) {
 }
 
 // FromBuildPackageForModule creates a packages Package from a build Package for a module.
-func FromBuildPackageForModule(bpkg *build.Package) *packages.Package {
+func FromBuildPackageForModule(bpkg *build.Package, exportFile string) *packages.Package {
 	goFiles := make([]string, len(bpkg.GoFiles)+len(bpkg.TestGoFiles)+len(bpkg.XTestGoFiles))
 	for i, file := range bpkg.GoFiles {
 		goFiles[i] = filepath.Join(bpkg.Dir, file)
@@ -145,5 +142,6 @@ func FromBuildPackageForModule(bpkg *build.Package) *packages.Package {
 		OtherFiles:      slices.Concat(bpkg.CFiles, bpkg.CXXFiles, bpkg.MFiles, bpkg.HFiles, bpkg.SFiles, bpkg.SwigFiles, bpkg.SwigCXXFiles, bpkg.SysoFiles),
 		EmbedPatterns:   bpkg.EmbedPatterns,
 		Imports:         imports,
+		ExportFile:      exportFile,
 	}
 }
