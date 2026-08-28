@@ -1,3 +1,8 @@
+Version 1.32.1
+--------------
+    * Pass absolute source paths to `go tool cover` so that coverage builds
+      report correct file positions under Go 1.27 (#372)
+
 Version 1.32.0
 --------------
     * Allow passing command-line arguments to go_test targets (#368)

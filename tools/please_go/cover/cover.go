@@ -21,6 +21,15 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 	if err != nil {
 		return err
 	}
+	// `go tool cover` copies these into `//line` directives, and since Go 1.27
+	// (go.dev/issue/70478) a relative one resolves against the file's own directory.
+	for i, src := range srcs {
+		abs, err := filepath.Abs(src)
+		if err != nil {
+			return err
+		}
+		srcs[i] = abs
+	}
 	const pkgConfigFile = "pkgcfg"
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
@@ -34,7 +43,7 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 	var buf bytes.Buffer
 	// 1.21 requires a cover vars file to be written into the output file list
 	if coverTool != "" || needs121CoverVars(goTool) {
-		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go\n"))
+		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go") + "\n")
 	}
 	for _, src := range srcs {
 		buf.WriteString(strings.TrimSuffix(src, ".go") + ".cover.go\n")
