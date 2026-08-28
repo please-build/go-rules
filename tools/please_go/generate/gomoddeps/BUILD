@@ -1,4 +1,4 @@
-subinclude("///go//build_defs:go")
+subinclude("//build_defs:go")
 
 filegroup(
     name = "srcs",
