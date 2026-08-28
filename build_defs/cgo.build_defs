@@ -1,4 +1,7 @@
-subinclude("///go//build_defs:go", "///cc//build_defs:c")
+subinclude(
+    "///cc//build_defs:c",
+    "//build_defs:go",
+)
 
 def cgo_library(
     name:str,
