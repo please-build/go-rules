@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,7 +60,6 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 			return err
 		}
 	}
-	log.Printf("here %s %s", pkg, srcs)
 	var cmd *exec.Cmd
 	if coverTool != "" {
 		cmd = exec.Command(coverTool, append([]string{"-mode=set", "-var=_plz_goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
