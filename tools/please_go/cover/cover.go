@@ -53,6 +53,7 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 				log.Printf("failed to make path relative: %s", err)
 				continue
 			}
+			// Mutate in place so that the package-relative path is passed to `go tool cover`
 			srcs[i] = rel
 		}
 		// If we're using relative paths, we need a separate 'outfilelist' file with the relative paths in it for 'go tool cover' to read
