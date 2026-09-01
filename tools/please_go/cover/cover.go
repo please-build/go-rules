@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,8 +34,10 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 	}
 	var buf bytes.Buffer
 	// 1.21 requires a cover vars file to be written into the output file list
+	need121CoverVars := needs121CoverVars(goTool)
+	// 1.27 needs package-relative paths (https://go.dev/issue/70478)
 	needRelativePaths := needs127RelativePaths(goTool)
-	if coverTool != "" || needRelativePaths || needs121CoverVars(goTool) {
+	if coverTool != "" || needRelativePaths || need121CoverVars {
 		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go\n"))
 	}
 	for _, src := range srcs {
@@ -45,11 +48,15 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 	}
 	if needRelativePaths {
 		for i, src := range srcs {
-			if rel, err := filepath.Rel(pkg, src); err == nil {
-				srcs[i] = rel
+			rel, err := filepath.Rel(pkg, src)
+			if err != nil {
+				log.Printf("failed to make path relative: %s", err)
+				continue
 			}
+			srcs[i] = rel
 		}
-		// We _also_ need an 'outfilelist' file with the relative paths in it for 'go tool cover' to read.
+		// If we're using relative paths, we need a separate 'outfilelist' file with the relative paths in it for 'go tool cover' to read
+		// while still producing the output file with the root-relative paths for Please to consume.
 		output = "outfilelist.txt"
 		buf.Reset()
 		buf.WriteString("_covervars.cover.go\n")
@@ -76,12 +83,18 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 
 func needs121CoverVars(goTool string) bool {
 	version, err := toolchain.GoMinorVersion(goTool)
-	return err == nil && version >= 21
+	if err != nil {
+		panic(err)
+	}
+	return version >= 21
 }
 
 func needs127RelativePaths(goTool string) bool {
 	version, err := toolchain.GoMinorVersion(goTool)
-	return err == nil && version >= 27
+	if err != nil {
+		panic(err)
+	}
+	return version >= 27
 }
 
 // This is a copy of the one from internal/coverage (why does that need to be internal??)
