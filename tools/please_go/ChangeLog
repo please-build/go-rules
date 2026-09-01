@@ -1,3 +1,7 @@
+Version 1.24.1
+--------------
+    * Better support Go 1.27+ coverage, which fixes tests relying on things like runtime path information.
+
 Version 1.24.0
 --------------
     * Propagate licences down to the go_library, go_binary and cgo_library go_repo generates.
