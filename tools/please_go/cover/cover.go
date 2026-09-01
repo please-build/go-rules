@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,7 +50,18 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 				srcs[i] = rel
 			}
 		}
+		// We _also_ need an 'outfilelist' file with the relative paths in it for 'go tool cover' to read.
+		output = "outfilelist.txt"
+		buf.Reset()
+		buf.WriteString("_covervars.cover.go\n")
+		for _, src := range srcs {
+			buf.WriteString(strings.TrimSuffix(src, ".go") + ".cover.go\n")
+		}
+		if err := os.WriteFile(filepath.Join(pkg, output), buf.Bytes(), 0644); err != nil {
+			return err
+		}
 	}
+	log.Printf("here %s %s", pkg, srcs)
 	var cmd *exec.Cmd
 	if coverTool != "" {
 		cmd = exec.Command(coverTool, append([]string{"-mode=set", "-var=_plz_goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
