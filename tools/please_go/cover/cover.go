@@ -16,12 +16,12 @@ import (
 )
 
 // WriteCoverage writes the necessary Go coverage information for a set of sources.
-func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []string) error {
+func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg string, srcs []string) error {
 	pkgName, err := packageName(srcs[0])
 	if err != nil {
 		return err
 	}
-	const pkgConfigFile = "pkgcfg"
+
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
 		PkgPath:     pkg,
@@ -33,7 +33,8 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 	}
 	var buf bytes.Buffer
 	// 1.21 requires a cover vars file to be written into the output file list
-	if coverTool != "" || needs121CoverVars(goTool) {
+	needRelativePaths := needs127RelativePaths(goTool)
+	if coverTool != "" || needRelativePaths || needs121CoverVars(goTool) {
 		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go\n"))
 	}
 	for _, src := range srcs {
@@ -42,11 +43,21 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 	if err := os.WriteFile(output, buf.Bytes(), 0644); err != nil {
 		return err
 	}
+	if needRelativePaths {
+		for i, src := range srcs {
+			if rel, err := filepath.Rel(pkg, src); err == nil {
+				srcs[i] = rel
+			}
+		}
+	}
 	var cmd *exec.Cmd
 	if coverTool != "" {
 		cmd = exec.Command(coverTool, append([]string{"-mode=set", "-var=_plz_goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
 	} else {
 		cmd = exec.Command(goTool, append([]string{"tool", "cover", "-mode=set", "-var=_plz_goCover", "-pkgcfg", pkgConfigFile, "-outfilelist", output}, srcs...)...)
+	}
+	if needRelativePaths {
+		cmd.Dir = pkg
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -56,6 +67,11 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkg string, srcs []strin
 func needs121CoverVars(goTool string) bool {
 	version, err := toolchain.GoMinorVersion(goTool)
 	return err == nil && version >= 21
+}
+
+func needs127RelativePaths(goTool string) bool {
+	version, err := toolchain.GoMinorVersion(goTool)
+	return err == nil && version >= 27
 }
 
 // This is a copy of the one from internal/coverage (why does that need to be internal??)
