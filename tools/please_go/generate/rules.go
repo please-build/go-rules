@@ -11,6 +11,7 @@ type Rule struct {
 	cgoSrcs        []string
 	cSrcs          []string
 	compilerFlags  []string
+	definitions    []string
 	linkerFlags    []string
 	pkgConfigs     []string
 	asmFiles       []string
@@ -42,6 +43,9 @@ func populateRule(r *build.Rule, targetState *Rule) {
 	}
 	if len(targetState.linkerFlags) > 0 {
 		r.SetAttr("linker_flags", NewStringList(targetState.linkerFlags))
+	}
+	if len(targetState.definitions) > 0 {
+		r.SetAttr("definitions", NewStringList(targetState.definitions))
 	}
 	if len(targetState.hdrs) > 0 {
 		r.SetAttr("hdrs", NewStringList(targetState.hdrs))

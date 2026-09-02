@@ -30,13 +30,14 @@ type Generate struct {
 	replace            map[string]string
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
 	thirdPartyFolder   string
+	definitions        []string
 	install            []string
 	labels             []string
 	largePackages      []string
 	licences           []string
 }
 
-func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install, buildTags, labels, largePackages, licences []string) *Generate {
+func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install, buildTags, definitions, labels, largePackages, licences []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -54,6 +55,7 @@ func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string
 		knownImportTargets: map[string]string{},
 		thirdPartyFolder:   thirdPartyFolder,
 		install:            install,
+		definitions:        definitions,
 		moduleName:         module,
 		moduleArg:          moduleArg,
 		subrepo:            subrepo,
@@ -454,14 +456,20 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 	}
 
 	name := nameForLibInPkg(g.moduleName, trimPath(dir, g.srcRoot))
+	kind := packageKind(pkg)
 	deps := g.depTargets(pkg.Imports)
 	if len(pkg.IgnoredOtherFiles) != 0 {
 		deps = append(deps, ":a_files")
 	}
 
+	var definitions []string
+	if kind == "cgo_binary" || kind == "go_binary" {
+		definitions = g.definitions
+	}
+
 	return &Rule{
 		name:           name,
-		kind:           packageKind(pkg),
+		kind:           kind,
 		srcs:           pkg.GoFiles,
 		module:         g.moduleArg,
 		subrepo:        g.subrepo,
@@ -469,6 +477,7 @@ func (g *Generate) ruleForPackage(pkg *build.Package, dir string) *Rule {
 		cSrcs:          pkg.CFiles,
 		compilerFlags:  pkg.CgoCFLAGS,
 		linkerFlags:    orderLinkerFlags(pkg.CgoLDFLAGS),
+		definitions:    definitions,
 		pkgConfigs:     pkg.CgoPkgConfig,
 		asmFiles:       pkg.SFiles,
 		hdrs:           pkg.HFiles,
