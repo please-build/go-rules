@@ -1,3 +1,7 @@
+Version 1.26.0
+--------------
+    * `generate`: rename `third_part_folder` option to `deps_path`, and remove `t` short option (#379)
+
 Version 1.25.0
 --------------
     * Generate `definitions` parameter for Go binary targets (#375)
