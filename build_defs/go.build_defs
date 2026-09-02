@@ -1775,11 +1775,11 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     }
     if cover:
         cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c $TMP_DIR/covcfg.json -o $TMP_DIR/covfiles.txt --pkg_cfg $TMP_DIR/pkgcfg {package_flag} $filtered_srcs && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
+        # Go is always required for doing toolchain version checks; see WriteCoverage in tools/please_go/cover/cover.go
+        tools['go'] = CONFIG.GO.GO_TOOL
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
         if CONFIG.GO.GO_COVER_TOOL:
             tools['cover'] = CONFIG.GO.GO_COVER_TOOL
-        else:
-            tools['go'] = CONFIG.GO.GO_TOOL
     return cmds, tools
 
 
