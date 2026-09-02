@@ -1803,7 +1803,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     return cmds, tools
 
 
-def _go_linker_defs(definitions):
+def _go_linker_defs(definitions:str|list|dict):
     """Formats a string, list or dictionary of Go linker definitions as a list of values that can each
     be passed as a value of -X to the Go linker (or as a value of --definition to `please_go generate`)."""
     if definitions is None:
