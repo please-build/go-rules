@@ -94,7 +94,7 @@ var opts = struct {
 		Version          string   `long:"version" description:"The version of the current module"`
 		Install          []string `long:"install" description:"The packages to add to the :install alias"`
 		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
-		Definitions      []string `short:"D" long:"definition" value-name:"[IMPORTPATH].[NAME]=[VALUE]" description:"Element to insert into \"definitions\" parameter when generating Go binary targets"`
+		Definitions      []string `long:"definition" value-name:"[IMPORTPATH].[NAME]=[VALUE]" description:"Element to insert into \"definitions\" parameter when generating Go binary targets"`
 		Subrepo          string   `long:"subrepo" description:"The subrepo root to output into"`
 		Licences         []string `long:"licence" description:"The licences under which the module is released"`
 		Labels           []string `long:"label" description:"Additional labels to attach to subrepo targets"`
