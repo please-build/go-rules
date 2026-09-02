@@ -1774,7 +1774,7 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
         'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $filtered_srcs',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c covcfg.json -o covfiles.txt {package_flag} $filtered_srcs && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
+        cmds['cover'] = f'{prefix}; {filter_cmd} $TOOLS_PLEASE_GO cover -c $TMP_DIR/covcfg.json -o $TMP_DIR/covfiles.txt --pkg_cfg $TMP_DIR/pkgcfg {package_flag} $filtered_srcs && {compile_cmd} -coveragecfg covcfg.json {package_flag} `cat covfiles.txt`'
         tools['please_go'] = [CONFIG.GO.PLEASE_GO_TOOL]
         if CONFIG.GO.GO_COVER_TOOL:
             tools['cover'] = CONFIG.GO.GO_COVER_TOOL
