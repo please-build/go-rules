@@ -1277,7 +1277,8 @@ def _module_rule_name(module):
 
 def go_repo(module: str, version:str='', download:str=None, name:str=None, install:list=[], requirements:list=[],
             licences:list=None, patch:list=None, visibility:list=["PUBLIC"], deps:list=[], build_tags:list=CONFIG.GO.BUILD_TAGS,
-            third_party_path:str="third_party/go", strip:list=None, labels:list=[], large_packages:list=[]):
+            third_party_path:str="third_party/go", strip:list=None, definitions:str|list|dict=None, labels:list=[],
+            large_packages:list=[]):
     """Adds a third party go module to the build graph as a subrepo. This is designed to be closer to how the `go.mod`
     file works, requiring only the module name and version to be specified. Unlike go_module, each package is compiled
     individually, and dependencies between packages are inferred by convention.
@@ -1314,6 +1315,9 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
       build_tags (list): Build tags to pass to the Go compiler.
       third_party_path (str): Optional path of third_party directory.
       strip (list): A list of directories to strip from the repo
+      definitions (str | list | dict): Go linker definitions to set on go_binary and cgo_binary targets generated in
+                                       the subrepo. Refer to "definitions" in go_binary for further details about what
+                                       this does.
       labels (list): Labels for this rule.
       large_packages (list): List of relative package names which should be marked as large in the
                              generated go_library rules (i.e. packages which have large number of
@@ -1347,6 +1351,8 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
     else:
         modFileArg = ""
 
+    def_args = " ".join([f'--definition "{d}"' for d in _go_linker_defs(definitions)])
+
     labels += ["go_module_path:" + module]
     if version:
         labels += [f"go_module:{module}@{version}"]
@@ -1368,7 +1374,21 @@ def go_repo(module: str, version:str='', download:str=None, name:str=None, insta
         "find $SRCS_DOWNLOAD -name BUILD -delete",
         f"mkdir -p $(dirname {pkgRoot})",
         f"mv $SRCS_DOWNLOAD {pkgRoot}",
-        f"$TOOL generate {modFileArg} --module {module} --version '{version}' {build_tag_args} {label_args} {large_package_args} --src_root={pkgRoot} --third_part_folder='{third_party_path}' --subrepo '{pkg_name}/{subrepo_name}' {install_args} {requirements} {licence_args}",
+        f"$TOOL generate " + " ".join([
+            modFileArg,
+            f"--module {module}",
+            f"--version '{version}'",
+            build_tag_args,
+            def_args,
+            label_args,
+            large_package_args,
+            f"--src_root={pkgRoot}",
+            f"--third_part_folder='{third_party_path}'",
+            f"--subrepo '{pkg_name}/{subrepo_name}'",
+            install_args,
+            requirements,
+            licence_args,
+        ]),
         f"mv {pkgRoot} $OUT",
     ]
     cmd = " && ".join(cmds)
@@ -1783,6 +1803,19 @@ def _go_library_cmds(name, import_path:str="", complete=True, all_srcs=False, co
     return cmds, tools
 
 
+def _go_linker_defs(definitions:str|list|dict):
+    """Formats a string, list or dictionary of Go linker definitions as a list of values that can each
+    be passed as a value of -X to the Go linker (or as a value of --definition to `please_go generate`)."""
+    if definitions is None:
+        return []
+    if isinstance(definitions, str):
+        return [f"{definitions}"]
+    if isinstance(definitions, list):
+        return [f"{d}" for d in definitions]
+    if isinstance(definitions, dict):
+        return [k if v is None else f"{k}={v}" for k, v in sorted(definitions.items())]
+
+
 def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=None, gcov=False, split_debug=False, strip=None, test=False):
     """Returns the commands to run for linking a Go binary."""
 
@@ -1794,15 +1827,7 @@ def _go_binary_cmds(name, static=False, ldflags='', pkg_config='', definitions=N
         gen_import_cfg += ' && ' + _generate_pkg_import_cfg_cmd(name, "goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
 
-    linkerdefs = []
-    if definitions is None:
-        pass
-    elif isinstance(definitions, str):
-        linkerdefs += [f'{definitions}']
-    elif isinstance(definitions, list):
-        linkerdefs += [f'{linkerdef}' for linkerdef in definitions]
-    elif isinstance(definitions, dict):
-        linkerdefs = [k if v is None else f'{k}={v}' for k, v in sorted(definitions.items())]
+    linkerdefs = _go_linker_defs(definitions)
     if test:
         linkerdefs += ["testing.testBinary=1"]
 
