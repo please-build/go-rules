@@ -87,20 +87,20 @@ var opts = struct {
 		Packages     []string `short:"p" long:"packages" description:"Packages to include in the module"`
 	} `command:"module_info" alias:"m" description:"Creates an info file about a series of packages in a go_module"`
 	Generate struct {
-		SrcRoot          string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
-		ImportPath       string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
-		ThirdPartyFolder string   `short:"t" long:"third_part_folder" description:"The folder containing the third party subrepos" default:"third_party/go"`
-		ModFile          string   `long:"mod_file" description:"Path to the host repo mod file to use to resolve dependencies against (dependencies will be resolved against the module as well if it exists)"`
-		Module           string   `long:"module" description:"The name of the current module"`
-		Version          string   `long:"version" description:"The version of the current module"`
-		Install          []string `long:"install" description:"The packages to add to the :install alias"`
-		BuildTags        []string `long:"build_tag" description:"Any build tags to apply to the build"`
-		Definitions      []string `long:"definition" value-name:"[IMPORTPATH].[NAME]=[VALUE]" description:"Element to insert into \"definitions\" parameter when generating Go binary targets"`
-		Subrepo          string   `long:"subrepo" description:"The subrepo root to output into"`
-		Licences         []string `long:"licence" description:"The licences under which the module is released"`
-		Labels           []string `long:"label" description:"Additional labels to attach to subrepo targets"`
-		LargePackages    []string `long:"large_package" description:"Relative names of packages which have lots of input files (meaning the go_library target should be marked as large)"`
-		Args             struct {
+		SrcRoot       string   `short:"r" long:"src_root" description:"The src root of the module to inspect"`
+		ImportPath    string   `long:"import_path" description:"overrides the module's import path. If not set, the import path from the go.mod will be used.'"`
+		DepsPath      string   `long:"deps_path" value-name:"[PKG]" description:"Assume third-party Go modules are defined in PKG when generating dependency target names" default:"third_party/go"`
+		ModFile       string   `long:"mod_file" description:"Path to the host repo mod file to use to resolve dependencies against (dependencies will be resolved against the module as well if it exists)"`
+		Module        string   `long:"module" description:"The name of the current module"`
+		Version       string   `long:"version" description:"The version of the current module"`
+		Install       []string `long:"install" description:"The packages to add to the :install alias"`
+		BuildTags     []string `long:"build_tag" description:"Any build tags to apply to the build"`
+		Definitions   []string `long:"definition" value-name:"[IMPORTPATH].[NAME]=[VALUE]" description:"Element to insert into \"definitions\" parameter when generating Go binary targets"`
+		Subrepo       string   `long:"subrepo" description:"The subrepo root to output into"`
+		Licences      []string `long:"licence" description:"The licences under which the module is released"`
+		Labels        []string `long:"label" description:"Additional labels to attach to subrepo targets"`
+		LargePackages []string `long:"large_package" description:"Relative names of packages which have lots of input files (meaning the go_library target should be marked as large)"`
+		Args          struct {
 			Requirements []string `positional-arg-name:"requirements" description:"Any module requirements not included in the go.mod"`
 		} `positional-args:"true"`
 	} `command:"generate" alias:"g" description:"Generate build targets for a Go module"`
@@ -174,7 +174,7 @@ var subCommands = map[string]func() int{
 		gen := opts.Generate
 		g := generate.New(
 			gen.SrcRoot,
-			gen.ThirdPartyFolder,
+			gen.DepsPath,
 			gen.ModFile,
 			gen.Module,
 			gen.Version,

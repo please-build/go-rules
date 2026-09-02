@@ -148,7 +148,7 @@ func TestDepTarget(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := &Generate{
 				moduleName:         "github.com/this/module",
-				thirdPartyFolder:   "third_party/go",
+				depsPath:           "third_party/go",
 				replace:            map[string]string{},
 				knownImportTargets: map[string]string{},
 				moduleDeps:         test.deps,

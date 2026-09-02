@@ -29,7 +29,7 @@ type Generate struct {
 	moduleDeps         []string
 	replace            map[string]string
 	knownImportTargets map[string]string // cache these so we don't end up looping over all the modules for every import
-	thirdPartyFolder   string
+	depsPath           string
 	definitions        []string
 	install            []string
 	labels             []string
@@ -37,7 +37,7 @@ type Generate struct {
 	licences           []string
 }
 
-func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install, buildTags, definitions, labels, largePackages, licences []string) *Generate {
+func New(srcRoot, depsPath, hostModFile, module, version, subrepo string, buildFileNames, moduleDeps, install, buildTags, definitions, labels, largePackages, licences []string) *Generate {
 	moduleArg := module
 	if version != "" {
 		moduleArg += "@" + version
@@ -53,7 +53,7 @@ func New(srcRoot, thirdPartyFolder, hostModFile, module, version, subrepo string
 		moduleDeps:         moduleDeps,
 		hostModFile:        hostModFile,
 		knownImportTargets: map[string]string{},
-		thirdPartyFolder:   thirdPartyFolder,
+		depsPath:           depsPath,
 		install:            install,
 		definitions:        definitions,
 		moduleName:         module,
@@ -590,7 +590,7 @@ func (g *Generate) subrepoName(module string) string {
 	if g.moduleName == module {
 		return ""
 	}
-	return filepath.Join(g.thirdPartyFolder, strings.ReplaceAll(module, "/", "_"))
+	return filepath.Join(g.depsPath, strings.ReplaceAll(module, "/", "_"))
 }
 
 func (g *Generate) libTargetForBuildPackage(i string) (string, error) {
