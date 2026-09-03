@@ -1,3 +1,10 @@
+Version 1.33.0
+--------------
+    * `go_repo`: add `definitions` parameter (#378)
+    * `go_repo`: rename `third_party_path` parameter to `deps_path` (#379). `third_party_path` is now an
+      alias for `deps_path` for the sake of backwards compatibility; this may be dropped in a future major
+      release.
+
 Version 1.32.1
 --------------
     * Better support coverage line directives in Go 1.27+ for tests that rely on source locations at runtime
