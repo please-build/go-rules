@@ -1,3 +1,7 @@
+Version 1.26.1
+--------------
+    * Make `please_go cover` handle the possiblity that every src is outside the package directory (#385)
+
 Version 1.26.0
 --------------
     * `generate`: rename `third_part_folder` option to `deps_path`, and remove `t` short option (#379)
