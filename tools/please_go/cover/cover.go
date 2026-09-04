@@ -5,6 +5,7 @@ package cover
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"go/parser"
 	"go/token"
 	"log"
@@ -23,6 +24,14 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 		return err
 	}
 
+	// It is entirely possible that all of the sources to a build target are outside the package
+	// directory (which is usually the result of using the outputs of other targets as srcs).
+	// `go tool cover` still wants to write the `_covervars.cover.go` file to the package directory,
+	// so first ensure that it exists.
+	if err := os.MkdirAll(pkg, 0755); err != nil {
+		return fmt.Errorf("ensure package directory exists: %w", err)
+	}
+
 	b, _ := json.Marshal(coverConfig{
 		OutConfig:   covercfg,
 		PkgPath:     pkg,
@@ -38,7 +47,7 @@ func WriteCoverage(goTool, coverTool, covercfg, output, pkgConfigFile, pkg strin
 	// 1.27 needs package-relative paths (https://go.dev/issue/70478)
 	needRelativePaths := needs127RelativePaths(goTool)
 	if coverTool != "" || needRelativePaths || need121CoverVars {
-		buf.WriteString(filepath.Join(filepath.Dir(srcs[0]), "_covervars.cover.go\n"))
+		buf.WriteString(filepath.Join(pkg, "_covervars.cover.go\n"))
 	}
 	for _, src := range srcs {
 		buf.WriteString(strings.TrimSuffix(src, ".go") + ".cover.go\n")
