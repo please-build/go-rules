@@ -5,7 +5,7 @@ subinclude(
 go_toolchain(
     name = "toolchain",
     install_std = False,
-    version = "1.27.0",
+    version = "1.27.1",
 )
 
 go_stdlib(
@@ -43,25 +43,25 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
-    version = "v1.6.2",
+    version = "v1.7.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sys",
-    version = "v0.36.0",
+    version = "v0.47.0",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/dustin/go-humanize",
-    version = "v1.0.0",
+    version = "v1.0.1",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.2.0",
+    version = "v5.2.1",
 )
 
 go_repo(
@@ -73,7 +73,7 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/mod",
-    version = "v0.29.0",
+    version = "v0.40.0",
 )
 
 go_repo(
@@ -85,7 +85,7 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/tools",
-    version = "v0.43.0",
+    version = "v0.49.0",
 )
 
 go_repo(
@@ -103,25 +103,25 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/term",
-    version = "v0.23.0",
+    version = "v0.45.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
-    version = "v0.17.0",
+    version = "v0.22.0",
 )
 
 go_repo(
     licences = ["BSD-3"],
     module = "github.com/golang/protobuf",
-    version = "v1.4.3",
+    version = "v1.5.4",
 )
 
 go_repo(
     licences = ["BSD-3"],
     module = "google.golang.org/protobuf",
-    version = "v1.25.0",
+    version = "v1.36.12",
 )
 
 go_repo(
