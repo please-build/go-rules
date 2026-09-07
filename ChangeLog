@@ -1,3 +1,7 @@
+Version 1.33.1
+--------------
+    * Make `please_go cover` handle the possibility that every src is outside the package directory (#385)
+
 Version 1.33.0
 --------------
     * `go_repo`: add `definitions` parameter (#378)
