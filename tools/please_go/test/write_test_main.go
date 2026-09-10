@@ -76,7 +76,13 @@ func parseTestSources(sources []string) (testDescr, error) {
 			}
 		}
 		// Get doc to find the examples for us :)
-		descr.Examples = append(descr.Examples, doc.Examples(f)...)
+		for _, e := range doc.Examples(f) {
+			// Match `go test`: an example without an `// Output:` comment is compiled but not run.
+			if e.Output == "" && !e.EmptyOutput {
+				continue
+			}
+			descr.Examples = append(descr.Examples, e)
+		}
 	}
 	return descr, nil
 }
