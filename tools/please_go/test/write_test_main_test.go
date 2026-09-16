@@ -38,6 +38,17 @@ func TestParseTestSourcesWithMain(t *testing.T) {
 	assert.Equal(t, functions, descr.TestFunctions)
 }
 
+func TestParseTestSourcesSkipsExamplesWithoutOutput(t *testing.T) {
+	descr, err := parseTestSources([]string{"tools/please_go/test/test_data/example/example_example_test.go"})
+	assert.NoError(t, err)
+	names := make([]string, 0, len(descr.Examples))
+	for _, e := range descr.Examples {
+		names = append(names, e.Name)
+	}
+	// Same rule as `go test`: an example is only run when it has an output comment, even an empty one.
+	assert.Equal(t, []string{"EmptyOutput", "WithOutput"}, names)
+}
+
 func TestParseTestSourcesFailsGracefully(t *testing.T) {
 	_, err := parseTestSources([]string{"wibble"})
 	assert.Error(t, err)
@@ -51,6 +62,20 @@ func TestWriteTestMain(t *testing.T) {
 	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "main", f.Name.Name)
+}
+
+func TestWriteTestMainSkipsExamplesWithoutOutput(t *testing.T) {
+	err := WriteTestMain("test_pkg", []string{"tools/please_go/test/test_data/example/example_example_test.go"}, "test.go", false)
+	assert.NoError(t, err)
+	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, "main", f.Name.Name)
+
+	test, err := ioutil.ReadFile("test.go")
+	assert.NoError(t, err)
+	assert.Contains(t, string(test), "ExampleWithOutput")
+	assert.Contains(t, string(test), "ExampleEmptyOutput")
+	assert.NotContains(t, string(test), "ExampleNoOutput")
 }
 
 func TestWriteTestMainWithBenchmark(t *testing.T) {
