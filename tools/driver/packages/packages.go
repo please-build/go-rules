@@ -361,11 +361,18 @@ func loadPackageInfoFiles(paths []string) ([]*packages.Package, error) {
 	var lock sync.Mutex
 	var g errgroup.Group
 	g.SetLimit(8) // arbitrary limit since we're doing I/O
+	seen := make(map[string]struct{}, len(paths))
 	for _, file := range paths {
 		file := file
 		if !strings.HasSuffix(file, ".json") {
 			continue // Ignore all the various Go sources etc.
 		}
+		// A target can be in the output of both `plz query deps` and `plz query filter`, in which case `plz build`
+		// prints its outputs twice. Loading a package info file twice would return duplicate packages.
+		if _, ok := seen[file]; ok {
+			continue
+		}
+		seen[file] = struct{}{}
 		log.Debug("Package file: %s", file)
 		g.Go(func() error {
 			f, err := os.Open(file)

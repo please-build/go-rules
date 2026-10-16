@@ -17,3 +17,14 @@ go_library(
         "//tools/please_go/packageinfo",
     ],
 )
+
+go_test(
+    name = "test",
+    srcs = glob(["*_test.go"]),
+    deps = [
+        ":packages",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
+        "///third_party/go/golang.org_x_tools//go/packages",
+    ],
+)
