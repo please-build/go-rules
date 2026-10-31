@@ -1,7 +1,6 @@
 package modinfo_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -79,22 +78,6 @@ exit 1
 	assert.NotContains(t, payload, "darwin/arm64")
 	assert.Contains(t, payload, "build\tGOOS=linux\n")
 	assert.Contains(t, payload, "build\tGOARCH=arm64\n")
-}
-
-func TestWriteModInfoRejectsBadGoVersion(t *testing.T) {
-	for _, version := range []string{"", "1.27.1", "devel go1.27.1"} {
-		t.Run(fmt.Sprintf("%q", version), func(t *testing.T) {
-			dir := t.TempDir()
-			goTool := filepath.Join(dir, "go")
-			script := "#!/bin/sh\nprintf '%s\\n' " + strconv.Quote(version) + "\n"
-			require.NoError(t, os.WriteFile(goTool, []byte(script), 0o755))
-
-			t.Chdir(dir)
-			err := modinfo.WriteModInfo(goTool, "example.com/mod", "example.com/mod/cmd", "exe", "0", "linux", "amd64", filepath.Join(dir, "out"))
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "GOVERSION")
-		})
-	}
 }
 
 func modInfoPayload(t *testing.T, path string) string {

@@ -27,12 +27,8 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goar
 	if err != nil {
 		return fmt.Errorf("failed to exec %s env GOVERSION: %w", goTool, err)
 	}
-	goVersion := strings.TrimSpace(string(out))
-	if goVersion == "" || !strings.HasPrefix(goVersion, "go") {
-		return fmt.Errorf("%s env GOVERSION returned %q; want a version like go1.2.3", goTool, goVersion)
-	}
 	bi := debug.BuildInfo{
-		GoVersion: goVersion,
+		GoVersion: strings.TrimSpace(string(out)),
 		Path:      pkgPath,
 		Main: debug.Module{
 			Path: modulePath,
