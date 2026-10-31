@@ -21,13 +21,18 @@ func WriteModInfo(goTool, modulePath, pkgPath, buildMode, cgoEnabled, goos, goar
 	if buildMode == "" {
 		buildMode = "exe"
 	}
-	// Nab the Go version from the tool
-	out, err := exec.Command(goTool, "version").CombinedOutput()
+	// `go version` appends the host OS/arch ("go version go1.x.y linux/amd64").
+	// `go env GOVERSION` is just "go1.x.y", which is what `go build` records.
+	out, err := exec.Command(goTool, "env", "GOVERSION").CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to exec %s: %w", goTool, err)
+		return fmt.Errorf("failed to exec %s env GOVERSION: %w", goTool, err)
+	}
+	goVersion := strings.TrimSpace(string(out))
+	if goVersion == "" || !strings.HasPrefix(goVersion, "go") {
+		return fmt.Errorf("%s env GOVERSION returned %q; want a version like go1.2.3", goTool, goVersion)
 	}
 	bi := debug.BuildInfo{
-		GoVersion: strings.TrimSpace(string(out)),
+		GoVersion: goVersion,
 		Path:      pkgPath,
 		Main: debug.Module{
 			Path: modulePath,
