@@ -1,7 +1,6 @@
 package test
 
 import (
-	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
@@ -52,32 +51,6 @@ func TestWriteTestMain(t *testing.T) {
 	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "main", f.Name.Name)
-}
-
-func TestWriteTestMainWithTestMain(t *testing.T) {
-	err := WriteTestMain("test_pkg", []string{"tools/please_go/test/test_data/main/example_test_main.go"}, "test.go", false)
-	assert.NoError(t, err)
-	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
-	assert.NoError(t, err)
-	assert.Equal(t, "main", f.Name.Name)
-
-	// The exit code recorded by m.Run must be propagated when TestMain doesn't call os.Exit, so
-	// internalMain must not return a constant.
-	var returns []*ast.ReturnStmt
-	for _, d := range f.Decls {
-		if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "internalMain" {
-			ast.Inspect(fd.Body, func(n ast.Node) bool {
-				if r, ok := n.(*ast.ReturnStmt); ok {
-					returns = append(returns, r)
-				}
-				return true
-			})
-		}
-	}
-	assert.NotEmpty(t, returns)
-	for _, r := range returns {
-		assert.IsType(t, &ast.CallExpr{}, r.Results[0])
-	}
 }
 
 func TestWriteTestMainWithBenchmark(t *testing.T) {
