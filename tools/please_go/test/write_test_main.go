@@ -127,6 +127,7 @@ package main
 
 import (
 	_gostdlib_os "os"
+	{{ if .Main }}_gostdlib_reflect "reflect"{{ end }}
 	{{ if not .Benchmark }}_gostdlib_strings "strings"{{ end }}
 	_gostdlib_testing "testing"
 	_gostdlib_testdeps "testing/internal/testdeps"
@@ -180,7 +181,10 @@ func internalMain() int {
 
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
-    return 0
+	// Using reflection like upstream does because the field is private.
+	// Using the private field should be safe as it is coupled across the go command and the testing
+	// package so it unlikely to be changed.
+	return int(_gostdlib_reflect.ValueOf(m).Elem().FieldByName("exitCode").Int())
 {{else}}
 	return m.Run()
 {{end}}
