@@ -115,13 +115,15 @@ func loadImportConfig(filename string) (map[string]string, error) {
 
 // FromBuildPackageForModule creates a packages Package from a build Package for a module.
 func FromBuildPackageForModule(bpkg *build.Package, exportFile string) *packages.Package {
-	goFiles := make([]string, len(bpkg.GoFiles)+len(bpkg.TestGoFiles)+len(bpkg.XTestGoFiles))
-	for i, file := range bpkg.GoFiles {
+	allFiles := slices.Concat(bpkg.GoFiles, bpkg.TestGoFiles, bpkg.XTestGoFiles)
+	goFiles := make([]string, len(allFiles))
+	for i, file := range allFiles {
 		goFiles[i] = filepath.Join(bpkg.Dir, file)
 	}
 
-	imports := make(map[string]*packages.Package, len(bpkg.Imports)+len(bpkg.TestImports)+len(bpkg.XTestImports))
-	for _, imp := range bpkg.Imports {
+	allImports := slices.Concat(bpkg.Imports, bpkg.TestImports, bpkg.XTestImports)
+	imports := make(map[string]*packages.Package, len(allImports))
+	for _, imp := range allImports {
 		imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
 	}
 
