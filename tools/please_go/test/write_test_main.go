@@ -183,7 +183,7 @@ func internalMain() int {
 	{{.Package}}.{{.Main}}(m)
 	// Using reflection like upstream does because the field is private.
 	// Using the private field should be safe as it is coupled across the go command and the testing
-	// package so it unlikely to be changed.
+	// package so it is unlikely to be changed.
 	return int(_gostdlib_reflect.ValueOf(m).Elem().FieldByName("exitCode").Int())
 {{else}}
 	return m.Run()
