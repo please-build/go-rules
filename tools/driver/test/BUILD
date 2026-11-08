@@ -24,3 +24,17 @@ gentest(
         "//tools/driver/packages",
     ],
 )
+
+# Checks the driver's response for some of this repo's own targets. The driver runs plz itself, so this can't run in a
+# test sandbox; run it with `plz run`, e.g. as in the CI config.
+go_binary(
+    name = "driver_e2e",
+    srcs = [
+        "cases.go",
+        "driver_e2e.go",
+    ],
+    deps = [
+        "///third_party/go/golang.org_x_tools//go/packages",
+        "//tools/driver/packages",
+    ],
+)

@@ -8,6 +8,14 @@ jobs:
         uses: actions/checkout@v7
       - name: Run tests
         run: ./pleasew test -p -v notice --log_file plz-out/log/test.log
+      - name: Check package driver output
+        # The driver runs `plz`, so make that resolve to pleasew.
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          ln -s "$(pwd)/pleasew" "$RUNNER_TEMP/bin/plz"
+          export PATH="$RUNNER_TEMP/bin:$PATH"
+          plz build //tools/driver:plz-gopackagesdriver
+          plz run //tools/driver/test:driver_e2e -- --driver "$(plz query outputs //tools/driver:plz-gopackagesdriver)"
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v7
