@@ -62,7 +62,7 @@ func WriteModuleInfo(importPath string, srcRoot, importconfig string, installPkg
 		} else if err != nil {
 			return fmt.Errorf("failed to import directory %s: %w", dir, err)
 		}
-		pkgs = append(pkgs, FromBuildPackageForModule(bpkg, imports[bpkg.ImportPath]))
+		pkgs = append(pkgs, FromBuildPackageForModule(bpkg, imports[bpkg.ImportPath], true))
 	}
 	// If we're doing the stdlib, limit it to just things in the importconfig (i.e. no cmd/ packages)
 	pkgs = slices.DeleteFunc(pkgs, func(pkg *packages.Package) bool {
@@ -114,14 +114,23 @@ func loadImportConfig(filename string) (map[string]string, error) {
 }
 
 // FromBuildPackageForModule creates a packages Package from a build Package for a module.
-func FromBuildPackageForModule(bpkg *build.Package, exportFile string) *packages.Package {
-	allFiles := slices.Concat(bpkg.GoFiles, bpkg.TestGoFiles, bpkg.XTestGoFiles)
+// If includeTests is set, test files and imports are merged in and packages with external tests
+// get a "_test" suffix on their ID and name; otherwise only the non-test package is described.
+func FromBuildPackageForModule(bpkg *build.Package, exportFile string, includeTests bool) *packages.Package {
+	allFiles := bpkg.GoFiles
+	allImports := bpkg.Imports
+	hasExternalTests := false
+	if includeTests {
+		allFiles = slices.Concat(bpkg.GoFiles, bpkg.TestGoFiles, bpkg.XTestGoFiles)
+		allImports = slices.Concat(bpkg.Imports, bpkg.TestImports, bpkg.XTestImports)
+		hasExternalTests = len(bpkg.XTestGoFiles) > 0 || len(bpkg.XTestImports) > 0
+	}
+
 	goFiles := make([]string, len(allFiles))
 	for i, file := range allFiles {
 		goFiles[i] = filepath.Join(bpkg.Dir, file)
 	}
 
-	allImports := slices.Concat(bpkg.Imports, bpkg.TestImports, bpkg.XTestImports)
 	imports := make(map[string]*packages.Package, len(allImports))
 	for _, imp := range allImports {
 		imports[imp] = &packages.Package{ID: imp, PkgPath: imp}
@@ -129,7 +138,7 @@ func FromBuildPackageForModule(bpkg *build.Package, exportFile string) *packages
 
 	name := bpkg.Name
 	id := bpkg.ImportPath
-	if len(bpkg.XTestGoFiles) > 0 || len(bpkg.XTestImports) > 0 {
+	if hasExternalTests {
 		// In please we may have an external test target and an internal test within the same please package.
 		// To ensure they have different go package import paths we appending to the name and id.
 		name += "_test"

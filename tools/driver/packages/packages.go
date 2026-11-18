@@ -434,11 +434,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		// FromBuildPackageForModule renames packages that have external tests (id += "_test") and
-		// merges test files and imports in. That's wrong for stdlib packages, which would then be
-		// unresolvable under their real import path, so drop the test info.
-		pkg.TestGoFiles, pkg.XTestGoFiles, pkg.TestImports, pkg.XTestImports = nil, nil, nil, nil
-		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg, ""))
+		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg, "", false))
 	}
 	return pkgs, nil
 }
