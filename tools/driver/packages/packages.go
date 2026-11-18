@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -137,8 +138,10 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 	seenRuntime := false
 	for _, pkg := range pkgs {
 		if _, present := dirs[filepath.Dir(pkg.ExportFile)]; present {
-			seenRoots[pkg.ID] = struct{}{}
-			roots = append(roots, pkg.ID)
+			if _, present := seenRoots[pkg.ID]; !present {
+				seenRoots[pkg.ID] = struct{}{}
+				roots = append(roots, pkg.ID)
+			}
 			continue
 		}
 		for _, file := range pkg.GoFiles {
@@ -182,6 +185,15 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		}
 		pkgs = append(pkgs, stdlib...)
 	}
+	// The same package can be reported by several pkg_info files (every target's file includes its
+	// transitive deps) and by the stdlib listing above. go/packages rejects duplicate IDs, so keep
+	// only the first occurrence of each.
+	seenIDs := map[string]struct{}{}
+	pkgs = slices.DeleteFunc(pkgs, func(pkg *packages.Package) bool {
+		_, dup := seenIDs[pkg.ID]
+		seenIDs[pkg.ID] = struct{}{}
+		return dup
+	})
 	log.Debug("Built package set")
 	return &DriverResponse{
 		Sizes: &types.StdSizes{
@@ -420,7 +432,7 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg, ""))
+		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg, "", false))
 	}
 	return pkgs, nil
 }
