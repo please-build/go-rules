@@ -1,3 +1,11 @@
+Version 0.9.0
+-------------
+    * refactor: split packageinfo.WritePackageInfo into one function for modules and one for packages (#363)
+		* Set ExportFile on package info for external tests (#370)
+		* Update all Go modules (and Go itself) (#389)
+		* fix(packageinfo): Restore test files and imports in FromBuildPackageForModule (#397)
+		* Make go-packagesdriver work for scip-go (#398)
+
 Version 0.8.0
 -------------
     * Include test files and their packag info if requested (#346)
