@@ -188,14 +188,12 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 	// The same package can be reported by several pkg_info files (every target's file includes its
 	// transitive deps) and by the stdlib listing above. go/packages rejects duplicate IDs, so keep
 	// only the first occurrence of each.
-	pkgs = slices.DeleteFunc(pkgs, func() func(*packages.Package) bool {
-		seen := map[string]struct{}{}
-		return func(pkg *packages.Package) bool {
-			_, dup := seen[pkg.ID]
-			seen[pkg.ID] = struct{}{}
-			return dup
-		}
-	}())
+	seenIDs := map[string]struct{}{}
+	pkgs = slices.DeleteFunc(pkgs, func(pkg *packages.Package) bool {
+		_, dup := seenIDs[pkg.ID]
+		seenIDs[pkg.ID] = struct{}{}
+		return dup
+	})
 	log.Debug("Built package set")
 	return &DriverResponse{
 		Sizes: &types.StdSizes{
