@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -137,8 +138,10 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 	seenRuntime := false
 	for _, pkg := range pkgs {
 		if _, present := dirs[filepath.Dir(pkg.ExportFile)]; present {
-			seenRoots[pkg.ID] = struct{}{}
-			roots = append(roots, pkg.ID)
+			if _, present := seenRoots[pkg.ID]; !present {
+				seenRoots[pkg.ID] = struct{}{}
+				roots = append(roots, pkg.ID)
+			}
 			continue
 		}
 		for _, file := range pkg.GoFiles {
@@ -182,6 +185,17 @@ func packagesToResponse(rootpath string, pkgs []*packages.Package, dirs map[stri
 		}
 		pkgs = append(pkgs, stdlib...)
 	}
+	// The same package can be reported by several pkg_info files (every target's file includes its
+	// transitive deps) and by the stdlib listing above. go/packages rejects duplicate IDs, so keep
+	// only the first occurrence of each.
+	pkgs = slices.DeleteFunc(pkgs, func() func(*packages.Package) bool {
+		seen := map[string]struct{}{}
+		return func(pkg *packages.Package) bool {
+			_, dup := seen[pkg.ID]
+			seen[pkg.ID] = struct{}{}
+			return dup
+		}
+	}())
 	log.Debug("Built package set")
 	return &DriverResponse{
 		Sizes: &types.StdSizes{
@@ -420,6 +434,10 @@ func loadStdlibPackages() ([]*packages.Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
+		// FromBuildPackageForModule renames packages that have external tests (id += "_test") and
+		// merges test files and imports in. That's wrong for stdlib packages, which would then be
+		// unresolvable under their real import path, so drop the test info.
+		pkg.TestGoFiles, pkg.XTestGoFiles, pkg.TestImports, pkg.XTestImports = nil, nil, nil, nil
 		pkgs = append(pkgs, packageinfo.FromBuildPackageForModule(pkg, ""))
 	}
 	return pkgs, nil
