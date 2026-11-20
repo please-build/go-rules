@@ -22,6 +22,7 @@ go_test(
     srcs = ["modinfo_test.go"],
     external = True,
     deps = [
+        ":modinfo",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
     ],

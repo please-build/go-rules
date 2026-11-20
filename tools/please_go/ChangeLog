@@ -1,3 +1,7 @@
+Version 1.26.2
+--------------
+    * `please_go modinfo`: stamp the Go version as `go env GOVERSION` reports it (go1.x), not `go version`'s output, which named the host platform and made a binary's bytes depend on where it was built.
+
 Version 1.26.1
 --------------
     * Make `please_go cover` handle the possiblity that every src is outside the package directory (#385)
