@@ -1,6 +1,6 @@
 Version 1.27.0
 --------------
-    * Allow tests to be compiled but not run (#391)
+    * Only execute example tests if they specify expected output (#391)
     * Make test binaries exit with the right exit code if TestMain is defined (#396)
     * Restore test files and imports in FromBuildPackageForModule (#397)
 
