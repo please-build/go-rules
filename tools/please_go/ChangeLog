@@ -1,3 +1,8 @@
+Version 1.25.0
+    * Allow tests to be compiled but not run (#391)
+    * Make test binaries exit with the right exit code if TestMain is defined (#396)
+    * Restore test files and imports in FromBuildPackageForModule (#397)
+
 Version 1.24.0
 --------------
     * Propagate licences down to the go_library, go_binary and cgo_library go_repo generates.
